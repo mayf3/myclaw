@@ -54,6 +54,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.equal(reference.referenceCompletion.modules.length, 8);
     assert.equal(reference.referenceCompletion.modules[0].criteria.length, 3);
     assert.equal(feishu.feishuAdoption.directUse, false);
+    assert.equal(feishu.feishuAdapter.connectionMode, "webhook");
   } finally {
     await new Promise((resolve) => dashboard.server.close(resolve));
   }

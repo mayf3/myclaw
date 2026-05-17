@@ -19,6 +19,7 @@ async function loadStatus() {
       ...statusPayload,
       referenceCompletion: referencePayload.referenceCompletion,
       feishuAdoption: feishuPayload.feishuAdoption,
+      feishuAdapter: feishuPayload.feishuAdapter,
     };
     $("rawJson").textContent = JSON.stringify(payload, null, 2);
     if (!payload.ok) {
@@ -27,7 +28,7 @@ async function loadStatus() {
     }
     renderOverview(payload);
     renderReferenceCompletion(payload.referenceCompletion);
-    renderFeishu(payload.feishuAdoption);
+    renderFeishu(payload.feishuAdoption, payload.feishuAdapter);
     renderMigration(payload.openclawMigration, payload.openclawStage);
     renderRuns(payload.runs || []);
     renderEvents(payload.events || []);
@@ -84,22 +85,43 @@ function refScore(label, score) {
   return '<div class="ref-score"><span class="small">' + esc(label) + '</span><br><strong>' + score + '%</strong></div>';
 }
 
-function renderFeishu(payload) {
+function renderFeishu(payload, adapter) {
   if (!payload) {
     $("feishuPanel").outerHTML = '<div id="feishuPanel" class="empty">暂无 Feishu 决策</div>';
     return;
   }
-  $("feishuDecision").className = payload.directUse ? "pill ok" : "pill warn";
-  $("feishuDecision").textContent = payload.directUse ? "可直接加载" : "参考，不直接加载";
+  const readyClass = adapter?.level === "ready" ? "ok" : adapter?.level === "blocked" ? "fail" : "warn";
+  $("feishuDecision").className = "pill " + readyClass;
+  $("feishuDecision").textContent = adapter ? "adapter " + adapter.level : "参考，不直接加载";
   $("feishuPanel").outerHTML = '<div id="feishuPanel">' +
     '<p><strong>结论</strong><br>' + esc(payload.verdict) + '</p>' +
     '<p><strong>来源</strong><br><span class="mono">' + esc(payload.source) + '</span> · <span class="mono">' + esc(payload.packageName) + '</span></p>' +
+    adapterSummary(adapter) +
     '<div class="decision-grid">' +
       decisionList("可复用设计", payload.reuse, "ok") +
       decisionList("直接加载阻塞", payload.blockers, "warn") +
     '</div>' +
     '<p><strong>下一步</strong><br>' + esc(payload.next) + '</p>' +
     '</div>';
+}
+
+function adapterSummary(adapter) {
+  if (!adapter) {
+    return "";
+  }
+  const issues = [...(adapter.issues || []), ...(adapter.warnings || [])];
+  return '<div class="decision-card"><strong>MyClaw adapter facade</strong>' +
+    '<p><span class="tag ' + (adapter.level === "ready" ? "ok" : adapter.level === "blocked" ? "fail" : "warn") + '">' + esc(adapter.level) + '</span> ' +
+    esc(adapter.connectionMode) + ' · signed webhook ' + (adapter.signedWebhookReady ? "ready" : "not ready") + '</p>' +
+    readinessItem("verification token", adapter.verificationTokenReady) +
+    readinessItem("x-lark signature", adapter.signedWebhookReady) +
+    readinessItem("outbound app credentials", adapter.outboundReady) +
+    issues.map((item) => '<p><span class="small">' + esc(item) + '</span></p>').join("") +
+    '</div>';
+}
+
+function readinessItem(label, ok) {
+  return '<p><span class="tag ' + (ok ? "ok" : "warn") + '">' + (ok ? "ready" : "missing") + '</span> ' + esc(label) + '</p>';
 }
 
 function decisionList(title, items, tone) {

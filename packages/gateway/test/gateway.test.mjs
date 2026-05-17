@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { buildFeishuWebhookSignature } from "../../feishu-adapter/src/index.mjs";
 import { startGateway } from "../src/index.mjs";
 
 test("gateway serves dashboard status and accepts inbound messages", async () => {
@@ -38,6 +39,7 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
 
     const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
     assert.equal(feishu.feishuAdoption.referenceUse, true);
+    assert.equal(feishu.feishuAdapter.connectionMode, "webhook");
 
     const asset = await fetch(`${gateway.url}/assets/dashboard.js`);
     assert.equal(asset.status, 200);
@@ -180,6 +182,48 @@ test("gateway validates Feishu verification tokens and rejects encrypted callbac
       body: JSON.stringify({ token: "verify", challenge: "plain_challenge" }),
     });
     assert.deepEqual(await challenge.json(), { challenge: "plain_challenge" });
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway validates signed Feishu webhook callbacks when encryptKey is configured", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-signed-"));
+  const gateway = await startGateway({
+    port: 0,
+    stateDir,
+    openclawSource: stateDir,
+    feishuVerifyToken: "verify",
+    feishuEncryptKey: "encrypt",
+  });
+  try {
+    const body = JSON.stringify({ token: "verify", challenge: "signed_challenge" });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const nonce = "nonce-test";
+    const signature = buildFeishuWebhookSignature({ timestamp, nonce, encryptKey: "encrypt", rawBody: body });
+    const challenge = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-lark-request-timestamp": timestamp,
+        "x-lark-request-nonce": nonce,
+        "x-lark-signature": signature,
+      },
+      body,
+    });
+    assert.deepEqual(await challenge.json(), { challenge: "signed_challenge" });
+
+    const denied = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-lark-request-timestamp": timestamp,
+        "x-lark-request-nonce": nonce,
+        "x-lark-signature": "bad",
+      },
+      body,
+    });
+    assert.equal(denied.status, 401);
   } finally {
     await new Promise((resolve) => gateway.server.close(resolve));
   }

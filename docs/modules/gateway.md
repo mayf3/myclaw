@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 0.5 已实现通用 `POST /messages`、Feishu/Lark `POST /feishu/events`、OpenClaw `POST /api/openclaw-migration/stage` 和 mutation token guard。它仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 0.7 已把 gateway 主文件拆成 auth/http/routes，并让 Feishu callback route 只依赖 MyClaw 自己的 `packages/feishu-adapter` facade。它仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -28,7 +28,7 @@ OpenHuman 的 gateway/RPC 价值在于边界拆分：
 
 ## 推荐设计
 
-Phase 0.5 已实现的最小 gateway：
+Phase 0.7 已实现的最小 gateway：
 
 ```text
 HTTP
@@ -46,10 +46,10 @@ Feishu event 路径必须保持薄：
 
 ```text
 POST /feishu/events
-  -> Feishu verify token / gateway token / local dev guard
-  -> reject encrypt payload
-  -> challenge response
-  -> event id idempotency
+  -> routes/feishu.mjs
+  -> Feishu adapter x-lark signature / verify token / local dev guard
+  -> reject encrypt payload until decrypt is implemented
+  -> challenge response or event id replay guard
   -> runtime.receiveMessage(rawInbound)
   -> feishu-event channel normalize
   -> state envelope
@@ -177,6 +177,13 @@ Phase 0.5：
 - `myclaw dashboard` 使用只读 dashboard server；mutation endpoints 只在显式 gateway 打开。
 - OpenClaw migration GET route 不再接受任意 `source` query override。
 
+Phase 0.7：
+
+- `packages/gateway/src/index.mjs` 从 321 行拆到 90 行。
+- 新增 `auth.mjs`、`http.mjs`、`routes/control.mjs`、`routes/feishu.mjs`、`routes/messages.mjs`、`routes/migration.mjs`。
+- Feishu callback route 调用 `packages/feishu-adapter`，不再在 gateway 主文件里维护签名、token、replay 和 normalize。
+- `--feishu-encrypt-key` / `MYCLAW_FEISHU_ENCRYPT_KEY` 可启用 `x-lark-signature` 校验。
+
 Phase 4：
 
 - HTTP + WS。
@@ -192,7 +199,7 @@ Phase 4：
 - Control UI config editor。
 - public remote access。
 - launchd/systemd。
-- Feishu encrypt payload 解密和正式签名校验。
+- Feishu encrypt payload 解密。
 - 持久 replay window。
 
 ## 关键风险
@@ -200,7 +207,7 @@ Phase 4：
 - 过早把 gateway 做成 OpenClaw 级别控制平面。
 - auth 作为后补，会导致 UI/channel 接入时重构。
 - event 没有 seq，前端断线后无法判断丢事件。
-- Feishu idempotency 目前是内存 Map，服务重启后不保留 replay window。
+- Feishu replay guard 目前是 adapter 内存 Map，服务重启后不保留 replay window。
 - token 现在只是 shared secret，没有用户/角色/作用域。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 
@@ -211,6 +218,7 @@ Phase 4：
 - `POST /messages` 在配置 token 后拒绝无 token 请求。
 - `POST /api/openclaw-migration/stage` 只写 snapshot，不修改 runtime config。
 - `GET /api/status` 能显示最新 gateway message run。
+- 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
 - Gateway 重启后能从 state store 读历史 run。
