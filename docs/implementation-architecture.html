@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyClaw 当前实现架构评审 · MyClaw</title>
+    <title>MyClaw Phase 0.4 实现架构可视化评审 · MyClaw</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -20,6 +20,7 @@ nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;p
 .content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
 code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
 .code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.mermaid{margin:14px 0;border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;overflow:auto}
 .table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
 @media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
@@ -29,206 +30,263 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>MyClaw 当前实现架构评审</h1>
+          <h1>MyClaw Phase 0.4 实现架构可视化评审</h1>
           <p>当前实现架构与阶段评审</p>
         </div>
         <a class="back" href="./index.html">← 返回全局索引</a>
         <nav aria-label="架构评审导航">
           <a href="#module-summary">总诊断</a>
           <a href="#总诊断">总诊断</a>
-<a href="#当前实现架构">当前实现架构</a>
-<a href="#系统架构图">系统架构图</a>
-<a href="#数据流水线流程图">数据流水线流程图</a>
+<a href="#系统上下文图">系统上下文图</a>
+<a href="#模块架构图">模块架构图</a>
+<a href="#核心业务流程图">核心业务流程图</a>
+<a href="#关键时序图">关键时序图</a>
+<a href="#状态机图">状态机图</a>
+<a href="#数据模型-er-图">数据模型 / ER 图</a>
+<a href="#数据流图">数据流图</a>
+<a href="#部署图">部署图</a>
+<a href="#风险分级">风险分级</a>
 <a href="#目录结构与文件行数">目录结构与文件行数</a>
 <a href="#概念解释">概念解释</a>
 <a href="#相似技术比较">相似技术比较</a>
-<a href="#请求-响应图">请求-响应图</a>
-<a href="#状态流图">状态流图</a>
-<a href="#严重问题">严重问题</a>
-<a href="#主要问题">主要问题</a>
-<a href="#细节问题">细节问题</a>
-<a href="#openclaw-一键迁移方案">OpenClaw 一键迁移方案</a>
+<a href="#关键设计对比">关键设计对比</a>
+<a href="#openclaw-一键迁移路线">OpenClaw 一键迁移路线</a>
 <a href="#linus-视角严苛审查">Linus 视角严苛审查</a>
-<a href="#证据">证据</a>
-<a href="#实现风险">实现风险</a>
-<a href="#修复优先级">修复优先级</a>
 <a href="#验收记录">验收记录</a>
         </nav>
       </aside>
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 0.3 的 gateway、dashboard、runtime、OpenClaw 迁移和当前架构审查。</p>
+          <p>MyClaw Phase 0.4 的 Feishu event、gateway、dashboard、runtime、OpenClaw 迁移和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0.3</span>
+            <span class="tag phase">Phase 0.4</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
         <article class="content"><p>更新时间：2026-05-17</p>
 <h2 id="总诊断">总诊断</h2>
-<p>当前实现已经进入 Phase 0.3：MyClaw 有了 public GitHub 基线、共享 message runtime、gateway-backed dashboard，以及最小 HTTP inbound <code>POST /messages</code>。这一步把“本地能看状态”和“外部能送消息进来”合到了同一个控制面，是接 Feishu/Lark event adapter 前正确的最小闭环。</p>
-<p>最大问题也很直接：gateway 还没有 token/auth、Feishu 签名校验和 event id 幂等，所以它只能作为本机开发入口；不能绑定公网，也不能直接作为飞书正式回调入口。</p>
-<h2 id="当前实现架构">当前实现架构</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>当前职责</th><th>阶段判断</th><th>不应扩大的职责</th></tr></thead><tbody><tr><td><code>packages/core/src/envelope.mjs</code></td><td>生成 run id、event、ok/failed envelope</td><td>P0 稳定边界</td><td>不感知 Feishu、CLI、HTTP、dashboard</td></tr><tr><td><code>packages/core/src/state.mjs</code></td><td>写入和读取 runs/events</td><td>P0.2 稳定边界</td><td>不做复杂查询和权限</td></tr><tr><td><code>packages/channels/src/index.mjs</code></td><td>注册 channel、解析 alias、声明能力、send、normalize inbound</td><td>P0.1 稳定边界</td><td>不跑 workflow、不调 LLM</td></tr><tr><td><code>packages/runtime/src/messages.mjs</code></td><td>共享 send/receive/reply pipeline</td><td>P0.3 新增核心复用层</td><td>不处理 HTTP、CLI 参数或 UI</td></tr><tr><td><code>packages/gateway/src/index.mjs</code></td><td>本地 HTTP gateway，接 <code>POST /messages</code></td><td>P0.3 新增 inbound 控制面</td><td>不直接接公网、不做 agent runtime</td></tr><tr><td><code>packages/dashboard/src/index.mjs</code></td><td>Dashboard HTML 和只读状态 API</td><td>P0.2/P0.3 控制台视图</td><td>不执行危险 mutation</td></tr><tr><td><code>packages/migrate/src/openclaw.mjs</code></td><td>OpenClaw dry-run 迁移评估</td><td>P0.2 稳定边界</td><td>不直接 apply runtime</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>命令编排和服务启动</td><td>P0.3 编排入口</td><td>不承载业务状态机</td></tr></tbody></table></div>
-<h2 id="系统架构图">系统架构图</h2>
-<pre class="code" data-lang="text"><code>User / Feishu future callback / local script
-  -&gt; CLI commands --------------------------.
-  -&gt; Gateway HTTP POST /messages --------.  |
-                                          v  v
-                                    packages/runtime
-                                          |
-                            ChannelAdapter registry/hook
-                         .----------------+----------------.
-                         v                                 v
-                   console adapter                 feishu-event adapter (next)
-                         |                                 |
-                         v                                 v
-                  core envelope/events              Feishu verification/idempotency
-                         |
-                         v
-               core state JSON + JSONL
-                         |
-             .-----------+------------.
-             v                        v
-       control-plane status       migrate openclaw plan
-             |                        |
-             v                        v
-        dashboard HTML          OpenClaw config/plugins</code></pre>
-<p>插件和 hook 边界：</p>
-<ul><li><code>ChannelAdapter registry</code> 是消息入口的扩展点。</li><li><code>packages/runtime</code> 是 CLI 和 gateway 共用的业务 pipeline。</li><li><code>packages/control-plane</code> 是 dashboard/gateway 共用的状态聚合层。</li><li><code>packages/migrate</code> 只产生 plan，不直接启用 OpenClaw runtime。</li></ul>
-<p>代码依赖关系：</p>
-<pre class="code" data-lang="text"><code>packages/cli
-  -&gt; packages/runtime
-  -&gt; packages/gateway
-  -&gt; packages/migrate
-  -&gt; packages/channels
-  -&gt; packages/core
+<p>Phase 0.4 已把 Feishu/Lark 事件回调接入到 gateway，并把 design review 报告升级为 Mermaid 可视化 dashboard。正确方向是：Feishu 格式留在 <code>feishu-event</code> adapter，CLI/gateway 继续复用 runtime，state 仍只记录 envelope/run/event。</p>
+<p>最大问题也必须说清楚：当前 gateway 仍只是本机开发入口，不是可公网暴露的飞书正式回调服务。缺 token、签名校验、encrypt payload 解密和持久幂等之前，不能把它当生产入口。</p>
+<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>channel/runtime/gateway 边界基本清楚</td></tr><tr><td>可扩展性</td><td>7/10</td><td>adapter registry 可扩展，但 rawInbound 契约还粗</td></tr><tr><td>可靠性</td><td>5/10</td><td>event id 仅内存去重，缺签名和持久 replay window</td></tr><tr><td>可维护性</td><td>7/10</td><td>文件低于 500 行，dashboard/report generator 后续需拆</td></tr><tr><td>安全性</td><td>4/10</td><td>当前仅适合 loopback 开发</td></tr></tbody></table></div>
+<h2 id="系统上下文图">系统上下文图</h2>
+<p>这张图回答：MyClaw 的系统边界在哪里，当前和哪些用户、外部系统、参考项目交互？</p>
+<div class="mermaid">flowchart LR
+  User[本地用户/开发者] --&gt; CLI[MyClaw CLI]
+  User --&gt; Dashboard[Dashboard Browser]
+  Feishu[Feishu/Lark 平台] --&gt;|事件回调| Gateway[MyClaw Gateway]
+  GitHub[GitHub public repo] &lt;--&gt;|commit/push| Repo[myclaw repo]
+  OpenClaw[OpenClaw 源项目] --&gt;|dry-run inventory| Migration[OpenClaw migration planner]
+  HtmlCenter[HTML Center] &lt;--&gt;|publish report| Docs[Design Review HTML]
 
-packages/gateway
-  -&gt; packages/dashboard render view
-  -&gt; packages/control-plane status
-  -&gt; packages/runtime
+  subgraph Boundary[MyClaw 本机边界]
+    CLI --&gt; Runtime[Message Runtime]
+    Gateway --&gt; Runtime
+    Dashboard --&gt; Control[Control Plane]
+    Runtime --&gt; Channels[Channel Adapters]
+    Runtime --&gt; State[State JSON/JSONL]
+    Control --&gt; State
+    Migration --&gt; Control
+    Docs
+  end</div>
+<p>Review 观察：</p>
+<ul><li>优点：外部系统只通过 gateway、migration planner、Git remote、HTML Center 进入，边界可解释。</li><li>风险：Feishu 回调目前没有签名/加密校验，图中的 Feishu 箭头仍只能代表本机模拟。</li><li>改进：下一阶段把 gateway mutation 入口加 token，并把 Feishu 验证失败挡在 runtime 外。</li><li>假设：HTML Center 仍运行在 <code>127.0.0.1:4177</code>，只承载报告展示，不参与 MyClaw runtime。</li></ul>
+<h2 id="模块架构图">模块架构图</h2>
+<p>这张图回答：系统拆成了哪些模块，每部分负责什么，依赖是否合理？</p>
+<div class="mermaid">flowchart TB
+  CLI[pkg/cli] --&gt; Runtime[pkg/runtime]
+  CLI --&gt; Gateway[pkg/gateway]
+  CLI --&gt; Migrate[pkg/migrate]
+  Gateway --&gt; Runtime
+  Gateway --&gt; Dashboard[pkg/dashboard render]
+  Gateway --&gt; Control[pkg/control-plane]
+  Dashboard --&gt; Control
+  Runtime --&gt; Channels[pkg/channels registry]
+  Runtime --&gt; Core[pkg/core envelope/state]
+  Control --&gt; Core
+  Control --&gt; Channels
+  Control --&gt; Migrate
+  Migrate --&gt; Core
+  Docs[docs builder] --&gt; Html[HTML reports]
 
-packages/dashboard
-  -&gt; packages/control-plane status</code></pre>
-<h2 id="数据流水线流程图">数据流水线流程图</h2>
-<p>CLI outbound/inbound:</p>
-<pre class="code" data-lang="text"><code>myclaw send / myclaw receive
-  -&gt; packages/runtime.sendMessage/receiveMessage
-  -&gt; ChannelAdapter
-  -&gt; envelope events
-  -&gt; state/runs/&lt;runId&gt;.json + events.jsonl</code></pre>
-<p>HTTP inbound:</p>
-<pre class="code" data-lang="text"><code>POST /messages
-  -&gt; parse JSON
-  -&gt; receiveMessage({ source: &quot;gateway&quot; })
-  -&gt; ChannelAdapter.normalizeInbound
-  -&gt; optional ChannelAdapter.send(reply)
-  -&gt; envelope
-  -&gt; state JSON/JSONL
-  -&gt; HTTP JSON response</code></pre>
-<p>Dashboard:</p>
-<pre class="code" data-lang="text"><code>GET /
-  -&gt; dashboard HTML
-  -&gt; fetch /api/status
-  -&gt; listRuns + readEvents + listChannels + planOpenClawMigration
-  -&gt; render runs/events/channels/migration risk</code></pre>
-<p>GitHub 阶段发布：</p>
-<pre class="code" data-lang="text"><code>stage implementation
-  -&gt; npm run check
-  -&gt; npm test
-  -&gt; docs/build-review-html.mjs
-  -&gt; git commit
-  -&gt; git push origin main
-  -&gt; HTML Center publish</code></pre>
+  Channels --&gt; Console[console]
+  Channels --&gt; Webhook[webhook]
+  Channels --&gt; FeishuWebhook[feishu-webhook outbound]
+  Channels --&gt; FeishuEvent[feishu-event inbound]</div>
+<p>Review 观察：</p>
+<ul><li>优点：<code>core</code> 不知道 HTTP/Feishu/UI，底层边界干净。</li><li>优点：<code>feishu-webhook</code> outbound 与 <code>feishu-event</code> inbound 分开，避免方向混淆。</li><li>风险：gateway 直接引用 dashboard render，Phase 0 可接受，复杂 UI 后要拆 host/view。</li><li>风险：runtime 的 <code>rawInbound</code> 让协议原始对象进入核心 pipeline，后续要收窄成稳定 adapter contract。</li></ul>
+<h2 id="核心业务流程图">核心业务流程图</h2>
+<p>这张图回答：一条 Feishu 文本事件从进入到记录完成，happy path、重复、失败、人工介入分别怎么走？</p>
+<div class="mermaid">flowchart TD
+  Start[POST /feishu/events] --&gt; Challenge{有 challenge?}
+  Challenge --&gt;|是| Echo[回显 challenge]
+  Challenge --&gt;|否| EventId{有 event id 且已见过?}
+  EventId --&gt;|是| Duplicate[返回 duplicate=true 不写 state]
+  EventId --&gt;|否| Runtime[receiveMessage rawInbound]
+  Runtime --&gt; Normalize[feishu-event normalize]
+  Normalize --&gt; Text{文本有效?}
+  Text --&gt;|否| Failed[failed envelope + 422]
+  Text --&gt;|是| Persist[recordRun 写 runs/events]
+  Persist --&gt; Status[Dashboard /api/status 可见]
+  Failed --&gt; Human[人工查看 run/error 后修复 payload 或 adapter]</div>
+<p>Review 观察：</p>
+<ul><li>优点：challenge、重复事件、文本缺失都已有路径，便于飞书接入 spike。</li><li>风险：duplicate 只在内存 Map，进程重启后不能防重放。</li><li>风险：失败 envelope 可能保存完整 raw payload，后续要做脱敏。</li><li>改进：增加 Feishu event type allowlist，只处理 message 事件。</li></ul>
+<h2 id="关键时序图">关键时序图</h2>
+<p>这张图回答：一次事件请求中 gateway、runtime、channel、state、dashboard 如何协作？</p>
+<div class="mermaid">sequenceDiagram
+  participant F as Feishu/Lark
+  participant G as Gateway
+  participant R as Runtime
+  participant C as feishu-event Channel
+  participant S as Core State
+  participant D as Dashboard
+
+  F-&gt;&gt;G: POST /feishu/events
+  G-&gt;&gt;G: challenge / event id idempotency
+  G-&gt;&gt;R: receiveMessage({channelId, rawInbound})
+  R-&gt;&gt;C: normalizeInbound(rawInbound)
+  C--&gt;&gt;R: InboundMessage
+  R-&gt;&gt;S: recordRun(envelope)
+  G--&gt;&gt;F: ok envelope
+  D-&gt;&gt;G: GET /api/status
+  G-&gt;&gt;S: listRuns/readEvents
+  G--&gt;&gt;D: runs/events/channels</div>
+<p>Review 观察：</p>
+<ul><li>优点：gateway 没有直接写 state，仍通过 runtime 形成统一 envelope。</li><li>风险：协议验证和 normalize 的分工还不够硬，签名校验应在 gateway，shape normalize 在 channel。</li><li>风险：dashboard 只轮询状态，没有 run detail 或失败修复入口。</li><li>改进：引入 <code>InboundAdapterInput</code> 类型契约，禁止 runtime 存完整原始 body。</li></ul>
+<h2 id="状态机图">状态机图</h2>
+<p>这张图回答：message run 的生命周期有哪些状态，失败、重复、重试、人工介入如何处理？</p>
+<div class="mermaid">stateDiagram-v2
+  [*] --&gt; Received
+  Received --&gt; ChallengeEchoed: challenge
+  Received --&gt; DuplicateIgnored: eventId seen
+  Received --&gt; Normalizing: new event
+  Normalizing --&gt; Persisted: valid text
+  Normalizing --&gt; Failed: missing text / invalid shape
+  Persisted --&gt; Visible: dashboard status
+  Failed --&gt; ManualReview: inspect failed envelope
+  ManualReview --&gt; Retried: corrected payload / adapter fix
+  Retried --&gt; Normalizing
+  DuplicateIgnored --&gt; [*]
+  ChallengeEchoed --&gt; [*]
+  Visible --&gt; [*]</div>
+<p>Review 观察：</p>
+<ul><li>优点：当前最小状态流可解释，重复事件不会产生第二个 run。</li><li>风险：没有 cancel/timeout，因为当前还不是长任务 agent run。</li><li>风险：人工介入只靠查看 JSON/JSONL，没有 dashboard 操作面。</li><li>改进：Phase 1 把 message run 和 workflow run 状态分开，避免未来状态爆炸。</li></ul>
+<h2 id="数据模型-er-图">数据模型 / ER 图</h2>
+<p>这张图回答：当前持久化数据有哪些核心实体，实体之间是什么关系？</p>
+<div class="mermaid">erDiagram
+  RUN ||--o{ EVENT : emits
+  RUN ||--o| INBOUND_MESSAGE : has
+  RUN ||--o| OUTBOUND_REPLY : may_reply
+  CHANNEL ||--o{ RUN : handles
+  MIGRATION_PLAN ||--o{ MIGRATION_ITEM : contains
+
+  RUN {
+    string runId
+    boolean ok
+    string createdAt
+    object result
+    object error
+  }
+  EVENT {
+    string type
+    string at
+    object data
+  }
+  INBOUND_MESSAGE {
+    string id
+    string channel
+    string conversationId
+    string senderId
+    string text
+  }
+  CHANNEL {
+    string id
+    boolean inbound
+    boolean outbound
+    boolean reply
+  }
+  MIGRATION_PLAN {
+    string source
+    boolean destructive
+    object inventory
+  }</div>
+<p>Review 观察：</p>
+<ul><li>优点：run/event 是统一审计线，CLI、gateway、Feishu 都复用。</li><li>风险：当前 state 是 JSON/JSONL，关系只存在约定里，没有数据库约束。</li><li>风险：<code>raw</code> 可能包含外部 payload，隐私和体积都要控制。</li><li>改进：迁移到 SQLite 前先定义稳定 schema 和脱敏策略。</li></ul>
+<h2 id="数据流图">数据流图</h2>
+<p>这张图回答：消息、迁移计划、评审报告的数据从哪里来，经过哪些处理，最终到哪里去？</p>
+<div class="mermaid">flowchart LR
+  FeishuEvent[Feishu event JSON] --&gt; Gateway
+  GenericMessage[Generic /messages JSON] --&gt; Gateway
+  CLIInput[CLI args] --&gt; Runtime
+  Gateway --&gt; Runtime
+  Runtime --&gt; ChannelNormalize[Channel normalize/send]
+  ChannelNormalize --&gt; Envelope[Envelope events]
+  Envelope --&gt; State[(runs/*.json + events.jsonl)]
+  State --&gt; Control[Control Plane]
+  Control --&gt; Dashboard[Dashboard HTML]
+
+  OpenClawConfig[OpenClaw config/plugins] --&gt; Planner[Migration planner]
+  Planner --&gt; Control
+  SourceFiles[Repo files] --&gt; DocsBuilder[docs/build-review-html]
+  DocsBuilder --&gt; ReviewHTML[Mermaid HTML reports]
+  ReviewHTML --&gt; HtmlCenter[HTML Center]</div>
+<p>Review 观察：</p>
+<ul><li>优点：runtime 数据线和 docs 数据线分开，不会把评审生成器放入运行时。</li><li>风险：Control Plane 当前同时聚合 channels/migration/state，后续可能变胖。</li><li>风险：Dashboard 仍以内联 HTML/JS 管理，复杂状态后测试成本会上升。</li><li>改进：把 docs builder 的 Markdown parser 和 shell template 拆成小模块。</li></ul>
+<h2 id="部署图">部署图</h2>
+<p>这张图回答：系统运行时部署在哪里，哪些同步调用，哪些后续应异步化？</p>
+<div class="mermaid">flowchart TB
+  subgraph Localhost[开发机 127.0.0.1]
+    Browser[Browser Dashboard] --&gt;|HTTP sync| Gateway[Node gateway :4321]
+    CLI[Node CLI] --&gt; Runtime[Runtime]
+    Gateway --&gt;|sync| Runtime
+    Gateway --&gt;|sync read| Control[Control Plane]
+    Runtime --&gt;|sync fs write| State[(.myclaw state)]
+    Control --&gt;|sync fs read| State
+    Docs[Docs builder] --&gt;|file output| HtmlFiles[docs/*.html]
+  end
+  Feishu[Feishu/Lark] -.future HTTPS callback.-&gt; Gateway
+  GitHub[GitHub] &lt;--&gt;|git push| Localhost
+  HtmlFiles --&gt;|publish| HtmlCenter[HTML Center :4177]</div>
+<p>Review 观察：</p>
+<ul><li>优点：当前全部本机同步调用，调试和回滚简单。</li><li>风险：Feishu future callback 不能直接开放，必须先补 auth/signature。</li><li>风险：同步 fs 写入适合 Phase 0，小并发下可用，正式多事件需要队列或锁。</li><li>改进：Phase 1 引入 mutation guard、持久幂等表、可观测 request id。</li></ul>
+<h2 id="风险分级">风险分级</h2>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议修改</th></tr></thead><tbody><tr><td>Critical</td><td>gateway 无 token/签名</td><td>绑定非本机时可被任意写 run</td><td>默认 loopback；非 loopback 必须 token；Feishu 必须签名校验</td></tr><tr><td>High</td><td><code>feishu-event</code> 只是 shape parser</td><td>不能处理 encrypt、tenant、event type、replay</td><td>增加 Feishu verify 层和 allowlist</td></tr><tr><td>High</td><td><code>rawInbound</code> 写入路径过宽</td><td>外部协议和敏感 raw payload 进入 runtime/state</td><td>定义 <code>InboundAdapterInput</code>，保存脱敏 raw 摘要</td></tr><tr><td>Medium</td><td>dashboard/report 内联字符串增长</td><td>后续 UI 和报告复杂后难测</td><td>拆 template、client script、markdown parser</td></tr><tr><td>Medium</td><td>OpenClaw 迁移仍是 inventory</td><td>不能直接“一键迁移运行”</td><td>坚持 plan -&gt; stage -&gt; apply module -&gt; rollback</td></tr></tbody></table></div>
 <h2 id="目录结构与文件行数">目录结构与文件行数</h2>
-<pre class="code" data-lang="text"><code>myclaw/
-  packages/
-    core/             envelope、state、runs/events 读写
-    channels/         ChannelAdapter registry
-    runtime/          send/receive/reply pipeline
-    gateway/          HTTP ingress 与 dashboard 托管
-    dashboard/        HTML view 与 standalone dashboard server
-    control-plane/    status/runs/events/migration 聚合
-    migrate/          OpenClaw dry-run plan
-    cli/              命令入口
-  docs/               HTML design review report
-  scripts/            repo 约束检查</code></pre>
-<div class="table-wrap"><table><thead><tr><th>文件</th><th>行数</th><th>职责</th><th>处理</th></tr></thead><tbody><tr><td><code>docs/build-review-html.mjs</code></td><td>398</td><td>生成模块化 HTML report</td><td>已从 523 行拆出 <code>docs/lib/module-meta.mjs</code></td></tr><tr><td><code>packages/migrate/src/openclaw.mjs</code></td><td>348</td><td>OpenClaw migration dry-run planner</td><td>低于 500；后续 parser 可拆</td></tr><tr><td><code>docs/design-review.md</code></td><td>345</td><td>总体设计评审</td><td>低于 500</td></tr><tr><td><code>docs/index.html</code></td><td>321</td><td>全局 HTML 索引</td><td>已从 610 行压缩到 321 行</td></tr><tr><td><code>docs/modules/initial-mvp-plan.md</code></td><td>315</td><td>初期方案</td><td>低于 500</td></tr><tr><td><code>packages/dashboard/src/index.mjs</code></td><td>287</td><td>Dashboard HTML view 与 standalone server</td><td>低于 500；后续拆 template/client script</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>298</td><td>CLI 编排</td><td>低于 500；后续按 command 拆分</td></tr></tbody></table></div>
-<p>硬性规则：所有手写源文件和文档文件必须 <code>&lt;=500</code> 行；<code>&gt;=450</code> 行必须拆分或压缩。<code>npm run check</code> 已接入 <code>scripts/check-file-lines.mjs</code>，默认不豁免生成 HTML。</p>
+<p>硬性规则：单个手写源文件或文档文件不得超过 500 行，接近 450 行必须拆。当前没有超过 500 行的手写文件，最大文件是 <code>docs/build-review-html.mjs</code> 408 行。</p>
+<div class="table-wrap"><table><thead><tr><th>目录</th><th>文件</th><th>行数</th><th>职责</th><th>内容评价</th></tr></thead><tbody><tr><td><code>/</code></td><td><code>README.md</code></td><td>44</td><td>项目入口说明</td><td>简洁，已补 Feishu event smoke test</td></tr><tr><td><code>/</code></td><td><code>package.json</code></td><td>15</td><td>workspace scripts</td><td>够用，暂不引入构建链</td></tr><tr><td><code>scripts</code></td><td><code>check-file-lines.mjs</code></td><td>62</td><td>500 行约束检查</td><td>必要约束，保持简单</td></tr><tr><td><code>packages/core</code></td><td><code>package.json</code></td><td>9</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/core/src</code></td><td><code>envelope.mjs</code></td><td>46</td><td>run/event/envelope 工厂</td><td>边界干净</td></tr><tr><td><code>packages/core/src</code></td><td><code>state.mjs</code></td><td>128</td><td>JSON/JSONL state 读写</td><td>Phase 0 合适，后续加索引</td></tr><tr><td><code>packages/core/test</code></td><td><code>state.test.mjs</code></td><td>30</td><td>state reader 测试</td><td>覆盖基础路径</td></tr><tr><td><code>packages/channels</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/channels/src</code></td><td><code>index.mjs</code></td><td>292</td><td>channel registry、webhook、Feishu normalize</td><td>仍低于 500；后续可拆 feishu adapter</td></tr><tr><td><code>packages/channels/test</code></td><td><code>channels.test.mjs</code></td><td>85</td><td>channel/Feishu normalize 测试</td><td>已覆盖 inbound/outbound 列表</td></tr><tr><td><code>packages/runtime</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/runtime/src</code></td><td><code>messages.mjs</code></td><td>185</td><td>send/receive/reply pipeline</td><td>复用正确，rawInbound 契约需收窄</td></tr><tr><td><code>packages/runtime/test</code></td><td><code>messages.test.mjs</code></td><td>29</td><td>runtime 状态测试</td><td>基础覆盖够</td></tr><tr><td><code>packages/gateway</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/gateway/src</code></td><td><code>index.mjs</code></td><td>222</td><td>HTTP routes、Feishu challenge、idempotency</td><td>Phase 0 清楚，缺 auth/signature</td></tr><tr><td><code>packages/gateway/test</code></td><td><code>gateway.test.mjs</code></td><td>90</td><td>gateway message/Feishu 测试</td><td>已覆盖 challenge、duplicate</td></tr><tr><td><code>packages/dashboard</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/dashboard/src</code></td><td><code>index.mjs</code></td><td>287</td><td>dashboard HTML/server</td><td>可用但内联较多</td></tr><tr><td><code>packages/dashboard/test</code></td><td><code>dashboard.test.mjs</code></td><td>45</td><td>dashboard/status 测试</td><td>已同步 4 个 channel</td></tr><tr><td><code>packages/control-plane</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/control-plane/src</code></td><td><code>status.mjs</code></td><td>42</td><td>status/runs/events/migration 聚合</td><td>抽离正确</td></tr><tr><td><code>packages/cli</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/cli/src</code></td><td><code>index.mjs</code></td><td>298</td><td>CLI 命令编排</td><td>接近 300，可继续保留</td></tr><tr><td><code>packages/cli/test</code></td><td><code>send.test.mjs</code></td><td>33</td><td>send CLI 测试</td><td>基础覆盖</td></tr><tr><td><code>packages/cli/test</code></td><td><code>receive.test.mjs</code></td><td>49</td><td>receive CLI 测试</td><td>基础覆盖</td></tr><tr><td><code>packages/migrate</code></td><td><code>package.json</code></td><td>8</td><td>包元数据</td><td>正常</td></tr><tr><td><code>packages/migrate/src</code></td><td><code>openclaw.mjs</code></td><td>348</td><td>OpenClaw dry-run planner</td><td>逻辑偏多但未超限；stage/apply 前要拆</td></tr><tr><td><code>packages/migrate/test</code></td><td><code>openclaw.test.mjs</code></td><td>44</td><td>migration planner 测试</td><td>覆盖 dry-run</td></tr><tr><td><code>docs</code></td><td><code>build-review-html.mjs</code></td><td>408</td><td>Markdown 到 HTML/Mermaid 报告生成</td><td>低于 450，下一轮拆 parser/template</td></tr><tr><td><code>docs</code></td><td><code>design-review.md</code></td><td>345</td><td>初始总体设计评审</td><td>可继续作为历史基线</td></tr><tr><td><code>docs</code></td><td><code>implementation-architecture.md</code></td><td>429</td><td>当前阶段可视化报告</td><td>符合 Mermaid dashboard 要求</td></tr><tr><td><code>docs</code></td><td><code>stage-status.md</code></td><td>141</td><td>阶段状态</td><td>已升级 Phase 0.4</td></tr><tr><td><code>docs/lib</code></td><td><code>module-meta.mjs</code></td><td>103</td><td>模块报告 metadata</td><td>拆分有效</td></tr><tr><td><code>docs/modules</code></td><td><code>README.md</code></td><td>46</td><td>模块索引</td><td>简洁</td></tr><tr><td><code>docs/modules</code></td><td><code>access-layer.md</code></td><td>95</td><td>接入层设计</td><td>需后续补真实远端入口</td></tr><tr><td><code>docs/modules</code></td><td><code>agent-runtime.md</code></td><td>128</td><td>Agent runtime 设计</td><td>Phase 1 重点</td></tr><tr><td><code>docs/modules</code></td><td><code>config-state-storage.md</code></td><td>109</td><td>配置与状态存储</td><td>后续连接 SQLite</td></tr><tr><td><code>docs/modules</code></td><td><code>gateway.md</code></td><td>189</td><td>gateway 模块设计</td><td>已补 Feishu event</td></tr><tr><td><code>docs/modules</code></td><td><code>initial-mvp-plan.md</code></td><td>315</td><td>分阶段 MVP</td><td>仍是主路线文件</td></tr><tr><td><code>docs/modules</code></td><td><code>memory-session-search.md</code></td><td>163</td><td>记忆/session/search</td><td>后续 Phase 1 细化</td></tr><tr><td><code>docs/modules</code></td><td><code>openclaw-migration.md</code></td><td>98</td><td>OpenClaw 迁移</td><td>仍是 plan/stage/apply 路线</td></tr><tr><td><code>docs/modules</code></td><td><code>openhuman-analysis.md</code></td><td>137</td><td>OpenHuman 参考分析</td><td>用于边界参考</td></tr><tr><td><code>docs/modules</code></td><td><code>plugins-skills.md</code></td><td>110</td><td>插件/skills 设计</td><td>后续接 openclaw-lark</td></tr><tr><td><code>docs/modules</code></td><td><code>reference-comparison.md</code></td><td>96</td><td>参考项目比较</td><td>需随实现更新</td></tr><tr><td><code>docs/modules</code></td><td><code>roadmap-acceptance.md</code></td><td>177</td><td>路线和验收</td><td>阶段验收清楚</td></tr><tr><td><code>docs/modules</code></td><td><code>tools-approval-security.md</code></td><td>123</td><td>工具/审批/安全</td><td>下一阶段要落地 mutation guard</td></tr><tr><td><code>docs/modules</code></td><td><code>ui-observability-ops.md</code></td><td>102</td><td>UI/观测/运维</td><td>dashboard 后续主线</td></tr><tr><td><code>docs/modules</code></td><td><code>workflow-core.md</code></td><td>107</td><td>workflow core</td><td>等 message ingress 稳定后进入</td></tr><tr><td><code>docs/*.html</code></td><td>生成 HTML</td><td>构建后检查</td><td>可浏览报告产物</td><td>生成物也受 500 行检查</td></tr></tbody></table></div>
 <h2 id="概念解释">概念解释</h2>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>当前定义</th><th>边界</th></tr></thead><tbody><tr><td>Gateway</td><td>本地 HTTP 控制面，当前承载 dashboard 和 <code>POST /messages</code></td><td>不做 agent runtime，不绑定公网</td></tr><tr><td>Dashboard</td><td>操作员查看状态、runs、events、migration risk 的 HTML view</td><td>不直接执行业务 mutation</td></tr><tr><td>Runtime</td><td>CLI 与 gateway 共用的 send/receive/reply pipeline</td><td>不解析 HTTP，不处理 UI</td></tr><tr><td>ChannelAdapter</td><td>通道扩展点，负责 send 和 inbound normalize</td><td>不写 state，不跑 workflow</td></tr><tr><td>Control Plane</td><td>聚合 status/runs/events/migration 的只读服务层</td><td>不渲染 HTML</td></tr><tr><td>Migration Plan</td><td>OpenClaw 配置和插件的 dry-run inventory</td><td>不读取 secret 实值，不 apply</td></tr><tr><td>State Store</td><td>JSON/JSONL run 和 event 持久化</td><td>暂不承担复杂查询</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>概念</th><th>当前定义</th><th>边界</th></tr></thead><tbody><tr><td>Gateway</td><td>本地 HTTP 控制面，承载 dashboard、<code>/messages</code>、<code>/feishu/events</code></td><td>不跑 agent，不做业务决策</td></tr><tr><td>Runtime</td><td>CLI 和 gateway 共用的 send/receive/reply pipeline</td><td>不解析 HTTP，不知道 dashboard</td></tr><tr><td>ChannelAdapter</td><td>通道扩展点，负责 send 或 inbound normalize</td><td>不写 state，不调 workflow</td></tr><tr><td><code>feishu-event</code></td><td>Feishu/Lark 入站事件 normalizer</td><td>不是完整协议校验器</td></tr><tr><td><code>feishu-webhook</code></td><td>Feishu/Lark 自定义机器人 outbound webhook</td><td>不处理 event callback</td></tr><tr><td>Control Plane</td><td>聚合 status/runs/events/migration 的只读层</td><td>不渲染 UI，不执行 mutation</td></tr><tr><td>Migration Plan</td><td>OpenClaw dry-run inventory 和映射草案</td><td>不是 apply，也不读取 secret 实值</td></tr><tr><td>Design Review Dashboard</td><td>带 Mermaid、风险分级、目录行数的 HTML 报告</td><td>不是普通 Markdown 总结</td></tr></tbody></table></div>
 <h2 id="相似技术比较">相似技术比较</h2>
-<div class="table-wrap"><table><thead><tr><th>设计点</th><th>MyClaw 当前选择</th><th>相似技术</th><th>取舍</th></tr></thead><tbody><tr><td>HTTP 服务</td><td>裸 <code>node:http</code></td><td>Fastify / Express</td><td>依赖少、可控；schema、plugin、middleware 需要后续补</td></tr><tr><td>状态存储</td><td>JSON + JSONL</td><td>SQLite / Litestream / event store</td><td>启动快、可审计；查询能力弱，后续需要索引</td></tr><tr><td>通道扩展</td><td><code>ChannelAdapter</code> registry</td><td>OpenClaw channel plugins / Bot framework adapters</td><td>边界轻；还没有 manifest 和运行时隔离</td></tr><tr><td>Dashboard</td><td>内联 HTML view</td><td>Vite/React dashboard</td><td>零构建；交互复杂后需要拆模板和 client script</td></tr><tr><td>迁移</td><td>plan/stage/apply</td><td>Terraform plan/apply / OpenClaw config patch</td><td>可审计、可回滚；短期不能“一键立即运行”</td></tr></tbody></table></div>
-<h2 id="请求-响应图">请求-响应图</h2>
-<p>Gateway <code>/messages</code>：</p>
-<pre class="code" data-lang="text"><code>POST /messages
-  request: { channel, from, conversation, text, reply? }
-  -&gt; handleGatewayRequest
-  -&gt; handlePostMessage
-  -&gt; receiveMessage
-  -&gt; recordRun
-  response: envelope</code></pre>
-<p>Gateway <code>/api/status</code>：</p>
-<pre class="code" data-lang="text"><code>GET /api/status
-  -&gt; dashboard handler
-  -&gt; resolveStateDir
-  -&gt; listRuns(limit=20)
-  -&gt; readEvents(limit=50)
-  -&gt; listChannels()
-  -&gt; planOpenClawMigration()
-  -&gt; JSON payload</code></pre>
-<h2 id="状态流图">状态流图</h2>
-<pre class="code" data-lang="text"><code>message ingress
-  -&gt; message.receive.started
-  -&gt; message.receive.completed
-  -&gt; message.reply.started        如果请求带 reply
-  -&gt; message.reply.completed
-  -&gt; ok
-
-message ingress failure
-  -&gt; message.receive.started
-  -&gt; message.receive.failed
-  -&gt; failed envelope</code></pre>
-<p>Git 状态：</p>
-<pre class="code" data-lang="text"><code>Phase 0.2 baseline
-  -&gt; commit 0d15020
-  -&gt; public repo mayf3/myclaw
-  -&gt; Phase 0.3 working tree
-  -&gt; next commit + push</code></pre>
-<h2 id="严重问题">严重问题</h2>
-<div class="table-wrap"><table><thead><tr><th>问题</th><th>影响</th><th>证据</th><th>修复建议</th></tr></thead><tbody><tr><td>gateway 无鉴权</td><td>绑定非本机地址时可能被任意写入 message run</td><td><code>POST /messages</code> 当前不检查 token</td><td>默认继续 loopback；下一阶段加 token/mutation guard</td></tr><tr><td>Feishu event 未校验</td><td>不能直接作为正式飞书回调</td><td><code>POST /messages</code> 只接受通用 JSON</td><td>新增 Feishu event adapter，处理 challenge、签名、event id</td></tr><tr><td>OpenClaw 仍不能 apply</td><td>migration 只做 inventory，不迁移 runtime</td><td><code>migrate openclaw</code> 输出 unsupported surfaces</td><td>继续 plan/stage/apply，先做 Feishu 模块</td></tr></tbody></table></div>
-<h2 id="主要问题">主要问题</h2>
-<div class="table-wrap"><table><thead><tr><th>问题</th><th>影响</th><th>证据</th><th>修复建议</th></tr></thead><tbody><tr><td>dashboard 仍包含大段 HTML 字符串</td><td>后续 UI 复杂后难测、难维护</td><td><code>packages/dashboard/src/index.mjs</code> 内联 HTML/CSS/JS</td><td>拆 view template 和 client script</td></tr><tr><td>state 仍是 JSONL 文件查询</td><td>runs 多时 dashboard 会变慢</td><td><code>listRuns</code> 读取 run JSON 文件</td><td>Phase 1 增加索引或 SQLite</td></tr><tr><td>request body schema 是手写校验</td><td>错误反馈和类型演进有限</td><td>gateway 手写 <code>readJsonBody</code> 和字段检查</td><td>后续用 schema/Zod 风格 contract</td></tr><tr><td>migration parser 是 best-effort JSON5</td><td>复杂 OpenClaw config 可能无法完整解析</td><td><code>stripJson5</code> 是轻量实现</td><td>plan 阶段保留 raw config，后续引入正式 JSON5 parser</td></tr></tbody></table></div>
-<h2 id="细节问题">细节问题</h2>
-<div class="table-wrap"><table><thead><tr><th>问题</th><th>影响</th><th>修复建议</th></tr></thead><tbody><tr><td>dashboard UI 还没有 message form</td><td>需要 curl 才能测试 gateway</td><td>增加本地发送表单和响应预览</td></tr><tr><td>CLI 参数解析仍较轻</td><td>错误提示和布尔参数边界有限</td><td>Phase 1 引入 schema/parser</td></tr><tr><td>HTML report 和源码同仓库</td><td>repo 会较大，但当前有利于 public review</td><td>后续考虑 GitHub Pages 或独立 docs 发布</td></tr></tbody></table></div>
-<h2 id="openclaw-一键迁移方案">OpenClaw 一键迁移方案</h2>
-<p>Phase 0.3 对一键迁移的意义是补上控制面，而不是直接 apply。推荐顺序不变：</p>
-<pre class="code" data-lang="text"><code>plan
-  -&gt; dashboard review
-  -&gt; stage snapshot
-  -&gt; apply --module feishu
-  -&gt; apply providers/tools/memory by module</code></pre>
-<p>接下来可把 <code>migrate openclaw --output plan.json</code> 的结果在 dashboard 中展示，并提供只读 diff。等 Feishu event adapter 可运行后，再实现 <code>--apply --module feishu</code>。</p>
+<div class="table-wrap"><table><thead><tr><th>设计点</th><th>MyClaw 当前选择</th><th>相似技术</th><th>取舍</th></tr></thead><tbody><tr><td>HTTP 服务</td><td>裸 <code>node:http</code></td><td>Express/Fastify</td><td>依赖少；schema/middleware 要手补</td></tr><tr><td>通道接入</td><td>Channel registry</td><td>Bot Framework adapter / OpenClaw plugins</td><td>边界轻；隔离和 manifest 尚弱</td></tr><tr><td>状态存储</td><td>JSON + JSONL</td><td>SQLite/event store</td><td>容易审计；查询、幂等和并发弱</td></tr><tr><td>Feishu 入站</td><td>gateway + <code>feishu-event</code></td><td>openclaw-lark plugin</td><td>先打通最小链路；正式协议能力不足</td></tr><tr><td>OpenClaw 迁移</td><td>plan/stage/apply 路线</td><td>Terraform plan/apply</td><td>可审计；短期不是一键全量运行</td></tr><tr><td>Report</td><td>Mermaid HTML dashboard</td><td>Markdown 文档 / Docusaurus</td><td>快速可视化；生成器后续要拆</td></tr></tbody></table></div>
+<h2 id="关键设计对比">关键设计对比</h2>
+<div class="table-wrap"><table><thead><tr><th>选项</th><th>当前选择</th><th>原因</th><th>何时改变</th></tr></thead><tbody><tr><td>同步 vs 异步</td><td>同步 HTTP + fs 写入</td><td>Phase 0 易调试</td><td>多并发 Feishu 事件后引入队列/锁</td></tr><tr><td>单体包 vs 服务拆分</td><td>monorepo 小包</td><td>边界清楚但部署简单</td><td>多进程 worker 出现后拆服务</td></tr><tr><td>本地存储 vs DB</td><td>JSON/JSONL</td><td>可读、可审计</td><td>需要查询、幂等表、索引时上 SQLite</td></tr><tr><td>自动执行 vs 人工确认</td><td>当前只记录消息</td><td>避免早期自动副作用</td><td>tools/workflow apply 前加审批</td></tr><tr><td>raw payload vs 标准消息</td><td>暂有 <code>rawInbound</code></td><td>快速接 Feishu shape</td><td>下一阶段收窄并脱敏</td></tr></tbody></table></div>
+<h2 id="openclaw-一键迁移路线">OpenClaw 一键迁移路线</h2>
+<p>当前只能叫“一键迁移路线”，不能叫“一键迁移能力”。推荐继续按模块推进：</p>
+<div class="mermaid">flowchart LR
+  Plan[plan inventory] --&gt; Review[dashboard review/diff]
+  Review --&gt; Stage[stage snapshot]
+  Stage --&gt; ApplyFeishu[apply --module feishu]
+  ApplyFeishu --&gt; Verify[send/receive verify]
+  Verify --&gt; Rollback[rollback module]
+  Verify --&gt; Next[providers/tools/memory modules]</div>
+<p>Review 观察：</p>
+<ul><li>优点：plan/stage/apply 和 Terraform 类似，能避免直接全量污染。</li><li>风险：<code>openclaw-lark</code> 可能依赖 OpenClaw plugin runtime，需要 facade，不能直接复制。</li><li>改进：下一阶段先做 stage snapshot 和只读 diff，再接 Feishu module apply。</li></ul>
 <h2 id="linus-视角严苛审查">Linus 视角严苛审查</h2>
-<p>独立 subagent 已按“30 年 Linux 内核维护经验”做过审查，结论摘要：</p>
-<ul><li>之前报告不通过：缺少系统架构图、数据流水线、目录结构、文件行数、概念解释和技术比较。</li><li>之前实现有边界倒挂：gateway 直接依赖 dashboard handler，dashboard 同时聚合 state/channels/migration。</li><li>已修复：新增 <code>packages/control-plane</code>，gateway/dashboard 共用状态聚合；新增行数检查；补齐架构图、流水线、目录/行数、概念表和比较表。</li><li>仍需修复：gateway 无鉴权、Feishu event adapter 未实现、dashboard HTML 仍是一段内联字符串、<code>/messages</code> body schema 仍手写。</li></ul>
-<h2 id="证据">证据</h2>
-<div class="table-wrap"><table><thead><tr><th>证据</th><th>位置</th><th>说明</th></tr></thead><tbody><tr><td>public repo</td><td><code>https://github.com/mayf3/myclaw</code></td><td>Phase 0.2 已推送到 GitHub public 仓库</td></tr><tr><td>runtime pipeline</td><td><code>packages/runtime/src/messages.mjs</code></td><td>CLI 和 gateway 共享 send/receive/reply</td></tr><tr><td>gateway 服务</td><td><code>packages/gateway/src/index.mjs</code></td><td><code>GET /api/health</code>、<code>POST /messages</code>、dashboard GET delegation</td></tr><tr><td>dashboard 视图</td><td><code>packages/dashboard/src/index.mjs</code></td><td>展示 runs/events/channels/migration 和 gateway 示例</td></tr><tr><td>control-plane 状态层</td><td><code>packages/control-plane/src/status.mjs</code></td><td>gateway/dashboard 共用 status/runs/events/migration 聚合</td></tr><tr><td>行数检查</td><td><code>scripts/check-file-lines.mjs</code></td><td><code>npm run check</code> 强制单文件不超过 500 行</td></tr><tr><td>CLI commands</td><td><code>packages/cli/src/index.mjs</code></td><td><code>dashboard</code> 和 <code>gateway</code> 均启动 gateway-backed 控制面</td></tr><tr><td>测试覆盖</td><td><code>packages/gateway/test/gateway.test.mjs</code>、<code>packages/runtime/test/messages.test.mjs</code></td><td>验证 HTTP ingress 和 runtime 复用</td></tr><tr><td>阶段状态</td><td><code>docs/stage-status.md</code></td><td>记录 Phase 0.3 当前范围、风险和下一步</td></tr></tbody></table></div>
-<h2 id="实现风险">实现风险</h2>
-<div class="table-wrap"><table><thead><tr><th>风险</th><th>当前等级</th><th>应对</th></tr></thead><tbody><tr><td>gateway 被误当公网服务</td><td>高</td><td>文档明确本机开发；下一阶段加 token/auth</td></tr><tr><td>Feishu shape 直接塞进 generic message</td><td>中</td><td>新增 <code>feishu-event</code> adapter，不污染 console adapter</td></tr><tr><td>dashboard/gateway 包边界倒挂</td><td>中</td><td>后续抽 control-plane handler，dashboard 只做 view</td></tr><tr><td>JSONL 查询扩展性不足</td><td>中</td><td>Phase 1 后增加 SQLite/FTS 或 run index</td></tr></tbody></table></div>
-<h2 id="修复优先级">修复优先级</h2>
-<div class="table-wrap"><table><thead><tr><th>优先级</th><th>任务</th><th>验收标准</th></tr></thead><tbody><tr><td>P0</td><td>Feishu event adapter spike</td><td>能处理 challenge 和一条文本消息事件样例</td></tr><tr><td>P0</td><td>Gateway token/mutation guard</td><td>非 loopback 或缺 token 时拒绝 mutation</td></tr><tr><td>P0</td><td>Dashboard message form</td><td>不用 curl 即可测试 <code>POST /messages</code></td></tr><tr><td>P1</td><td>Migration plan viewer</td><td>dashboard 展示 <code>migrate --output</code> 的 plan/diff</td></tr><tr><td>P1</td><td>State read index</td><td>最近 runs 查询不全量读目录</td></tr></tbody></table></div>
+<p>独立 subagent 已完成审查，结论摘要如下：</p>
+<ul><li>最严重：gateway 没有 token、签名、timestamp、nonce、来源校验，当前不是可暴露入口，只是本机开发入口。</li><li>最严重：Feishu adapter 只是 shape parser，不是协议适配器；challenge 任意回显，内存幂等重启失效。</li><li>最严重：<code>rawInbound</code> 绕开 runtime 正常输入契约，并可能把完整 raw payload 写入 state。</li><li>已做对：<code>core</code> 仍只管 envelope/state；runtime 统一 CLI/gateway；<code>feishu-webhook</code> 和 <code>feishu-event</code> 没混在一起；行数约束有效。</li><li>必须修：先加 gateway mutation guard 和 Feishu 验证，再做 stage snapshot，不要把 OpenClaw 全量 runtime 直接 apply。</li></ul>
 <h2 id="验收记录">验收记录</h2>
-<p>本阶段已验证：</p>
+<p>本阶段需要通过：</p>
 <pre class="code" data-lang="bash"><code>npm run check
 npm test
-npm run myclaw -- receive --channel console --from ou_user --conversation oc_group --text hi --reply 收到 --json</code></pre>
+node docs/build-review-html.mjs
+curl -sS http://127.0.0.1:4321/feishu/events -H 'content-type: application/json' -d '{&quot;challenge&quot;:&quot;plain_challenge&quot;}'
+curl -sS http://127.0.0.1:4321/api/feishu/events -H 'content-type: application/json' -d '{&quot;header&quot;:{&quot;event_id&quot;:&quot;evt_demo&quot;},&quot;event&quot;:{&quot;sender&quot;:{&quot;sender_id&quot;:{&quot;open_id&quot;:&quot;ou_user&quot;}},&quot;message&quot;:{&quot;message_id&quot;:&quot;om_demo&quot;,&quot;chat_id&quot;:&quot;oc_group&quot;,&quot;content&quot;:&quot;{\&quot;text\&quot;:\&quot;hello from feishu\&quot;}&quot;}}}'</code></pre>
 <p>测试覆盖：</p>
-<ul><li>channel registry 和 alias。</li><li>channel 能力声明。</li><li>console inbound normalize。</li><li>runtime send/receive。</li><li>CLI send/receive envelope/state。</li><li>state runs/events reader。</li><li>dashboard HTML 和 <code>/api/status</code>。</li><li>gateway <code>/api/health</code>、<code>POST /messages</code>、<code>GET /api/status</code>。</li><li>OpenClaw migration planner。</li></ul>
-<p>结论：Phase 0.3 已经具备“本地 dashboard + HTTP inbound + GitHub 阶段提交”的骨架。下一阶段应该专注 Feishu event adapter 和 gateway 安全边界。</p></article>
+<ul><li>channel registry 和 <code>feishu-event</code> normalize。</li><li>runtime send/receive/reply 共享 envelope。</li><li>gateway <code>/messages</code>、<code>/feishu/events</code> challenge、event normalize、duplicate event id。</li><li>dashboard/status 能看到 4 个 channel。</li><li>OpenClaw migration planner 仍是 dry-run。</li></ul>
+<p>结论：Phase 0.4 已跑通 Feishu 入站最小链路和可视化设计评审规范。下一阶段必须优先补安全边界和迁移 stage snapshot，而不是扩展更多自动执行能力。</p></article>
       </main>
     </div>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>
   </body>
 </html>

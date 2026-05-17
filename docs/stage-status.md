@@ -4,9 +4,9 @@
 
 ## 当前阶段
 
-Phase 0.3: Gateway Message Ingress + GitHub Public Baseline。
+Phase 0.4: Feishu Event Ingress + Visual Design Review Dashboard。
 
-这一步完成两件事：第一，把 Phase 0.2 作为 git 基线提交并推送到 public GitHub 仓库；第二，把 dashboard 和 gateway 控制面合并出最小 `POST /messages` 入口。现在 CLI、dashboard/gateway HTTP 和后续 Feishu event adapter 可以复用同一套 runtime message pipeline。
+这一步把 Feishu/Lark 事件回调接到 gateway，并把 design review skill 和报告生成器升级为 Mermaid 可视化 dashboard。现在 CLI、通用 HTTP message、Feishu event callback、dashboard 状态读取都复用同一套 runtime/message/state 边界。
 
 ## 已完成
 
@@ -23,6 +23,10 @@ Phase 0.3: Gateway Message Ingress + GitHub Public Baseline。
 - 新增 `scripts/check-file-lines.mjs`：`npm run check` 强制单文件不超过 500 行，450 行开始预警。
 - 修复当前超限文件：`docs/build-review-html.mjs` 从 523 行降到 398 行，`docs/index.html` 从 610 行降到 321 行。
 - 新增测试覆盖 runtime message pipeline 和 gateway ingress。
+- 新增 `feishu-event` channel adapter：负责 Feishu/Lark event text、sender、chat id、message id normalize。
+- 新增 gateway `POST /feishu/events` / `POST /api/feishu/events`：支持 challenge 回显、文本事件入站、event id 幂等。
+- `docs/build-review-html.mjs` 支持 Mermaid 代码块渲染，阶段架构报告升级为可视化 design review dashboard。
+- 更新 `web-design-review` skill：硬性要求系统上下文图、模块架构图、流程图、时序图、状态机、ER、数据流、部署图、风险分级、目录/行数/文件评价。
 
 ## 当前可用命令
 
@@ -44,6 +48,18 @@ curl -sS http://127.0.0.1:4321/messages \
   -d '{"channel":"console","from":"ou_user","conversation":"oc_group","text":"hello","reply":"received"}'
 ```
 
+Feishu event ingress：
+
+```bash
+curl -sS http://127.0.0.1:4321/feishu/events \
+  -H 'content-type: application/json' \
+  -d '{"challenge":"plain_challenge"}'
+
+curl -sS http://127.0.0.1:4321/api/feishu/events \
+  -H 'content-type: application/json' \
+  -d '{"header":{"event_id":"evt_1"},"event":{"sender":{"sender_id":{"open_id":"ou_user"}},"message":{"message_id":"om_1","chat_id":"oc_group","content":"{\"text\":\"hello from feishu\"}"}}}'
+```
+
 飞书自定义机器人 webhook 的最小 outbound 形态：
 
 ```bash
@@ -51,7 +67,7 @@ MYCLAW_FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/..." \
   npm run myclaw -- send --channel feishu-webhook --text "hello from MyClaw"
 ```
 
-这仍然不是完整 OpenClaw Feishu/Lark 插件接入。现在只是补齐 Feishu event adapter 之前必须有的 HTTP inbound 控制面。
+这仍然不是完整 OpenClaw Feishu/Lark 插件接入。现在只是补齐后续接 `openclaw-lark` GitHub 插件前必须稳定的 HTTP inbound 和 normalize 边界。
 
 ## 当前实现架构
 
@@ -65,6 +81,12 @@ HTTP POST /messages
   -> packages/gateway
   -> packages/runtime.receiveMessage
   -> packages/channels.normalizeInbound/send reply
+  -> packages/core state
+
+HTTP POST /feishu/events
+  -> packages/gateway challenge/idempotency
+  -> packages/runtime.receiveMessage(rawInbound)
+  -> packages/channels feishu-event.normalizeInbound
   -> packages/core state
 
 Dashboard GET /api/status
@@ -85,17 +107,17 @@ Dashboard GET /api/status
 
 ## 下一步
 
-1. 为 `POST /messages` 增加 Feishu event shape normalize：challenge、event text、sender、chat id。
-2. 新增 `packages/channels` 的 `feishu-event` adapter，与 `feishu-webhook` outbound 区分。
-3. 为 gateway 增加 loopback token / mutation guard，避免后续绑定非本机时暴露入口。
-4. 在 dashboard 增加 run detail drawer 和 message form，用 UI 直接发送本地测试消息。
-5. 把 `migrate openclaw --output` 生成的 plan 文件展示在 dashboard，并开始 `stage` snapshot 设计。
+1. 为 gateway 增加 loopback token / mutation guard，避免后续绑定非本机时暴露入口。
+2. 增加 Feishu 签名校验、encrypt payload 解密和 replay window。
+3. 在 dashboard 增加 run detail drawer 和 message form，用 UI 直接发送本地测试消息。
+4. 把 `migrate openclaw --output` 生成的 plan 文件展示在 dashboard，并开始 `stage` snapshot 设计。
+5. 把 `openclaw-lark` 插件接在 `feishu-event`/`feishu-webhook` 边界后面，不直接穿透 gateway。
 6. 每个阶段继续：更新 HTML design review report、执行 Linus 视角独立审查、commit、push 到 GitHub、发布到 HTML Center。
 
 ## 风险
 
 - 当前 gateway 仅适合本机开发，尚无 token auth；不要绑定公网地址。
-- `POST /messages` 目前是通用 inbound JSON，尚未校验 Feishu 签名、challenge 或 event id 幂等。
+- `POST /feishu/events` 已支持 challenge 和 event id 幂等，但尚未校验 Feishu 签名、encrypt payload 或 token。
 - dashboard HTML 仍以内联字符串维护，后续复杂交互需要拆 view template 和 client script。
 - OpenClaw migration 目前是 dry-run，不会直接迁移 secrets、tool permissions、sessions、memory DB。
 - OpenClaw Feishu 插件依赖 `openclaw/plugin-sdk` runtime，不是单文件 SDK；直接接入可能需要适配一层 runtime facade。
@@ -106,13 +128,14 @@ Dashboard GET /api/status
 npm run check
 npm test
 npm run myclaw -- receive --channel console --from ou_user --conversation oc_group --text hi --reply 收到 --json
+curl -sS http://127.0.0.1:4321/feishu/events -H 'content-type: application/json' -d '{"challenge":"plain_challenge"}'
 ```
 
 结果：
 
 - 语法检查通过。
 - 单文件行数检查通过：当前最大文件低于 500 行。
-- Node test 通过：13 个测试全部通过。
+- Node test 通过：新增 Feishu event 相关测试。
 - CLI receive/reply 通过共享 runtime 返回 `ok` envelope。
-- gateway 测试验证 `GET /api/health`、`POST /messages`、`GET /api/status`。
-- Phase 0.2 已推送到 GitHub public 仓库，Phase 0.3 完成后会形成独立 commit 并继续 push。
+- gateway 测试验证 `GET /api/health`、`POST /messages`、`POST /feishu/events`、`GET /api/status`。
+- Phase 0.4 完成后会形成独立 commit 并继续 push 到 GitHub public 仓库。

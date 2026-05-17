@@ -19,6 +19,7 @@ The first channel implementation is intentionally small:
 - `console`: local inbound/outbound channel for verifying the message pipeline.
 - `webhook`: generic HTTP POST channel.
 - `feishu-webhook`: minimal Feishu/Lark custom-bot webhook payload shape.
+- `feishu-event`: inbound Feishu/Lark event normalizer for gateway callbacks.
 
 The later OpenClaw Feishu/Lark plugin integration should attach behind the same channel boundary instead of changing CLI commands.
 
@@ -28,7 +29,15 @@ Dashboard:
 
 Gateway:
 
-- `gateway`: local HTTP control surface. Phase 0.3 supports `GET /api/status`, `GET /api/health`, and `POST /messages`.
+- `gateway`: local HTTP control surface. Phase 0.4 supports `GET /api/status`, `GET /api/health`, `POST /messages`, and `POST /feishu/events`.
+
+Feishu event callback smoke test:
+
+```bash
+curl -sS http://127.0.0.1:4321/feishu/events \
+  -H 'content-type: application/json' \
+  -d '{"challenge":"plain_challenge"}'
+```
 
 Migration:
 

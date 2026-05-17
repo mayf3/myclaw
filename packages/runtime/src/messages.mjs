@@ -67,8 +67,9 @@ export async function sendMessage(options = {}) {
 }
 
 export async function receiveMessage(options = {}) {
+  const hasRawInbound = Object.prototype.hasOwnProperty.call(options, "rawInbound");
   const text = String(options.text || "").trim();
-  if (!text) {
+  if (!hasRawInbound && !text) {
     throw new Error("Missing message text.");
   }
 
@@ -76,12 +77,12 @@ export async function receiveMessage(options = {}) {
   const runId = createRunId("in");
   const channelId = options.channelId || options.channel || "console";
   const conversationId = options.conversationId || options.conversation || options.target;
-  const senderId = options.senderId || options.from || "local-user";
+  const senderId = options.senderId || options.from || (hasRawInbound ? null : "local-user");
   const events = [
     createEvent("message.receive.started", {
       channel: channelId,
       conversationId: conversationId || null,
-      senderId,
+      senderId: senderId || null,
     }),
   ];
 
@@ -92,17 +93,20 @@ export async function receiveMessage(options = {}) {
       throw new Error(`Channel ${channel.id} does not support inbound messages.`);
     }
 
-    const inbound = channel.normalizeInbound({
-      text,
-      senderId,
-      senderName: options.senderName,
-      conversationId,
-      raw: {
-        source: options.source || "runtime",
-        channel: channel.id,
-        ...(options.raw && typeof options.raw === "object" ? options.raw : {}),
-      },
-    });
+    const inboundInput = hasRawInbound
+      ? options.rawInbound
+      : {
+          text,
+          senderId,
+          senderName: options.senderName,
+          conversationId,
+          raw: {
+            source: options.source || "runtime",
+            channel: channel.id,
+            ...(options.raw && typeof options.raw === "object" ? options.raw : {}),
+          },
+        };
+    const inbound = channel.normalizeInbound(inboundInput);
     events.push(
       createEvent("message.receive.completed", {
         channel: inbound.channel,

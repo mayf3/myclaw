@@ -75,11 +75,15 @@ function renderMarkdown(source) {
   };
   const flushCode = () => {
     if (inCode) {
-      body.push(
-        `<pre class="code" data-lang="${escapeHtml(codeLang || "text")}"><code>${escapeHtml(
-          code.join("\n"),
-        )}</code></pre>`,
-      );
+      if (codeLang.trim().toLowerCase() === "mermaid") {
+        body.push(`<div class="mermaid">${escapeHtml(code.join("\n"))}</div>`);
+      } else {
+        body.push(
+          `<pre class="code" data-lang="${escapeHtml(codeLang || "text")}"><code>${escapeHtml(
+            code.join("\n"),
+          )}</code></pre>`,
+        );
+      }
       inCode = false;
       codeLang = "";
       code = [];
@@ -157,10 +161,12 @@ nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;p
 .content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
 code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
 .code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.mermaid{margin:14px 0;border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;overflow:auto}
 .table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
 @media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
 `;
+const mermaidScript = `<script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>`;
 function moduleShell({ slug, title, headings, body }) {
   const meta = moduleMeta[slug] ?? { phase: "未分配", priority: "P2", label: "模块", summary: "" };
   const navItems = headings
@@ -217,6 +223,7 @@ function moduleShell({ slug, title, headings, body }) {
         </article>
       </main>
     </div>
+    ${mermaidScript}
   </body>
 </html>
 `;
@@ -270,6 +277,7 @@ function buildDesignReview() {
         <article class="content">${parsed.html}</article>
       </main>
     </div>
+    ${mermaidScript}
   </body>
 </html>
 `;
@@ -315,6 +323,7 @@ function buildStageStatus() {
         <article class="content">${parsed.html}</article>
       </main>
     </div>
+    ${mermaidScript}
   </body>
 </html>
 `;
@@ -350,16 +359,17 @@ function buildImplementationArchitecture() {
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 0.3 的 gateway、dashboard、runtime、OpenClaw 迁移和当前架构审查。</p>
+          <p>MyClaw Phase 0.4 的 Feishu event、gateway、dashboard、runtime、OpenClaw 迁移和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0.3</span>
+            <span class="tag phase">Phase 0.4</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
         <article class="content">${parsed.html}</article>
       </main>
     </div>
+    ${mermaidScript}
   </body>
 </html>
 `;

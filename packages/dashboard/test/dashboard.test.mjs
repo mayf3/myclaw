@@ -38,7 +38,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 1);
-    assert.equal(status.channels.length, 3);
+    assert.equal(status.channels.length, 4);
   } finally {
     await new Promise((resolve) => dashboard.server.close(resolve));
   }
