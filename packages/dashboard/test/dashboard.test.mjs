@@ -26,19 +26,34 @@ test("dashboard serves HTML and status API", async () => {
 
   const dashboard = await startDashboard({ port: 0, stateDir, openclawSource: stateDir });
   try {
-    const [htmlResponse, statusResponse] = await Promise.all([
-      fetch(`${dashboard.url}/`),
-      fetch(`${dashboard.url}/api/status`),
-    ]);
+    const [htmlResponse, cssResponse, jsResponse, statusResponse, referenceResponse, feishuResponse] =
+      await Promise.all([
+        fetch(`${dashboard.url}/`),
+        fetch(`${dashboard.url}/assets/dashboard.css`),
+        fetch(`${dashboard.url}/assets/dashboard.js`),
+        fetch(`${dashboard.url}/api/status`),
+        fetch(`${dashboard.url}/api/reference-completion`),
+        fetch(`${dashboard.url}/api/feishu-adoption`),
+      ]);
     const html = await htmlResponse.text();
+    const css = await cssResponse.text();
+    const js = await jsResponse.text();
     const status = await statusResponse.json();
+    const reference = await referenceResponse.json();
+    const feishu = await feishuResponse.json();
 
     assert.equal(htmlResponse.status, 200);
     assert.match(html, /MyClaw Dashboard/);
+    assert.match(html, /assets\/dashboard\.js/);
+    assert.match(css, /reference-row/);
+    assert.match(js, /renderReferenceCompletion/);
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 1);
     assert.equal(status.channels.length, 4);
+    assert.equal(reference.referenceCompletion.modules.length, 8);
+    assert.equal(reference.referenceCompletion.modules[0].criteria.length, 3);
+    assert.equal(feishu.feishuAdoption.directUse, false);
   } finally {
     await new Promise((resolve) => dashboard.server.close(resolve));
   }

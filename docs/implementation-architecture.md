@@ -1,46 +1,69 @@
-# MyClaw Phase 0.5 实现架构可视化评审
+# MyClaw Phase 0.6 实现架构可视化评审
 
 更新时间：2026-05-17
 
 ## 总诊断
 
-Phase 0.5 把两个 Phase 0.4 暴露出的硬问题向前推进了一步：gateway mutation 已有 token guard，`dashboard` 命令回到只读 server，Feishu endpoint 已有 verify token/encrypt 拒绝边界，OpenClaw 迁移从纯 `plan` 进入可落盘 `stage snapshot`。正确方向是：所有写操作都先过显式 gateway 边界，迁移只写可审阅快照，不直接 apply runtime。
+Phase 0.6 的核心变化是 dashboard 从“粗糙状态页”变成“参考完成度工作台”：同一页展示 runs/events/channels、OpenClaw migration stage、Feishu/Lark 复用决策，以及 MyClaw 与 OpenClaw、Hermes-agent、OpenHuman 的模块完成度对比。
 
-还不能美化结论：这仍不是生产安全模型。Feishu 正式签名、encrypt payload 解密、timestamp/nonce replay window、scoped token、stage diff UI 和 rollback 还没有做完。
+Feishu/Lark 的结论也更清楚：OpenClaw 仓库中可参考的是 `extensions/feishu`，它支持 Feishu/Lark 域和 `@openclaw/feishu` 插件能力。MyClaw 当前必须参考它的 schema、安全、event/outbound/policy 设计，但 Phase 0.6 不直接加载插件 runtime。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
-| 设计清晰度 | 8/10 | mutation、message、migration stage 边界清楚 |
-| 可扩展性 | 7/10 | adapter/stage writer 易扩展，但 rawInbound 仍粗 |
-| 可靠性 | 6/10 | stage 可落盘；Feishu 幂等仍在内存 |
-| 可维护性 | 7/10 | 文件低于 500 行；dashboard/report 仍需拆 |
-| 安全性 | 5/10 | token guard 可用；缺正式签名、作用域和持久 replay |
+| 设计清晰度 | 8/10 | dashboard、gateway、migration、Feishu 决策边界清楚 |
+| 可扩展性 | 7/10 | status payload 可继续挂载阶段验收数据 |
+| 可靠性 | 6/10 | stage/state 可审计；dashboard 还没有实时 stream |
+| 可维护性 | 8/10 | dashboard 已拆分，所有手写文件低于 500 行 |
+| 安全性 | 5/10 | token/verify guard 可用；Feishu 签名、encrypt、持久 replay 仍缺 |
+
+## OpenClaw Feishu/Lark 复用结论
+
+| 问题 | 结论 | 理由 |
+|---|---|---|
+| 能不能直接用现成的 openclaw-lark？ | 暂不直接加载 | 本仓库里对应为 OpenClaw `extensions/feishu`，依赖 OpenClaw plugin-sdk/runtime/config/secrets/approval |
+| 能不能参考？ | 必须参考 | 它的 config schema、安全测试、webhook/WebSocket、policy、event/outbound normalization 很成熟 |
+| MyClaw 下一步 | 先做 adapter facade | 先拥有自己的 contract，再选择性 port OpenClaw Feishu 逻辑 |
+
+## 参考完成度矩阵
+
+| 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
+|---|---:|---:|---:|---:|---|
+| Gateway / 控制面 | 58 | 90 | 78 | 86 | 缺 WS/event stream、scoped token、route schema |
+| Feishu/Lark 接入 | 28 | 92 | 42 | 35 | 缺签名、encrypt、WebSocket、policy、outbound rich card |
+| Dashboard / 观测 | 45 | 78 | 55 | 90 | 缺 run detail、stage diff、approval queue、实时事件 |
+| OpenClaw 迁移 | 50 | 0 | 82 | 35 | 已有 plan/stage，缺 apply/rollback/diff UI |
+| Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
+| Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
+| Tools / Security | 22 | 88 | 74 | 84 | 缺 tool schema、approval queue、policy snapshot、sandbox |
+| Plugins / Skills | 18 | 92 | 88 | 78 | 仅 channel registry，没有 plugin manifest/skill loader |
 
 ## 系统上下文图
 
-这张图回答：MyClaw 当前和用户、Feishu、OpenClaw、GitHub、HTML Center 的边界在哪里？
+这张图回答：MyClaw 当前和用户、Feishu、OpenClaw、参考项目、GitHub、HTML Center 的边界在哪里？
 
 ```mermaid
 flowchart LR
   User[本地用户/开发者] --> CLI[MyClaw CLI]
   User --> Browser[Dashboard Browser]
   Feishu[Feishu/Lark 平台] -->|callback: dev only| Gateway[Gateway]
-  OpenClaw[OpenClaw repo/config] --> Planner[Migration planner]
+  OpenClaw[OpenClaw repo/extensions/feishu] --> Planner[Migration planner]
+  OpenClaw --> Reference[Reference completion model]
+  Hermes[Hermes-agent repo] --> Reference
+  OpenHuman[OpenHuman repo] --> Reference
   GitHub[GitHub public repo] <-->|push| Repo[myclaw repo]
   HtmlCenter[HTML Center] <-->|publish| Reports[Design Review HTML]
 
   subgraph MyClaw[MyClaw 本机边界]
     CLI --> Runtime[Message Runtime]
-    Gateway --> Guard[Mutation Guard]
+    Gateway --> Guard[Mutation + Feishu Guards]
     Guard --> Runtime
     Guard --> StageWriter[OpenClaw Stage Writer]
     Browser --> DashboardServer[Read-only Dashboard]
-    DashboardServer --> Control
+    DashboardServer --> Control[Control Plane]
     Runtime --> Channels[Channel Adapters]
     Runtime --> State[(runs/events state)]
     StageWriter --> StageState[(migration snapshots)]
-    Planner --> StageWriter
-    Gateway --> Control[Control Plane]
+    Control --> Reference
     Control --> State
     Control --> StageState
   end
@@ -48,393 +71,303 @@ flowchart LR
 
 Review 观察：
 
-- 优点：`myclaw dashboard` 不再隐式打开 mutation surface，写操作需要显式 gateway。
-- 优点：Feishu 入站和 OpenClaw 迁移是两条独立数据线，不互相污染。
-- 风险：Feishu callback 仍不能生产暴露，图中 callback 只能代表 dev/spike。
-- 改进：下一阶段把 Feishu 签名校验和持久 replay window 放在 guard 之前。
+- 优点：dashboard 只读，写操作仍必须走显式 gateway。
+- 优点：参考完成度由 control-plane 独立 API 提供，不再塞进 operational status。
+- 风险：Feishu callback 仍只能代表 dev/spike，不能生产暴露。
+- 改进：把 Feishu 签名、encrypt、持久 replay 放到 adapter facade 第一批。
 
 ## 模块架构图
 
-这张图回答：Phase 0.5 被拆成哪些模块，哪些模块之间有依赖？
+这张图回答：Phase 0.6 被拆成哪些模块，dashboard 如何避免继续变成大文件？
 
 ```mermaid
 flowchart TB
   CLI[pkg/cli] --> Runtime[pkg/runtime]
-  CLI --> MigratePlan[pkg/migrate openclaw]
-  CLI --> MigrateStage[pkg/migrate stage]
   CLI --> Gateway[pkg/gateway]
+  CLI --> Migrate[pkg/migrate]
   Gateway --> Runtime
-  Gateway --> MigrateStage
-  Gateway --> Dashboard[pkg/dashboard render only]
+  Gateway --> Migrate
+  Gateway --> Dashboard[pkg/dashboard]
   Gateway --> Control[pkg/control-plane]
+  Dashboard --> View[view.mjs]
+  Dashboard --> Styles[styles.mjs]
+  Dashboard --> Client[client.mjs]
+  Dashboard --> Assets[assets.mjs]
   Dashboard --> Control
+  Control --> Reference[reference-completion.mjs]
   Control --> Core[pkg/core state]
-  Control --> MigratePlan
-  Control --> MigrateStage
+  Control --> Migrate
   Runtime --> Channels[pkg/channels]
   Runtime --> Core
-  MigrateStage --> Core
-
-  Channels --> Console[console]
-  Channels --> Webhook[webhook]
-  Channels --> FeishuWebhook[feishu-webhook]
-  Channels --> FeishuEvent[feishu-event]
+  Migrate --> Core
 ```
 
 Review 观察：
 
-- 优点：stage writer 独立在 `packages/migrate/src/stage.mjs`，没有继续撑大 planner。
-- 优点：`core` 仍只管 state/envelope，不知道 Feishu 或 OpenClaw。
-- 风险：gateway 文件承担路由、auth、Feishu guard、stage API，后续可能变胖。
-- 改进：下一阶段可把 gateway guard 拆成 `auth.mjs`，把 Feishu verification 拆成 adapter edge。
+- 优点：dashboard 从 288 行单文件拆为 view/styles/client/assets。
+- 优点：gateway 只复用 dashboard HTML/assets，不知道 dashboard 渲染细节。
+- 风险：`packages/gateway/src/index.mjs` 已 321 行，后续应拆 route/auth/feishu。
+- 改进：Phase 0.7 把 gateway route handler 分文件，保留统一 `handleGatewayRequest`。
 
 ## 核心业务流程图
 
-这张图回答：一条写请求如何通过 token guard、Feishu guard 或 migration stage 写入 state？
+这张图回答：打开 dashboard 后如何拿到状态、参考对比和 Feishu 决策？
 
 ```mermaid
 flowchart TD
-  Start[POST mutation] --> Route{入口}
-  Route --> Messages[/messages]
-  Route --> Feishu[/feishu/events]
-  Route --> Stage[/api/openclaw-migration/stage]
-
-  Messages --> GToken{需要 gateway token?}
-  Stage --> GToken
-  GToken -->|无效| Denied[401/403]
-  GToken -->|有效或本机 dev| MessageRuntime[receiveMessage / stage writer]
-
-  Feishu --> FToken{Feishu verify token / 本机 dev?}
-  FToken -->|无效| Denied
-  FToken -->|有效| Encrypt{encrypt payload?}
-  Encrypt -->|是| Unsupported[501 not supported]
-  Encrypt -->|否| Challenge{challenge?}
-  Challenge -->|是| Echo[回显 challenge]
-  Challenge -->|否| Duplicate{event id 已见过?}
-  Duplicate -->|是| Dup[duplicate=true]
-  Duplicate -->|否| MessageRuntime
-
-  MessageRuntime --> Normalize[Channel normalize or stage snapshot]
-  Normalize --> Persist[写 runs/events 或 migration snapshot]
-  Persist --> Status[/api/status 可见]
-  Denied --> Human[人工修正 token/配置]
-  Unsupported --> Human
+  Start[Browser GET /] --> Html[renderDashboardHtml]
+  Html --> Assets[GET /assets/dashboard.css/js]
+  Assets --> Status[GET /api/status]
+  Status --> Reads[read runs/events/stage]
+  Status --> Plan[cached OpenClaw migration plan]
+  Assets --> RefApi[GET /api/reference-completion]
+  Assets --> FeishuApi[GET /api/feishu-adoption]
+  RefApi --> Ref[buildReferenceCompletionPayload]
+  FeishuApi --> Feishu[buildFeishuAdoptionPayload]
+  Reads --> Payload[dashboard combined payload]
+  Plan --> Payload
+  Ref --> Payload
+  Feishu --> Payload
+  Payload --> UI[render operational sections]
+  Ref --> UI
+  Feishu --> UI
+  UI --> Matrix[reference matrix]
+  UI --> Decision[Feishu adoption panel]
+  UI --> Migration[stage summary]
+  Status -->|failure| Error[show subtitle error + raw JSON]
 ```
 
 Review 观察：
 
-- 优点：失败请求在进入 runtime/stage 前被挡住。
-- 优点：OpenClaw stage 只写 snapshot，不启用 runtime 配置。
-- 风险：Feishu encrypt 现在只是拒绝，不是支持。
-- 风险：token 是 shared secret，无法区分 dashboard、CLI、外部 webhook。
+- 优点：dashboard 数据全部来自 API，不读私有文件。
+- 优点：参考矩阵和 Feishu 决策拆成独立 API，`/api/status` 不再变成杂物桶。
+- 风险：completion 分数目前是工程判断，不是自动验收计算。
+- 改进：把每个模块完成度拆成 measurable acceptance items。
 
 ## 关键时序图
 
-这张图回答：一次 stage 请求如何从 gateway 写入 snapshot 并回到 dashboard？
+这张图回答：一次 Feishu event 在当前阶段如何进入 MyClaw，并在哪里被挡住？
 
 ```mermaid
 sequenceDiagram
-  participant U as User/CLI
+  participant F as Feishu/Lark
   participant G as Gateway
-  participant A as Mutation Guard
-  participant P as OpenClaw Planner
-  participant S as Stage Writer
-  participant FS as State Files
+  participant A as Feishu Guard
+  participant R as Runtime
+  participant C as Channel Adapter
+  participant S as State
   participant D as Dashboard
 
-  U->>G: POST /api/openclaw-migration/stage
-  G->>A: validate token / loopback
-  A-->>G: allowed
-  G->>P: planOpenClawMigration(source)
-  P-->>S: plan
-  S->>FS: write <stageId>.json
-  S->>FS: write latest.json
-  G-->>U: staged snapshot
+  F->>G: POST /feishu/events
+  G->>A: verify token / loopback dev
+  A-->>G: allowed or rejected
+  G->>A: reject encrypt payload
+  G->>R: receiveMessage(rawInbound)
+  R->>C: feishu-event.normalizeInbound
+  C-->>R: normalized inbound
+  R->>S: write run/events
   D->>G: GET /api/status
-  G->>FS: read latest stage
-  G-->>D: openclawStage
+  G-->>D: runs/events
+  D->>G: GET /api/feishu-adoption
+  G-->>D: Feishu reuse decision
 ```
 
 Review 观察：
 
-- 优点：stage 有明确写入点和 latest 指针，便于 dashboard 汇总。
-- 优点：snapshot 已带 `schemaVersion`、`checksum`，并用临时文件 rename 原子写。
-- 优点：planner 和 stage writer 可单独测试。
-- 风险：stage diff UI 还没有，用户需要看 raw JSON。
-- 改进：下一阶段在 dashboard 增加 stage detail/diff drawer。
+- 优点：encrypted callback 不会被误当成明文 event。
+- 优点：event id duplicate guard 已有基本内存去重。
+- 风险：内存去重重启丢失，缺 timestamp/nonce 签名窗口。
+- 改进：移植 OpenClaw Feishu webhook security test 的持久 replay 思路。
 
 ## 状态机图
 
-这张图回答：消息和迁移 stage 的生命周期如何流转，失败、拒绝、人工介入在哪里？
+这张图回答：核心对象 message run、migration stage、Feishu adapter 的生命周期如何推进？
 
 ```mermaid
 stateDiagram-v2
-  [*] --> MutationReceived
-  MutationReceived --> AuthRejected: token invalid
-  MutationReceived --> FeishuRejected: encrypt unsupported
-  MutationReceived --> RuntimePersisted: message ok
-  MutationReceived --> StageWritten: migration stage ok
+  [*] --> Incoming
+  Incoming --> AuthRejected: token invalid
+  Incoming --> Unsupported: encrypt unsupported
+  Incoming --> RuntimePersisted: message ok
+  Incoming --> StageWritten: migration stage ok
   RuntimePersisted --> Visible
   StageWritten --> ReviewRequired
-  ReviewRequired --> ApplyReady: human approval
+  ReviewRequired --> ApplyReady: human confirms diff
+  ApplyReady --> AppliedFeishu: apply --module feishu
   ReviewRequired --> Rejected: risk found
+  Unsupported --> ManualFix
   AuthRejected --> ManualFix
-  FeishuRejected --> ManualFix
-  ManualFix --> MutationReceived: retry
+  ManualFix --> Incoming: retry
   Visible --> [*]
-  ApplyReady --> [*]
+  AppliedFeishu --> [*]
   Rejected --> [*]
 ```
 
 Review 观察：
 
-- 优点：stage 和 message 都不直接进入自动执行。
-- 风险：`ApplyReady` 目前只是设计状态，代码还没有 apply。
-- 风险：`ManualFix` 缺 UI，只能靠 curl/JSON。
-- 改进：apply 必须只允许从 staged snapshot 进入，不能从 live OpenClaw config 直接 apply。
+- 优点：stage 和 Feishu adapter 都保留人工确认节点。
+- 风险：`ApplyReady` 和 `AppliedFeishu` 仍是设计状态，代码未实现。
+- 风险：没有 approval queue，人工确认还不能在 UI 中完成。
+- 改进：先实现 stage diff，再加 apply。
 
 ## 数据模型 / ER 图
 
-这张图回答：当前持久化实体有哪些，stage 和 run/event 如何关联到 state？
+这张图回答：当前 status payload 中有哪些核心实体，以及参考完成度如何挂在控制面？
 
 ```mermaid
 erDiagram
   RUN ||--o{ EVENT : emits
-  RUN ||--o| INBOUND_MESSAGE : has
   CHANNEL ||--o{ RUN : handles
-  MIGRATION_PLAN ||--o{ MIGRATION_ITEM : contains
-  MIGRATION_STAGE ||--|| MIGRATION_PLAN : snapshots
   MIGRATION_STAGE ||--o{ STAGED_MODULE : contains
+  REFERENCE_COMPLETION ||--o{ MODULE_SCORE : scores
+  FEISHU_ADOPTION ||--o{ ADOPTION_NOTE : explains
 
-  RUN {
-    string runId
-    boolean ok
-    string status
-    object result
-  }
-  EVENT {
-    string type
-    string at
-    object data
-  }
-  CHANNEL {
-    string id
-    boolean inbound
-    boolean outbound
-  }
-  MIGRATION_PLAN {
-    string source
-    boolean destructive
-    object inventory
-  }
-  MIGRATION_STAGE {
-    string stageId
-    string status
-    boolean destructive
-    object rollback
-  }
-  STAGED_MODULE {
-    string id
-    string status
-    string nextAction
-  }
+  RUN { string runId boolean ok string status object result }
+  EVENT { string type string at string runId object data }
+  CHANNEL { string id boolean inbound boolean outbound boolean reply }
+  MIGRATION_STAGE { string stageId string status string checksum }
+  STAGED_MODULE { string id string status string nextAction }
+  REFERENCE_COMPLETION { int schemaVersion string updatedAt number average string scale }
+  MODULE_SCORE { string id number myclaw number openclaw number hermes number openhuman }
+  FEISHU_ADOPTION { int schemaVersion boolean directUse boolean referenceUse string source string packageName }
 ```
 
 Review 观察：
 
-- 优点：stage snapshot 独立于 run/event，不混用 message envelope。
-- 优点：`destructive:false` 继续保留，符合 plan/stage/apply 安全路线。
-- 优点：stage snapshot 已有 `schemaVersion` 和 `checksum`。
-- 风险：run/event state 仍没有 schema version，未来迁移自身会困难。
+- 优点：Feishu 决策是结构化数据，不只是文档段落。
+- 优点：reference matrix 可以被 dashboard、报告、未来 API 复用。
+- 风险：分数已有 schema version，但还没有验收项 id。
+- 改进：给 reference payload 增加可验证的 acceptance items。
 
 ## 数据流图
 
-这张图回答：消息、Feishu event、OpenClaw config 和 HTML 报告的数据怎么流动？
+这张图回答：消息、OpenClaw config、参考项目观察和 HTML 报告的数据怎么流动？
 
 ```mermaid
 flowchart LR
-  Generic[Generic JSON] --> Gateway
-  FeishuJSON[Feishu JSON] --> Gateway
-  Gateway --> Guard[Auth/Verification Guard]
-  Guard --> Runtime[Message Runtime]
-  Runtime --> Channel[Channel normalize/send]
-  Channel --> Runs[(runs/events)]
-
-  OpenClawConfig[OpenClaw config/plugins] --> Planner[Migration Planner]
-  Planner --> StageWriter[Stage Writer]
-  StageWriter --> Stages[(migration snapshots)]
-  Runs --> Control[Control Plane]
-  Stages --> Control
-  Control --> Dashboard[Dashboard]
-
-  Source[Repo files] --> DocsBuilder[Mermaid HTML Builder]
-  DocsBuilder --> Html[docs/*.html]
+  Msg[Generic/Feishu JSON] --> Gateway
+  Gateway --> Runtime
+  Runtime --> Events[(runs/events)]
+  OpenClawConfig[OpenClaw config/manifests] --> Planner
+  Planner --> Stage[(migration snapshots)]
+  Repos[OpenClaw/Hermes/OpenHuman observations] --> RefModel[reference-completion.mjs]
+  Events --> Status[/api/status]
+  Stage --> Status
+  RefModel --> ReferenceApi[/api/reference-completion]
+  Status --> Dashboard
+  ReferenceApi --> Dashboard
+  RefModel --> FeishuApi[/api/feishu-adoption]
+  FeishuApi --> Dashboard
+  Docs[Markdown design review] --> Build[docs/build-review-html.mjs]
+  Build --> Html[HTML review dashboard]
   Html --> HtmlCenter[HTML Center]
 ```
 
 Review 观察：
 
-- 优点：runtime 数据线、migration 数据线、docs 数据线分开。
-- 风险：Control Plane 汇总能力继续增加，后续要避免变成业务层。
-- 风险：raw payload 仍可能进入 run state，需要脱敏策略。
-- 改进：stage 写入和 run 写入都应补 schema validation。
+- 优点：运行数据和评审数据分开，但在 status 汇总。
+- 优点：HTML review 仍由 markdown 生成，便于审阅 diff。
+- 风险：参考项目观察是手动维护，可能和 repo 演进偏离。
+- 改进：后续用脚本扫描 reference repo manifest/schema/test 生成部分指标。
 
 ## 部署图
 
-这张图回答：运行时部署在哪里，哪些调用是同步，哪些后续应该异步化？
+这张图回答：本地运行时部署在哪里，同步/异步边界如何区分？
 
 ```mermaid
 flowchart TB
-  subgraph Localhost[开发机 127.0.0.1]
-    Browser[Dashboard] -->|GET sync| DashboardServer[Read-only dashboard :4321]
-    CLI[Node CLI] --> Runtime[Runtime]
-    CLI --> StageCLI[Migration stage CLI]
-    Gateway -->|guarded POST sync| Runtime
-    Gateway -->|guarded POST sync| StageWriter[Stage Writer]
-    Runtime -->|fs write| State[(.myclaw/state/runs)]
-    StageWriter -->|fs write| StageState[(.myclaw/state/migrations)]
-    Gateway -->|read cached status| Control[Control Plane]
-    DashboardServer -->|read cached status| Control
-    Control --> State
-    Control --> StageState
+  subgraph Localhost[Developer machine]
+    Browser[Browser :4321] -->|sync GET| Dashboard[myclaw dashboard]
+    Browser -->|sync GET| Gateway[myclaw gateway :4322]
+    CLI[myclaw CLI] --> State[(.myclaw state)]
+    Gateway --> State
+    Dashboard --> State
+    Gateway -->|sync HTTP POST| FeishuWebhook[Feishu custom bot webhook]
+    Gateway -.future async.-> Queue[Task queue / event stream]
   end
-  Feishu[Feishu/Lark] -.future HTTPS.-> Gateway
-  GitHub[GitHub] <-->|git push| Localhost
-  HtmlCenter[HTML Center :4177] <-->|publish| Localhost
+  Feishu[Feishu/Lark Cloud] -->|sync callback| Gateway
+  OpenClawRepo[OpenClaw repo] -->|read only| CLI
+  Dashboard -->|sync read| OpenClawRepo
 ```
 
 Review 观察：
 
-- 优点：Phase 0 仍是单机同步模型，容易调试。
-- 风险：同步 fs 写入无法支撑高并发 webhook。
-- 风险：Feishu future HTTPS 仍必须等签名/加密/replay 后才可用。
-- 改进：有真实 webhook 压力后引入队列、持久幂等表和 request id。
-
-## 风险分级
-
-| 等级 | 问题 | 影响 | 建议修改 |
-|---|---|---|---|
-| Critical | Feishu 正式签名/加密未实现 | 不能作为生产回调入口 | 实现签名校验、encrypt 解密、timestamp/nonce replay |
-| High | token 只是 shared secret | 无角色、作用域和主体审计 | 引入 scoped token、mutation audit |
-| High | `rawInbound` 保存面过宽 | 可能写入敏感 payload | 定义 `InboundAdapterInput`，只保存脱敏摘要 |
-| Medium | stage 无 diff/approval UI | 迁移审查仍依赖 raw JSON | dashboard 增加 stage detail 和 approve/reject |
-| Medium | status plan cache 仍是内存缓存 | 多进程下仍可能重复扫描 | 后续改 state-backed plan cache 和 explicit refresh |
-| Medium | dashboard/report 内联增长 | 后续 UI 和报告难维护 | 拆 template、client script、markdown parser |
-
-## 目录结构与文件行数
-
-硬性规则：单个手写源文件或文档文件不得超过 500 行，接近 450 行必须拆。当前没有超过 500 行的手写文件，最大文件是本报告和 `docs/build-review-html.mjs`，均低于 500 行。
-
-| 目录 | 文件 | 行数 | 职责 | 内容评价 |
-|---|---|---:|---|---|
-| `/` | `README.md` | 47 | 项目入口说明 | 已补 dashboard 只读、token 与 stage 命令 |
-| `/` | `package.json` | 15 | workspace scripts | 简洁 |
-| `scripts` | `check-file-lines.mjs` | 62 | 500 行约束检查 | 必要约束 |
-| `packages/core/src` | `envelope.mjs` | 46 | envelope/event 工厂 | 边界干净 |
-| `packages/core/src` | `state.mjs` | 128 | JSON/JSONL 读写 | Phase 0 可用，后续加 schema |
-| `packages/channels/src` | `index.mjs` | 292 | channel registry 与 Feishu normalize | 低于 500；后续拆 Feishu adapter |
-| `packages/runtime/src` | `messages.mjs` | 185 | send/receive/reply pipeline | 复用正确，rawInbound 待收窄 |
-| `packages/gateway/src` | `index.mjs` | 306 | HTTP routes、token guard、Feishu guard、stage API | Phase 0.5 关键文件，后续拆 auth |
-| `packages/dashboard/src` | `index.mjs` | 288 | read-only dashboard HTML/server | 已显示 latest stage，仍内联 |
-| `packages/control-plane/src` | `status.mjs` | 81 | status/runs/events/migration/stage 聚合 | 已加短 TTL cache 和错误隔离 |
-| `packages/cli/src` | `index.mjs` | 321 | CLI 命令编排 | dashboard 只读，gateway 显式 mutation |
-| `packages/migrate/src` | `openclaw.mjs` | 348 | OpenClaw dry-run planner | 最大业务文件，apply 前应拆 parser |
-| `packages/migrate/src` | `stage.mjs` | 122 | OpenClaw stage snapshot writer | schema/checksum/atomic write |
-| `packages/*/test` | `*.test.mjs` | 29-193 | CLI/gateway/runtime/state/migrate 测试 | 已覆盖 token、verify、stage |
-| `docs` | `build-review-html.mjs` | 408 | Markdown 到 Mermaid HTML | 接近 450 前应拆 parser/template |
-| `docs` | `implementation-architecture.md` | 440 | 当前阶段可视化报告 | 需保持低于 500 |
-| `docs` | `stage-status.md` | 169 | 阶段状态 | 已升级 Phase 0.5 |
-| `docs/lib` | `module-meta.mjs` | 103 | 模块报告 metadata | 拆分有效 |
-| `docs/modules` | `gateway.md` | 217 | gateway 模块设计 | 已补 token/stage |
-| `docs/modules` | `openclaw-migration.md` | 111 | OpenClaw 迁移设计 | 已补 Phase 0.5 stage |
-| `docs/modules` | 其他模块文档 | 46-315 | access/runtime/memory/tools/plugins/UI/roadmap | 粒度合适 |
-| `docs/*.html` | 生成 HTML | 构建后检查 | 可浏览报告产物 | 生成物也受 500 行检查 |
+- 优点：默认本机 loopback，适合 Phase 0。
+- 优点：dashboard 与 gateway 可以分端口，读写边界明确。
+- 风险：没有 queue/worker，长任务会卡同步请求。
+- 改进：Agent runtime 前先加 run worker 或 event stream。
 
 ## 概念解释
 
-| 概念 | 当前定义 | 边界 |
+| 概念 | 含义 | 当前边界 |
 |---|---|---|
-| Gateway | 本地 HTTP 控制面，承载 dashboard 和 mutation | 不跑 agent |
-| Mutation Guard | 对写操作做 token/local host 边界控制 | 不是完整 RBAC |
-| Feishu Verify Token | Feishu callback 的共享校验 token | 不是签名校验 |
-| Runtime | CLI/gateway 共用的 message pipeline | 不解析 HTTP |
-| ChannelAdapter | 通道扩展点，负责 send 或 inbound normalize | 不写 state |
-| Migration Plan | OpenClaw dry-run inventory | 不是 apply |
-| Migration Stage | plan 的可审阅 snapshot | 不启用 runtime |
-| Control Plane | 只读聚合 runs/events/migration/stage | 不执行 mutation |
+| adapter facade | MyClaw 自己拥有的 Feishu 接口层 | 先定义契约，再 port OpenClaw 逻辑 |
+| reference completion | 模块相对参考项目的完成度 | 当前是工程判断，后续变成验收项 |
+| stage snapshot | OpenClaw 迁移的可审阅快照 | 不直接启用 runtime |
+| mutation guard | gateway 写操作入口保护 | token/loopback 可用，scoped token 未做 |
+| replay window | 防重复/重放攻击窗口 | 当前 Feishu 去重在内存中，需持久化 |
 
 ## 相似技术比较
 
-| 设计点 | MyClaw 当前选择 | 相似技术 | 取舍 |
+| 维度 | MyClaw Phase 0.6 | OpenClaw | Hermes-agent | OpenHuman |
+|---|---|---|---|---|
+| 技术栈 | Node.js ESM workspace | Node/TS plugin runtime | Python agent platform | Rust/Tauri + UI-first |
+| Gateway | 本地 HTTP，token guard | 成熟 gateway/channel 安全 | 多平台 gateway | JSON-RPC/SSE 控制层 |
+| Feishu/Lark | event normalize spike | 完整 Feishu plugin | 有平台 adapter 方向 | 非核心 |
+| Dashboard | 状态 + 参考矩阵 | Control UI/schema | CLI/TUI/ops | 强 UI/Memory tree |
+| 迁移 | plan/stage，不 apply | 被迁移源 | 有 OpenClaw migration 经验 | 可借 controller 思想 |
+
+## 目录结构与文件行数
+
+| 路径 | 行数 | 职责 | 评价 |
+|---|---:|---|---|
+| `packages/dashboard/src/index.mjs` | 103 | dashboard server/router | 已拆出 view/assets，健康 |
+| `packages/dashboard/src/view.mjs` | 127 | HTML shell | 小而清楚 |
+| `packages/dashboard/src/styles.mjs` | 196 | dashboard CSS | 可接受，后续组件化前不再堆太多 |
+| `packages/dashboard/src/client.mjs` | 171 | browser render logic | 可接受，run detail 前应拆 renderer |
+| `packages/control-plane/src/reference-completion.mjs` | 173 | 参考完成度与 Feishu 决策数据 | 已有 criteria 证据项，后续自动化 |
+| `packages/control-plane/src/status.mjs` | 96 | status/reference/Feishu API payload 聚合 | 健康；评审态已拆独立 endpoint |
+| `packages/gateway/src/index.mjs` | 321 | HTTP gateway/routes/auth/Feishu | 接近变胖，下一轮拆路由 |
+| `packages/migrate/src/openclaw.mjs` | 348 | OpenClaw migration planner | 可接受，apply 前需拆 parser/inventory |
+| `packages/cli/src/index.mjs` | 321 | CLI commands | 可接受，后续 command registry |
+| `docs/build-review-html.mjs` | 408 | markdown 到 HTML builder | 接近 450，继续加能力前必须拆 |
+
+没有手写源文件超过 500 行。`docs/implementation-architecture.md` 属于阶段报告，仍需保持低于 500 行；如果接近 450 行，下一阶段拆为模块页。
+
+## 风险分级
+
+| 等级 | 问题 | 影响 | 建议 |
 |---|---|---|---|
-| HTTP 服务 | 裸 `node:http` | Fastify/Express | 依赖少；auth/schema 要手补 |
-| Auth | shared token + loopback guard | API key/RBAC/OAuth | 快速有效；缺主体和作用域 |
-| 状态存储 | JSON/JSONL | SQLite/event store | 可读；并发和查询弱 |
-| Feishu 入站 | verify token + `feishu-event` | openclaw-lark plugin | 最小可跑；正式协议不足 |
-| OpenClaw 迁移 | plan + stage snapshot | Terraform plan/apply | 可审计；还没有 apply/rollback UI |
-| Report | Mermaid HTML dashboard | Markdown/Docusaurus | 可视化强；生成器要拆 |
-
-## 关键设计对比
-
-| 选项 | 当前选择 | 原因 | 何时改变 |
-|---|---|---|---|
-| 同步 vs 异步 | 同步 HTTP + fs | Phase 0 易调试 | 高并发 webhook 时加队列 |
-| 本地存储 vs DB | JSON/JSONL | 可审计 | 需要持久幂等和查询时上 SQLite |
-| 自动执行 vs 人工确认 | 只 stage，不 apply | 防止迁移误伤 | stage diff/approval 完成后再 apply |
-| shared token vs scoped token | shared token | 快速封住 mutation | 多用户/远端场景改 scoped |
-| raw payload vs 标准消息 | 暂有 rawInbound | 快速接 Feishu shape | 下一阶段收窄并脱敏 |
-
-## OpenClaw 一键迁移路线
-
-当前只能叫“一键迁移路线”，不能叫“一键迁移能力”。Phase 0.5 已完成 `stage snapshot`，推荐继续按模块推进：
-
-```mermaid
-flowchart LR
-  Plan[plan inventory] --> Review[dashboard/API review]
-  Review --> Stage[stage snapshot 已实现]
-  Stage --> Diff[stage diff UI]
-  Diff --> ApplyFeishu[apply --module feishu]
-  ApplyFeishu --> Verify[send/receive verify]
-  Verify --> Rollback[rollback module]
-  Verify --> Next[providers/tools/memory modules]
-```
-
-Review 观察：
-
-- 优点：stage snapshot 让迁移结果可审计、可回滚设计可讨论。
-- 风险：`openclaw-lark` 可能依赖 OpenClaw runtime facade，不能直接复制。
-- 改进：下一阶段先做 stage diff UI 和审批，再做 Feishu module apply。
+| High | Feishu 缺正式签名、encrypt、持久 replay | 不能生产暴露 callback | Phase 0.7 port OpenClaw security tests |
+| High | Gateway index 承担太多职责 | 后续 route/auth/adapter 回归风险高 | 拆 `routes/`、`auth.mjs`、`feishu-edge.mjs` |
+| Medium | completion 分数仍需更多证据 | 已从裸百分比升级为验收项，但仍是手动维护 | 增加自动扫描和 source links |
+| Medium | dashboard 无 run detail/stage diff | 用户仍需看 raw JSON | 增加 drawer 和 diff panel |
+| Low | asset cache 很短 | 本地体验无大影响 | 后续加 version/hash |
 
 ## Linus 视角严苛审查
 
-独立 subagent 已按“30 年 Linux 内核维护者”视角完成审查，结论和本轮补救如下：
+独立 subagent 已完成只读审查，结论是 Phase 0.6 方向正确，但不要把“跑通”和“架构成熟”混为一谈。
 
-- 已修复：`myclaw dashboard` 不再启动 gateway，默认只读；mutation endpoints 只在显式 gateway/control mode 打开。
-- 已修复：Feishu 非 loopback 不再接受 gateway token 代替 verify token，`encrypt` payload 继续明确拒绝。
-- 已修复：OpenClaw stage snapshot 增加 `schemaVersion`、`checksum`、临时文件 rename 原子写；rollback 不再自称 supported。
-- 部分修复：`/api/status` 增加 5 秒 plan cache 和错误隔离，GET `source` override 已从 HTTP route 移除。
-- 仍需修复：Feishu 正式签名、加密解密、持久 replay window、scoped token 和 dashboard stage diff UI。
-- `gateway/src/index.mjs` 已超过 300 行，继续加能力前应拆 auth/feishu/migration route。
-- `rawInbound` 仍是脏接口，后续必须从 runtime 契约中收窄。
+| 等级 | 发现 | 处理 |
+|---|---|---|
+| High | HTML 报告仍是旧 Phase 0.5 会误导用户 | 本轮重新运行 `node docs/build-review-html.mjs` 后再发布 |
+| High | Linus 段落不能留占位 | 已把 subagent 发现写入本节 |
+| High | OpenClaw Feishu 插件不应直接加载 | 保持“参考不加载”，下一步做 MyClaw adapter facade |
+| High | gateway/status/dashboard 有反向耦合 | 已把 reference/Feishu 从 `/api/status` 拆成独立 API；gateway 文件仍需拆路由 |
+| Medium | dashboard 仍不像成熟操作台 | 本轮补列头和验收项；Phase 0.7 做 run detail、stage diff、approval queue |
+| Medium | reference completion 有自嗨风险 | 本轮从裸分数升级为 `criteria[]`，后续改为自动验收 |
+| Medium | 热点文件已形成 | `docs/build-review-html.mjs` 408 行、gateway 约 300 行，继续加能力前拆 |
 
-## 验收记录
+## Skill 规范自检
 
-本阶段需要通过：
+- `web-design-review` skill 已重新加载并要求 HTML dashboard、Mermaid、目录行数、风险分级、概念解释、相似技术比较。
+- 本报告覆盖系统上下文图、模块架构图、核心流程、时序图、状态机、ER、数据流、部署图。
+- 单文件限制继续由 `npm run check` 执行，500 行为硬阈值，450 行为预警。
+- 本阶段继续发布 HTML Center，并保留 GitHub commit。
 
-```bash
-npm run check
-npm test
-node docs/build-review-html.mjs
-npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json
-curl -sS http://127.0.0.1:4321/api/openclaw-migration/stage -H 'content-type: application/json' -d '{}'
-```
+## 下一阶段建议
 
-测试覆盖：
-
-- gateway `/messages` token guard。
-- Feishu verify token、challenge、encrypt callback 拒绝、duplicate event id。
-- OpenClaw `--stage` CLI 和 gateway stage API。
-- dashboard/status 展示 4 个 channel 和 latest stage。
-- line check 强制所有手写文件低于 500 行。
-
-结论：Phase 0.5 已补上 mutation guard 和 OpenClaw stage snapshot。下一阶段必须优先做 Feishu 正式协议安全、stage diff UI 和 `apply --module feishu` 的审批/回滚，不要扩展全量自动执行。
+1. Phase 0.7：MyClaw Feishu adapter facade，包含 config schema、verification、encrypt/replay contract。
+2. Dashboard 增加 stage diff、run detail drawer、`apply --module feishu` 人工确认入口。
+3. Gateway 拆路由和 auth，避免单文件继续膨胀。
+4. reference completion 改成模块验收项驱动，而不是纯手动百分比。

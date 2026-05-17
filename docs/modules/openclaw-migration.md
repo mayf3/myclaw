@@ -4,7 +4,7 @@
 
 “一键迁移 OpenClaw”必须被设计成可审计、可分阶段启用、可回滚的迁移流程，而不是复制目录后直接运行。OpenClaw 的 config、channels、plugins、secrets、tools、memory、browser 自动化和 gateway runtime 耦合面很大；MyClaw 当前只具备 channel boundary、state、dashboard 和 dry-run inventory。
 
-推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan`，Phase 0.5 已实现 `stage snapshot`，但还没有任何 runtime apply。
+推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan`，Phase 0.5 已实现 `stage snapshot`，Phase 0.6 已把 stage 状态接入 dashboard 的参考完成度工作台，但还没有任何 runtime apply。
 
 ## 参考项目观察
 
@@ -47,7 +47,7 @@ OpenClaw source
 | `myclaw migrate openclaw --source <path>` | Phase 0.2 | dry-run inventory，不写状态 |
 | `myclaw migrate openclaw --source <path> --output plan.json` | Phase 0.2 | 写可审计 plan 文件 |
 | `myclaw migrate openclaw --source <path> --stage` | Phase 0.5 | 写 MyClaw migration snapshot，不启用 runtime |
-| `myclaw migrate openclaw --apply --module feishu` | Phase 2 | 只启用 Feishu 相关可控配置 |
+| `myclaw migrate openclaw --apply --module feishu` | Phase 0.7/1 | 只从 staged snapshot 启用 Feishu adapter facade |
 | `myclaw migrate openclaw --rollback <snapshot>` | Phase 2+ | 回滚 staged/apply 结果 |
 
 ## MVP 边界
@@ -71,6 +71,14 @@ Phase 0.5 已完成：
 - rollback 不再自称 supported；stage 没有 runtime mutation，只能删除 proposal。
 - Gateway 暴露 `POST /api/openclaw-migration/stage`，受 mutation token guard 保护。
 
+Phase 0.6 已完成：
+
+- `/api/reference-completion` 返回带验收项的参考完成度矩阵。
+- `/api/feishu-adoption` 返回 Feishu/Lark 复用决策。
+- Dashboard 展示 OpenClaw/Hermes-agent/OpenHuman 对比矩阵。
+- Dashboard 明确 Feishu/Lark 当前是“参考 OpenClaw 插件，不直接加载”。
+- OpenClaw migration 的下一步被收敛到 `apply --module feishu`，不做全量 apply。
+
 Phase 0.2 不做：
 
 - 不读取 secrets 的真实值。
@@ -85,8 +93,9 @@ Phase 0.2 不做：
 |---|---|---|
 | Phase 0.2 | dry-run plan | `migrate openclaw` 输出稳定 JSON |
 | Phase 0.5 | staged snapshot | plan 可写入 MyClaw state，并在 dashboard/API 展示 latest stage |
-| Phase 1 | staged diff UI | dashboard 展示 stage diff，并支持确认/拒绝 |
-| Phase 2 | Feishu module apply | 只迁移 Feishu config 到 MyClaw Feishu adapter |
+| Phase 0.6 | reference dashboard | dashboard 显示 reference matrix 和 Feishu adoption decision |
+| Phase 0.7/1 | staged diff UI | dashboard 展示 stage diff，并支持确认/拒绝 |
+| Phase 1 | Feishu module apply | 只迁移 Feishu config 到 MyClaw Feishu adapter |
 | Phase 3 | providers/tools apply | provider 和 tool contracts 分批迁移 |
 | Phase 4 | memory/session migration | 明确 schema 后再迁移长期状态 |
 

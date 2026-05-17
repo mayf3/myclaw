@@ -1,6 +1,6 @@
 # MyClaw
 
-MyClaw is a local-first Node.js workflow and agent runtime in early Phase 0.
+MyClaw is a local-first Node.js workflow and agent runtime in early Phase 0.6.
 
 Current runnable surface:
 
@@ -26,12 +26,18 @@ The later OpenClaw Feishu/Lark plugin integration should attach behind the same 
 
 Dashboard:
 
-- `dashboard`: read-only local web console for state, runs, events, channel capabilities, and OpenClaw migration readiness.
+- `dashboard`: read-only local web console for state, runs, events, channel capabilities, OpenClaw migration readiness, Feishu/Lark adoption decision, and OpenClaw/Hermes-agent/OpenHuman module completion.
 
 Gateway:
 
-- `gateway`: local HTTP control surface. Phase 0.5 supports `GET /api/status`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, and `POST /api/openclaw-migration/stage`.
+- `gateway`: local HTTP control surface. Phase 0.6 supports `GET /api/status`, `GET /api/reference-completion`, `GET /api/feishu-adoption`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, and `POST /api/openclaw-migration/stage`.
 - Mutations stay open only for loopback development. Set `MYCLAW_GATEWAY_TOKEN` or pass `--token` before exposing the gateway beyond `127.0.0.1`.
+
+Feishu/Lark:
+
+- The OpenClaw Feishu package at `/Users/yanfenma/workspace/github/openclaw/extensions/feishu` is a strong reference, but MyClaw does not directly load it in Phase 0.6.
+- MyClaw will first mirror the needed adapter contract: config schema, webhook verification, encrypt/replay posture, event normalization, policy, and outbound result shape.
+- Direct loading is deferred because the plugin depends on OpenClaw plugin-sdk/runtime/config/secrets/approval contracts that MyClaw has not implemented yet.
 
 Feishu event callback smoke test:
 
@@ -45,3 +51,8 @@ Migration:
 
 - `migrate openclaw`: dry-run inventory for OpenClaw config, channels, plugin manifests, unsupported runtime surfaces, and a MyClaw draft mapping. It does not mutate OpenClaw or MyClaw state by default.
 - `migrate openclaw --stage`: writes a reviewable stage snapshot into MyClaw state. It still does not apply runtime config.
+
+Stage discipline:
+
+- Every implementation phase updates the design review HTML and compares MyClaw module completion against OpenClaw, Hermes-agent, and OpenHuman.
+- `npm run check` enforces the 500-line single-file limit.

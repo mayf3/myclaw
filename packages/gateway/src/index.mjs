@@ -1,12 +1,14 @@
 import http from "node:http";
 import { URL } from "node:url";
-import { renderDashboardHtml } from "../../dashboard/src/index.mjs";
+import { getDashboardAsset, renderDashboardHtml } from "../../dashboard/src/index.mjs";
 import { receiveMessage } from "../../runtime/src/messages.mjs";
 import { resolveStateDir } from "../../core/src/state.mjs";
 import { stageOpenClawMigration } from "../../migrate/src/stage.mjs";
 import {
   buildEventsPayload,
+  buildFeishuAdoptionStatusPayload,
   buildOpenClawMigrationPayload,
+  buildReferenceCompletionStatusPayload,
   buildRunsPayload,
   buildStatusPayload,
 } from "../../control-plane/src/status.mjs";
@@ -85,6 +87,11 @@ async function handleGetRequest(url, response, context) {
     sendHtml(response, renderDashboardHtml());
     return;
   }
+  const asset = getDashboardAsset(url.pathname);
+  if (asset) {
+    sendText(response, 200, asset.contentType, asset.body, "public, max-age=60");
+    return;
+  }
   if (url.pathname === "/api/health") {
     sendJson(response, 200, { ok: true, service: "myclaw-gateway", at: new Date().toISOString() });
     return;
@@ -103,6 +110,14 @@ async function handleGetRequest(url, response, context) {
   }
   if (url.pathname === "/api/openclaw-migration") {
     sendJson(response, 200, await buildOpenClawMigrationPayload(context));
+    return;
+  }
+  if (url.pathname === "/api/reference-completion") {
+    sendJson(response, 200, buildReferenceCompletionStatusPayload());
+    return;
+  }
+  if (url.pathname === "/api/feishu-adoption") {
+    sendJson(response, 200, buildFeishuAdoptionStatusPayload());
     return;
   }
   sendJson(response, 404, { ok: false, error: { code: "not_found" } });
@@ -290,17 +305,17 @@ function readJsonBody(request) {
 }
 
 function sendJson(response, status, payload) {
-  response.writeHead(status, {
-    "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-  });
-  response.end(JSON.stringify(payload, null, 2));
+  sendText(response, status, "application/json; charset=utf-8", JSON.stringify(payload, null, 2));
 }
 
 function sendHtml(response, html) {
-  response.writeHead(200, {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store",
+  sendText(response, 200, "text/html; charset=utf-8", html);
+}
+
+function sendText(response, status, contentType, body, cacheControl = "no-store") {
+  response.writeHead(status, {
+    "content-type": contentType,
+    "cache-control": cacheControl,
   });
-  response.end(html);
+  response.end(body);
 }
