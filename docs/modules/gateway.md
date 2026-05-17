@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 0.3 已提前实现最小 HTTP inbound，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。
+Gateway 是 MyClaw 的控制平面。Phase 0.4 已实现通用 `POST /messages` 和 Feishu/Lark `POST /feishu/events` 入站，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。
 
 ## 参考项目观察
 
@@ -28,7 +28,7 @@ OpenHuman 的 gateway/RPC 价值在于边界拆分：
 
 ## 推荐设计
 
-Phase 0.3 已实现的最小 gateway：
+Phase 0.4 已实现的最小 gateway：
 
 ```text
 HTTP
@@ -36,9 +36,21 @@ HTTP
   GET  /api/health
   GET  /api/status
   POST /messages
+  POST /feishu/events
 ```
 
-它只做 message ingress 和 dashboard 状态读取，尚未做 workflow run/resume。
+它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。
+
+Feishu event 路径必须保持薄：
+
+```text
+POST /feishu/events
+  -> challenge response
+  -> event id idempotency
+  -> runtime.receiveMessage(rawInbound)
+  -> feishu-event channel normalize
+  -> state envelope
+```
 
 Phase 4 的完整 gateway：
 
@@ -134,6 +146,14 @@ Phase 0.3：
 - `POST /messages` 复用 runtime receive pipeline。
 - 写入统一 envelope/state。
 
+Phase 0.4：
+
+- `POST /feishu/events` / `POST /api/feishu/events`。
+- Feishu challenge 回显。
+- Feishu 文本消息事件 normalize。
+- event id 内存幂等，避免本机测试重复写入。
+- Mermaid 可视化 design review report。
+
 Phase 4：
 
 - HTTP + WS。
@@ -149,16 +169,19 @@ Phase 4：
 - Control UI config editor。
 - public remote access。
 - launchd/systemd。
+- Feishu encrypt payload、token、签名校验。
 
 ## 关键风险
 
 - 过早把 gateway 做成 OpenClaw 级别控制平面。
 - auth 作为后补，会导致 UI/channel 接入时重构。
 - event 没有 seq，前端断线后无法判断丢事件。
+- Feishu idempotency 目前是内存 Map，服务重启后不保留 replay window。
 
 ## 验收标准
 
 - `POST /messages` 返回与 CLI receive 一致的 envelope。
+- `POST /feishu/events` 能回显 challenge，并把文本事件写入 `feishu-event` run。
 - `GET /api/status` 能显示最新 gateway message run。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。

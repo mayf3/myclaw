@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   createChannelRegistry,
   createConsoleChannel,
+  createFeishuEventChannel,
   listChannels,
   normalizeInboundMessage,
   resolveChannel,
@@ -30,6 +31,7 @@ test("registry lists channel capabilities", () => {
       ["console", true, true],
       ["webhook", false, true],
       ["feishu-webhook", false, true],
+      ["feishu-event", true, false],
     ],
   );
 });
@@ -54,9 +56,30 @@ test("generic inbound normalizer rejects empty text", () => {
   assert.throws(() => normalizeInboundMessage({ text: "" }), /missing text/);
 });
 
+test("feishu event channel normalizes text callbacks", () => {
+  const channel = createFeishuEventChannel();
+  const inbound = channel.normalizeInbound({
+    header: { event_id: "evt_1", create_time: "1710000000000" },
+    event: {
+      sender: { sender_id: { open_id: "ou_user" } },
+      message: {
+        message_id: "om_msg",
+        chat_id: "oc_group",
+        content: JSON.stringify({ text: " hello feishu " }),
+      },
+    },
+  });
+
+  assert.equal(inbound.id, "om_msg");
+  assert.equal(inbound.channel, "feishu-event");
+  assert.equal(inbound.text, "hello feishu");
+  assert.equal(inbound.sender.id, "ou_user");
+  assert.equal(inbound.conversationId, "oc_group");
+});
+
 test("channel list exposes the initial outbound surfaces", () => {
   assert.deepEqual(
     listChannels().map((channel) => channel.id),
-    ["console", "webhook", "feishu-webhook"],
+    ["console", "webhook", "feishu-webhook", "feishu-event"],
   );
 });

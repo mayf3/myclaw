@@ -11,6 +11,8 @@ import {
 } from "../../control-plane/src/status.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const FEISHU_EVENT_TTL_MS = 10 * 60 * 1000;
+const seenFeishuEvents = new Map();
 
 export async function startGateway(options = {}) {
   const host = options.host || "127.0.0.1";
@@ -48,6 +50,10 @@ export async function startGateway(options = {}) {
 
 export async function handleGatewayRequest(request, response, context) {
   const url = new URL(request.url || "/", "http://127.0.0.1");
+  if (request.method === "POST" && (url.pathname === "/feishu/events" || url.pathname === "/api/feishu/events")) {
+    await handlePostFeishuEvent(request, response, context);
+    return;
+  }
   if (request.method === "POST" && (url.pathname === "/messages" || url.pathname === "/api/messages")) {
     await handlePostMessage(request, response, context);
     return;
@@ -118,6 +124,56 @@ async function handlePostMessage(request, response, context) {
   });
 
   sendJson(response, envelope.ok ? 200 : 422, envelope);
+}
+
+async function handlePostFeishuEvent(request, response, context) {
+  const body = await readJsonBody(request);
+  if (body.challenge) {
+    sendJson(response, 200, { challenge: String(body.challenge) });
+    return;
+  }
+
+  const eventId = getFeishuEventId(body);
+  if (eventId && !reserveFeishuEvent(eventId)) {
+    sendJson(response, 200, { ok: true, duplicate: true, eventId });
+    return;
+  }
+
+  const envelope = await receiveMessage({
+    channelId: "feishu-event",
+    rawInbound: body,
+    stateDir: context.stateDir,
+    source: "feishu-event",
+  });
+  if (eventId && !envelope.ok) {
+    seenFeishuEvents.delete(eventId);
+  }
+  sendJson(response, envelope.ok ? 200 : 422, {
+    ...envelope,
+    ...(eventId ? { eventId } : {}),
+  });
+}
+
+function getFeishuEventId(body = {}) {
+  return body.header?.event_id || body.event?.message?.message_id || body.message?.message_id || null;
+}
+
+function reserveFeishuEvent(eventId) {
+  cleanupFeishuEvents();
+  if (seenFeishuEvents.has(eventId)) {
+    return false;
+  }
+  seenFeishuEvents.set(eventId, Date.now());
+  return true;
+}
+
+function cleanupFeishuEvents() {
+  const threshold = Date.now() - FEISHU_EVENT_TTL_MS;
+  for (const [eventId, seenAt] of seenFeishuEvents) {
+    if (seenAt < threshold) {
+      seenFeishuEvents.delete(eventId);
+    }
+  }
 }
 
 function readJsonBody(request) {
