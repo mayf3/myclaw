@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 0.4 已实现通用 `POST /messages` 和 Feishu/Lark `POST /feishu/events` 入站，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。
+Gateway 是 MyClaw 的控制平面。Phase 0.5 已实现通用 `POST /messages`、Feishu/Lark `POST /feishu/events`、OpenClaw `POST /api/openclaw-migration/stage` 和 mutation token guard。它仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -28,7 +28,7 @@ OpenHuman 的 gateway/RPC 价值在于边界拆分：
 
 ## 推荐设计
 
-Phase 0.4 已实现的最小 gateway：
+Phase 0.5 已实现的最小 gateway：
 
 ```text
 HTTP
@@ -37,6 +37,7 @@ HTTP
   GET  /api/status
   POST /messages
   POST /feishu/events
+  POST /api/openclaw-migration/stage
 ```
 
 它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。
@@ -45,11 +46,23 @@ Feishu event 路径必须保持薄：
 
 ```text
 POST /feishu/events
+  -> Feishu verify token / gateway token / local dev guard
+  -> reject encrypt payload
   -> challenge response
   -> event id idempotency
   -> runtime.receiveMessage(rawInbound)
   -> feishu-event channel normalize
   -> state envelope
+```
+
+OpenClaw stage 路径：
+
+```text
+POST /api/openclaw-migration/stage
+  -> gateway mutation token guard
+  -> stageOpenClawMigration
+  -> state/migrations/openclaw/<stageId>.json
+  -> latest.json pointer
 ```
 
 Phase 4 的完整 gateway：
@@ -103,9 +116,10 @@ type GatewayFrame =
 默认：
 
 - bind: `127.0.0.1`。
-- auth: token。
-- local-only 也保留 token 配置，但可允许 bootstrap 时生成。
-- 非 loopback 禁止无 token。
+- auth: local loopback 可无 token；配置 `MYCLAW_GATEWAY_TOKEN` 或 `--token` 后所有 mutation 必须带 token。
+- 非 loopback mutation 禁止无 token。
+- token 支持 `Authorization: Bearer <token>` 和 `x-myclaw-token`。
+- Feishu endpoint 支持 `MYCLAW_FEISHU_VERIFY_TOKEN`，正式暴露前必须配置。
 
 后续再加：
 
@@ -154,6 +168,15 @@ Phase 0.4：
 - event id 内存幂等，避免本机测试重复写入。
 - Mermaid 可视化 design review report。
 
+Phase 0.5：
+
+- Gateway mutation token guard。
+- Feishu verify token 与 encrypted callback 拒绝路径。
+- OpenClaw stage snapshot API。
+- Dashboard `/api/status` 展示 latest stage 指针。
+- `myclaw dashboard` 使用只读 dashboard server；mutation endpoints 只在显式 gateway 打开。
+- OpenClaw migration GET route 不再接受任意 `source` query override。
+
 Phase 4：
 
 - HTTP + WS。
@@ -169,7 +192,8 @@ Phase 4：
 - Control UI config editor。
 - public remote access。
 - launchd/systemd。
-- Feishu encrypt payload、token、签名校验。
+- Feishu encrypt payload 解密和正式签名校验。
+- 持久 replay window。
 
 ## 关键风险
 
@@ -177,11 +201,15 @@ Phase 4：
 - auth 作为后补，会导致 UI/channel 接入时重构。
 - event 没有 seq，前端断线后无法判断丢事件。
 - Feishu idempotency 目前是内存 Map，服务重启后不保留 replay window。
+- token 现在只是 shared secret，没有用户/角色/作用域。
+- `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 
 ## 验收标准
 
 - `POST /messages` 返回与 CLI receive 一致的 envelope。
 - `POST /feishu/events` 能回显 challenge，并把文本事件写入 `feishu-event` run。
+- `POST /messages` 在配置 token 后拒绝无 token 请求。
+- `POST /api/openclaw-migration/stage` 只写 snapshot，不修改 runtime config。
 - `GET /api/status` 能显示最新 gateway message run。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
