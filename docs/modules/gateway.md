@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面，不是第一阶段核心。它应该在 workflow core 稳定后加入，负责 HTTP/WS、auth、事件推送和本地 UI，而不是承担业务逻辑。
+Gateway 是 MyClaw 的控制平面。Phase 0.3 已提前实现最小 HTTP inbound，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。
 
 ## 参考项目观察
 
@@ -28,7 +28,19 @@ OpenHuman 的 gateway/RPC 价值在于边界拆分：
 
 ## 推荐设计
 
-Phase 4 的最小 gateway：
+Phase 0.3 已实现的最小 gateway：
+
+```text
+HTTP
+  GET  /
+  GET  /api/health
+  GET  /api/status
+  POST /messages
+```
+
+它只做 message ingress 和 dashboard 状态读取，尚未做 workflow run/resume。
+
+Phase 4 的完整 gateway：
 
 ```text
 HTTP
@@ -47,7 +59,7 @@ WebSocket
   event:run.failed
 ```
 
-Phase 0/1 先做非 HTTP 的 gateway 前置契约：
+Phase 0/1 继续补非 HTTP 的 gateway 前置契约：
 
 ```text
 ControllerDefinition
@@ -115,6 +127,13 @@ Gateway 只调用 core/agent API，并转发事件。
 
 ## MVP 边界
 
+Phase 0.3：
+
+- 本机 HTTP gateway。
+- Dashboard GET routes。
+- `POST /messages` 复用 runtime receive pipeline。
+- 写入统一 envelope/state。
+
 Phase 4：
 
 - HTTP + WS。
@@ -139,6 +158,8 @@ Phase 4：
 
 ## 验收标准
 
+- `POST /messages` 返回与 CLI receive 一致的 envelope。
+- `GET /api/status` 能显示最新 gateway message run。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
 - Gateway 重启后能从 state store 读历史 run。

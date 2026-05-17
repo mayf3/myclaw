@@ -53,13 +53,13 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <p>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</p>
           <div class="meta">
             <span class="tag p1">P1</span>
-            <span class="tag phase">Phase 4</span>
+            <span class="tag phase">Phase 0.3/4</span>
             <span class="tag">控制平面</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>Gateway 是 MyClaw 的控制平面，不是第一阶段核心。它应该在 workflow core 稳定后加入，负责 HTTP/WS、auth、事件推送和本地 UI，而不是承担业务逻辑。</p>
+<p>Gateway 是 MyClaw 的控制平面。Phase 0.3 已提前实现最小 HTTP inbound，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw gateway 的核心设计值得借鉴：</p>
 <ul><li>单个长生命周期 gateway。</li><li>默认绑定 <code>127.0.0.1</code>。</li><li>WebSocket 使用 connect handshake。</li><li>request/response/event 三类消息。</li><li>side-effecting request 使用 idempotency key。</li><li>local trust 和 remote trust 分开。</li><li>gateway 负责 session、routing、channel、event、health。</li></ul>
@@ -68,7 +68,14 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li><code>src/core/all.rs</code> 先聚合 controller registry。</li><li><code>src/core/jsonrpc.rs</code> 只处理 JSON-RPC、health、schema discovery、错误 envelope 和实时流。</li><li>业务 controller 不依赖 HTTP transport。</li></ul>
 <p>这说明 MyClaw 不应该一开始就写 gateway handler，而应该先写 controller registry，等 CLI 跑通后再挂到 HTTP/WS。</p>
 <h2 id="推荐设计">推荐设计</h2>
-<p>Phase 4 的最小 gateway：</p>
+<p>Phase 0.3 已实现的最小 gateway：</p>
+<pre class="code" data-lang="text"><code>HTTP
+  GET  /
+  GET  /api/health
+  GET  /api/status
+  POST /messages</code></pre>
+<p>它只做 message ingress 和 dashboard 状态读取，尚未做 workflow run/resume。</p>
+<p>Phase 4 的完整 gateway：</p>
 <pre class="code" data-lang="text"><code>HTTP
   GET  /health
   GET  /runs
@@ -83,7 +90,7 @@ WebSocket
   event:run.approval
   event:run.completed
   event:run.failed</code></pre>
-<p>Phase 0/1 先做非 HTTP 的 gateway 前置契约：</p>
+<p>Phase 0/1 继续补非 HTTP 的 gateway 前置契约：</p>
 <pre class="code" data-lang="text"><code>ControllerDefinition
   namespace
   method
@@ -116,6 +123,8 @@ EventBus
 <p>输出依赖：</p>
 <ul><li><code>ui-control-observability</code> 使用 gateway API。</li><li><code>access-layer</code> 的 CLI remote mode 使用 gateway API。</li><li>未来 channel adapters 走 gateway API。</li></ul>
 <h2 id="mvp-边界">MVP 边界</h2>
+<p>Phase 0.3：</p>
+<ul><li>本机 HTTP gateway。</li><li>Dashboard GET routes。</li><li><code>POST /messages</code> 复用 runtime receive pipeline。</li><li>写入统一 envelope/state。</li></ul>
 <p>Phase 4：</p>
 <ul><li>HTTP + WS。</li><li>token auth。</li><li>run/resume/status。</li><li>event stream。</li><li>graceful shutdown。</li></ul>
 <p>先不做：</p>
@@ -123,7 +132,7 @@ EventBus
 <h2 id="关键风险">关键风险</h2>
 <ul><li>过早把 gateway 做成 OpenClaw 级别控制平面。</li><li>auth 作为后补，会导致 UI/channel 接入时重构。</li><li>event 没有 seq，前端断线后无法判断丢事件。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
+<ul><li><code>POST /messages</code> 返回与 CLI receive 一致的 envelope。</li><li><code>GET /api/status</code> 能显示最新 gateway message run。</li><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>

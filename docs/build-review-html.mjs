@@ -1,113 +1,8 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-
+import { moduleMeta, moduleOrder } from "./lib/module-meta.mjs";
 const ROOT = new URL(".", import.meta.url).pathname;
 const MODULES_DIR = path.join(ROOT, "modules");
-
-const moduleOrder = [
-  "reference-comparison",
-  "openhuman-analysis",
-  "initial-mvp-plan",
-  "openclaw-migration",
-  "workflow-core",
-  "access-layer",
-  "gateway",
-  "agent-runtime",
-  "tools-approval-security",
-  "memory-session-search",
-  "plugins-skills",
-  "config-state-storage",
-  "ui-observability-ops",
-  "roadmap-acceptance",
-];
-
-const moduleMeta = {
-  "reference-comparison": {
-    phase: "Phase 0",
-    priority: "P0",
-    label: "战略判断",
-    summary: "比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。",
-  },
-  "openhuman-analysis": {
-    phase: "Phase 0",
-    priority: "P0",
-    label: "新参考输入",
-    summary: "拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。",
-  },
-  "initial-mvp-plan": {
-    phase: "Phase 0-3",
-    priority: "P0",
-    label: "初期方案",
-    summary: "把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。",
-  },
-  "openclaw-migration": {
-    phase: "Phase 0.2-4",
-    priority: "P0",
-    label: "迁移方案",
-    summary: "把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。",
-  },
-  "workflow-core": {
-    phase: "Phase 1",
-    priority: "P0",
-    label: "核心地基",
-    summary: "定义 workflow AST、runner、统一 envelope、approval/resume 状态机。",
-  },
-  "access-layer": {
-    phase: "Phase 0-4",
-    priority: "P1",
-    label: "接口边界",
-    summary: "拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。",
-  },
-  gateway: {
-    phase: "Phase 4",
-    priority: "P1",
-    label: "控制平面",
-    summary: "本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。",
-  },
-  "agent-runtime": {
-    phase: "Phase 3",
-    priority: "P1",
-    label: "智能层",
-    summary: "LLM provider、prompt builder、tool calling、transcript 和 approval pause。",
-  },
-  "tools-approval-security": {
-    phase: "Phase 2",
-    priority: "P0",
-    label: "安全边界",
-    summary: "ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。",
-  },
-  "memory-session-search": {
-    phase: "Phase 3/6",
-    priority: "P1",
-    label: "长期价值",
-    summary: "JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。",
-  },
-  "plugins-skills": {
-    phase: "Phase 5",
-    priority: "P2",
-    label: "扩展机制",
-    summary: "区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。",
-  },
-  "config-state-storage": {
-    phase: "Phase 0/1",
-    priority: "P0",
-    label: "可恢复基础",
-    summary: "JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。",
-  },
-  "ui-observability-ops": {
-    phase: "Phase 1/4/6",
-    priority: "P1",
-    label: "可观察性",
-    summary: "doctor/status、run timeline、approval queue、logs、未来 Control UI。",
-  },
-  "roadmap-acceptance": {
-    phase: "全阶段",
-    priority: "P0",
-    label: "执行计划",
-    summary: "Phase 0-6 的交付、测试、验收标准和全局 Done Definition。",
-  },
-};
-
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -115,7 +10,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 }
-
 function slugify(value) {
   return value
     .toLowerCase()
@@ -125,7 +19,6 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "")
     || "section";
 }
-
 function inlineMarkdown(value) {
   let text = escapeHtml(value);
   text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -136,7 +29,6 @@ function inlineMarkdown(value) {
   });
   return text;
 }
-
 function parseMarkdownTable(lines, start) {
   const header = lines[start];
   const divider = lines[start + 1] ?? "";
@@ -166,7 +58,6 @@ function parseMarkdownTable(lines, start) {
       .join("")}</tbody></table></div>`,
   };
 }
-
 function renderMarkdown(source) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const title = lines.find((line) => line.startsWith("# "))?.replace(/^#\s+/, "").trim() ?? "模块评审";
@@ -176,14 +67,12 @@ function renderMarkdown(source) {
   let codeLang = "";
   let code = [];
   let list = [];
-
   const flushList = () => {
     if (list.length) {
       body.push(`<ul>${list.map((item) => `<li>${inlineMarkdown(item)}</li>`).join("")}</ul>`);
       list = [];
     }
   };
-
   const flushCode = () => {
     if (inCode) {
       body.push(
@@ -196,7 +85,6 @@ function renderMarkdown(source) {
       code = [];
     }
   };
-
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (line.startsWith("```")) {
@@ -249,12 +137,10 @@ function renderMarkdown(source) {
     flushList();
     body.push(`<p>${inlineMarkdown(line.trim())}</p>`);
   }
-
   flushList();
   flushCode();
   return { title, headings, html: body.join("\n") };
 }
-
 const css = `
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -275,7 +161,6 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 .module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
 @media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
 `;
-
 function moduleShell({ slug, title, headings, body }) {
   const meta = moduleMeta[slug] ?? { phase: "未分配", priority: "P2", label: "模块", summary: "" };
   const navItems = headings
@@ -293,7 +178,6 @@ function moduleShell({ slug, title, headings, body }) {
       )}</strong><span>${escapeHtml(sibling.summary)}</span></a>`;
     })
     .join("\n");
-
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -337,7 +221,6 @@ function moduleShell({ slug, title, headings, body }) {
 </html>
 `;
 }
-
 function buildModule(slug) {
   const mdPath = path.join(MODULES_DIR, `${slug}.md`);
   const source = readFileSync(mdPath, "utf8");
@@ -347,7 +230,6 @@ function buildModule(slug) {
     moduleShell({ slug, title: parsed.title, headings: parsed.headings, body: parsed.html }),
   );
 }
-
 function buildDesignReview() {
   const source = readFileSync(path.join(ROOT, "design-review.md"), "utf8");
   const parsed = renderMarkdown(source);
@@ -393,7 +275,6 @@ function buildDesignReview() {
 `;
   writeFileSync(path.join(ROOT, "design-review.html"), body);
 }
-
 function buildStageStatus() {
   const source = readFileSync(path.join(ROOT, "stage-status.md"), "utf8");
   const parsed = renderMarkdown(source);
@@ -439,7 +320,6 @@ function buildStageStatus() {
 `;
   writeFileSync(path.join(ROOT, "stage-status.html"), body);
 }
-
 function buildImplementationArchitecture() {
   const source = readFileSync(path.join(ROOT, "implementation-architecture.md"), "utf8");
   const parsed = renderMarkdown(source);
@@ -470,10 +350,10 @@ function buildImplementationArchitecture() {
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 0.1 的通道 registry、inbound/reply pipeline、状态记录、当前问题和下一阶段 gateway 推荐。</p>
+          <p>MyClaw Phase 0.3 的 gateway、dashboard、runtime、OpenClaw 迁移和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0.1</span>
+            <span class="tag phase">Phase 0.3</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
@@ -485,7 +365,6 @@ function buildImplementationArchitecture() {
 `;
   writeFileSync(path.join(ROOT, "implementation-architecture.html"), body);
 }
-
 function rewriteIndexLinks() {
   const indexPath = path.join(ROOT, "index.html");
   let html = readFileSync(indexPath, "utf8");
@@ -499,11 +378,9 @@ function rewriteIndexLinks() {
   }
   writeFileSync(indexPath, html);
 }
-
 for (const slug of moduleOrder) {
   buildModule(slug);
 }
-
 const readmePath = path.join(MODULES_DIR, "README.md");
 if (statSync(readmePath).isFile()) {
   const source = readFileSync(readmePath, "utf8");
@@ -513,11 +390,9 @@ if (statSync(readmePath).isFile()) {
     moduleShell({ slug: "roadmap-acceptance", title: parsed.title, headings: parsed.headings, body: parsed.html }),
   );
 }
-
 buildDesignReview();
 buildStageStatus();
 buildImplementationArchitecture();
 rewriteIndexLinks();
-
 const htmlFiles = readdirSync(MODULES_DIR).filter((file) => file.endsWith(".html")).length + 4;
 console.log(`Generated ${htmlFiles} HTML files`);

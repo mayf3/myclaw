@@ -1,8 +1,12 @@
 import http from "node:http";
 import { URL } from "node:url";
-import { listChannels } from "../../channels/src/index.mjs";
-import { listRuns, readEvents, resolveStateDir } from "../../core/src/state.mjs";
-import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
+import { resolveStateDir } from "../../core/src/state.mjs";
+import {
+  buildEventsPayload,
+  buildOpenClawMigrationPayload,
+  buildRunsPayload,
+  buildStatusPayload,
+} from "../../control-plane/src/status.mjs";
 
 export async function startDashboard(options = {}) {
   const host = options.host || "127.0.0.1";
@@ -54,44 +58,26 @@ export async function handleDashboardRequest(request, response, context) {
     return;
   }
   if (url.pathname === "/api/status") {
-    sendJson(response, 200, await buildStatusPayload(context));
+    sendJson(response, 200, await buildStatusPayload({ ...context, service: "myclaw-dashboard" }));
     return;
   }
   if (url.pathname === "/api/runs") {
     const limit = Number(url.searchParams.get("limit") || 50);
-    sendJson(response, 200, { ok: true, runs: await listRuns(context.stateDir, { limit }) });
+    sendJson(response, 200, await buildRunsPayload(context, { limit }));
     return;
   }
   if (url.pathname === "/api/events") {
     const limit = Number(url.searchParams.get("limit") || 100);
-    sendJson(response, 200, { ok: true, events: await readEvents(context.stateDir, { limit }) });
+    sendJson(response, 200, await buildEventsPayload(context, { limit }));
     return;
   }
   if (url.pathname === "/api/openclaw-migration") {
     const source = url.searchParams.get("source") || context.openclawSource;
-    sendJson(response, 200, { ok: true, plan: await planOpenClawMigration({ source }) });
+    sendJson(response, 200, await buildOpenClawMigrationPayload(context, { source }));
     return;
   }
 
   sendJson(response, 404, { ok: false, error: { code: "not_found" } });
-}
-
-async function buildStatusPayload(context) {
-  const [runs, events, migrationPlan] = await Promise.all([
-    listRuns(context.stateDir, { limit: 20 }),
-    readEvents(context.stateDir, { limit: 50 }),
-    planOpenClawMigration({ source: context.openclawSource }),
-  ]);
-  return {
-    ok: true,
-    service: "myclaw-dashboard",
-    at: new Date().toISOString(),
-    stateDir: context.stateDir,
-    channels: listChannels(),
-    runs,
-    events,
-    openclawMigration: migrationPlan,
-  };
 }
 
 function sendHtml(response, html) {
@@ -110,7 +96,7 @@ function sendJson(response, status, payload) {
   response.end(JSON.stringify(payload, null, 2));
 }
 
-function renderDashboardHtml() {
+export function renderDashboardHtml() {
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -151,6 +137,7 @@ function renderDashboardHtml() {
           <a href="#overview">总览</a>
           <a href="#runs">Runs</a>
           <a href="#events">事件</a>
+          <a href="#gateway">Gateway</a>
           <a href="#channels">通道</a>
           <a href="#migration">OpenClaw 迁移</a>
           <a href="#raw">原始状态</a>
@@ -185,11 +172,28 @@ function renderDashboardHtml() {
         </div>
 
         <div class="split">
+          <section id="gateway" class="panel">
+            <h3>Gateway 入口</h3>
+            <p class="muted">Dashboard 由 gateway 承载时，可用同源 HTTP 入口模拟外部 channel inbound。</p>
+            <pre>POST /messages
+Content-Type: application/json
+
+{
+  "channel": "console",
+  "from": "local-user",
+  "conversation": "local-thread",
+  "text": "hello",
+  "reply": "received"
+}</pre>
+          </section>
+
           <section id="channels" class="panel">
             <h3>通道能力</h3>
             <div id="channelsTable" class="empty">暂无通道</div>
           </section>
+        </div>
 
+        <div class="split">
           <section id="migration" class="panel">
             <h3>OpenClaw 迁移评估</h3>
             <div id="migrationPanel" class="empty">暂无迁移计划</div>
