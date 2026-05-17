@@ -37,7 +37,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
-<a href="#phase-0-6-完成度矩阵">Phase 0.6 完成度矩阵</a>
+<a href="#phase-0-7-完成度矩阵">Phase 0.7 完成度矩阵</a>
 <a href="#hermes-agent-观察">Hermes Agent 观察</a>
 <a href="#openclaw-观察">OpenClaw 观察</a>
 <a href="#openclaw-feishu-lark-观察">OpenClaw Feishu/Lark 观察</a>
@@ -62,9 +62,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <article class="content">
           <h2 id="诊断">诊断</h2>
 <p>Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw <code>extensions/lobster</code> 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。</p>
-<p>Phase 0.6 新增硬规则：每个阶段都必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。否则很容易只看到“消息能发了”，却忽略 gateway、记忆、工具安全、dashboard 和插件边界还差很远。</p>
-<h2 id="phase-0-6-完成度矩阵">Phase 0.6 完成度矩阵</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>58</td><td>90</td><td>78</td><td>86</td><td>缺 WS/event stream、scoped token、route schema</td></tr><tr><td>Feishu/Lark 接入</td><td>28</td><td>92</td><td>42</td><td>35</td><td>缺签名、encrypt、WebSocket、policy、outbound rich card</td></tr><tr><td>Dashboard / 观测</td><td>45</td><td>78</td><td>55</td><td>90</td><td>缺 run detail、stage diff、approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>50</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage，缺 apply/rollback/diff UI</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn、tool loop、subagent、context budget</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、policy snapshot、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>仅 channel registry，没有 plugin manifest/skill loader</td></tr></tbody></table></div>
+<p>Phase 0.7 新增 Feishu adapter facade，并把 gateway 热点文件拆为 route/auth/http 模块。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。</p>
+<h2 id="phase-0-7-完成度矩阵">Phase 0.7 完成度矩阵</h2>
+<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>60</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>45</td><td>92</td><td>42</td><td>35</td><td>有 adapter/signature，缺 encrypt/WebSocket/policy/outbound</td></tr><tr><td>Dashboard / 观测</td><td>47</td><td>78</td><td>55</td><td>90</td><td>缺 run detail、stage diff、approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>50</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage，缺 apply/rollback/diff UI</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn、tool loop、subagent、context budget</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、policy snapshot、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>仅 channel registry，没有 plugin manifest/skill loader</td></tr></tbody></table></div>
 <h2 id="hermes-agent-观察">Hermes Agent 观察</h2>
 <p>可借鉴：</p>
 <ul><li>一个 agent loop 服务 CLI、gateway、ACP、cron、batch 多入口。</li><li>SQLite + FTS5 存 session，适合长期检索和跨会话召回。</li><li>memory + skills 形成使用后的学习闭环。</li><li>tool registry 将工具 schema、handler、availability check 放在统一位置。</li><li>prompt stability 明确，避免系统 prompt 中途频繁变化。</li></ul>
@@ -81,8 +81,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>webhook mode 必须要求 verification token 和 encrypt key。</li><li>WebSocket/webhook 两种 connection mode 的配置边界。</li><li>DM/group/mention access policy。</li><li>message、card action、reaction、comment、media 的事件归一化。</li><li>text/card/threading/send result 的 outbound 归一化。</li></ul>
 <p>不建议直接用：</p>
 <ul><li>插件依赖 <code>@openclaw/plugin-sdk</code> 和 OpenClaw runtime API。</li><li>doc/drive/wiki/bitable 等工具面超出 MyClaw Phase 0。</li><li>直接加载会提前引入 OpenClaw 的 config、secret、approval 语义。</li></ul>
-<p>MyClaw 结论：</p>
-<ul><li>Phase 0.6 只参考，不直接加载。</li><li>下一阶段先写 MyClaw Feishu adapter facade，再选择性移植安全与 outbound 逻辑。</li></ul>
+<p>Phase 0.7 MyClaw 结论：</p>
+<ul><li>仍然只参考，不直接加载。</li><li>已新增 <code>packages/feishu-adapter</code>，先承接 config readiness、x-lark signature、verification token、replay guard 和 event normalize。</li><li>下一阶段选择性移植 encrypted challenge decrypt 和 outbound result normalization。</li></ul>
 <h2 id="openclaw-lobster-观察">OpenClaw Lobster 观察</h2>
 <p>可直接吸收的核心：</p>
 <ul><li><code>run</code> / <code>resume</code> 双动作。</li><li>typed JSON envelope。</li><li><code>needs_approval</code> 状态。</li><li><code>resumeToken</code> / <code>approvalId</code> 恢复。</li><li>cwd 必须留在 gateway 工作目录内。</li><li>timeout 和 stdout/stderr cap。</li><li>workflow file 与 pipeline string 两种入口。</li></ul>

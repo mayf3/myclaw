@@ -2,31 +2,31 @@ const moduleDefinitions = [
   {
     id: "gateway",
     label: "Gateway / 控制面",
-    phase: "0.5",
+    phase: "0.7",
     openclaw: 90,
     hermes: 78,
     openhuman: 86,
-    gap: "缺 WS/event stream、scoped token、route schema",
-    next: "拆 gateway auth/feishu/migration routes，增加 mutation audit",
+    gap: "已拆 routes/auth，仍缺 WS/event stream、scoped token、route schema",
+    next: "增加 mutation audit 和 scoped token",
     criteria: [
-      c("gateway-http", "HTTP health/status/messages/stage routes", "done", 100, "packages/gateway/src/index.mjs"),
-      c("gateway-guard", "loopback/token mutation guard", "partial", 75, "packages/gateway/test/gateway.test.mjs"),
+      c("gateway-http", "HTTP health/status/messages/stage routes", "done", 100, "packages/gateway/src/routes"),
+      c("gateway-guard", "loopback/token mutation guard", "done", 80, "packages/gateway/src/auth.mjs"),
       c("gateway-stream", "WS/SSE event stream and scoped token", "missing", 0, "OpenClaw/Hermes reference"),
     ],
   },
   {
     id: "feishu",
     label: "Feishu/Lark 接入",
-    phase: "0.6",
+    phase: "0.7",
     openclaw: 92,
     hermes: 42,
     openhuman: 35,
-    gap: "缺签名、encrypt、WebSocket、policy、outbound rich card",
-    next: "参考 OpenClaw Feishu 安全与 config schema，不直接加载插件 runtime",
+    gap: "已有 adapter facade 和签名校验，缺 encrypt 解密、WebSocket、policy、outbound rich card",
+    next: "移植 encrypted challenge 和 outbound facade",
     criteria: [
-      c("feishu-event", "event challenge/text normalization", "partial", 50, "packages/channels/src/index.mjs"),
-      c("feishu-security", "verify token and encrypt rejection", "partial", 25, "packages/gateway/test/gateway.test.mjs"),
-      c("feishu-runtime", "signed webhook, encrypt, WebSocket, policy", "missing", 10, "openclaw/extensions/feishu"),
+      c("feishu-event", "event challenge/text normalization", "partial", 65, "packages/feishu-adapter/src/index.mjs"),
+      c("feishu-security", "verify token, x-lark signature, replay guard", "partial", 55, "packages/feishu-adapter/test/feishu-adapter.test.mjs"),
+      c("feishu-runtime", "encrypt decrypt, WebSocket, policy, outbound rich card", "missing", 15, "openclaw/extensions/feishu"),
     ],
   },
   {
@@ -37,11 +37,11 @@ const moduleDefinitions = [
     hermes: 55,
     openhuman: 90,
     gap: "缺 run detail、stage diff、approval queue、实时事件",
-    next: "把 stage diff 和 run detail 做成一等操作面",
+    next: "把 adapter readiness、stage diff 和 run detail 做成一等操作面",
     criteria: [
       c("dashboard-status", "state/runs/events/channels view", "done", 60, "packages/dashboard/src/client.mjs"),
-      c("dashboard-reference", "reference matrix and Feishu adoption panel", "partial", 50, "packages/dashboard/src/view.mjs"),
-      c("dashboard-actions", "run detail, stage diff, approval queue", "missing", 25, "Phase 0.7 backlog"),
+      c("dashboard-reference", "reference matrix, Feishu adoption and adapter readiness", "partial", 55, "packages/dashboard/src/client.mjs"),
+      c("dashboard-actions", "run detail, stage diff, approval queue", "missing", 25, "Phase 0.8 backlog"),
     ],
   },
   {
@@ -149,7 +149,7 @@ export function buildFeishuAdoptionPayload() {
       "Do not directly load the OpenClaw Feishu plugin in MyClaw Phase 0. It depends on OpenClaw plugin-sdk/runtime contracts. Reuse the design, schema, security tests, and event/outbound normalization ideas.",
     reuse: [
       "config schema: appId/appSecret/verificationToken/encryptKey/domain/connectionMode/accounts",
-      "security posture: webhook mode must require verificationToken and encryptKey",
+      "security posture: x-lark signature uses sha256(timestamp + nonce + encryptKey + rawBody)",
       "event model: message, card action, reaction, comment, media and dedup keys",
       "policy model: DM/group allowlist, mention requirement, pairing/approval",
       "outbound model: text/card/threading/send result normalization",
@@ -159,7 +159,7 @@ export function buildFeishuAdoptionPayload() {
       "plugin surface includes doc/drive/wiki/bitable tools far beyond MyClaw Phase 0",
       "direct loading would import OpenClaw config, secret and approval semantics before MyClaw owns them",
     ],
-    next: "Create a MyClaw Feishu adapter facade that mirrors the needed contracts first, then selectively port security and outbound pieces.",
+    next: "Use the MyClaw Feishu adapter facade as the only gateway dependency, then port encrypted challenge and outbound pieces.",
   };
 }
 

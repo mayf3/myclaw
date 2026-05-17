@@ -11,7 +11,7 @@ export function renderDashboardHtml() {
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <p class="eyebrow">MyClaw Phase 0.6</p>
+          <p class="eyebrow">MyClaw Phase 0.7</p>
           <h1>运行与参考完成度</h1>
           <p>本地状态、OpenClaw 迁移、Feishu 复用决策、参考项目差距。</p>
         </div>

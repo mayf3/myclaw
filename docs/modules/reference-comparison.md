@@ -4,15 +4,15 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 0.6 新增硬规则：每个阶段都必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。否则很容易只看到“消息能发了”，却忽略 gateway、记忆、工具安全、dashboard 和插件边界还差很远。
+Phase 0.7 新增 Feishu adapter facade，并把 gateway 热点文件拆为 route/auth/http 模块。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 0.6 完成度矩阵
+## Phase 0.7 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
-| Gateway / 控制面 | 58 | 90 | 78 | 86 | 缺 WS/event stream、scoped token、route schema |
-| Feishu/Lark 接入 | 28 | 92 | 42 | 35 | 缺签名、encrypt、WebSocket、policy、outbound rich card |
-| Dashboard / 观测 | 45 | 78 | 55 | 90 | 缺 run detail、stage diff、approval queue、实时事件 |
+| Gateway / 控制面 | 60 | 90 | 78 | 86 | 已拆 routes/auth，仍缺 WS/SSE、scoped token |
+| Feishu/Lark 接入 | 45 | 92 | 42 | 35 | 有 adapter/signature，缺 encrypt/WebSocket/policy/outbound |
+| Dashboard / 观测 | 47 | 78 | 55 | 90 | 缺 run detail、stage diff、approval queue、实时事件 |
 | OpenClaw 迁移 | 50 | 0 | 82 | 35 | 已有 plan/stage，缺 apply/rollback/diff UI |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
@@ -70,10 +70,11 @@ OpenClaw 仓库里可参考的飞书实现位于 `/Users/yanfenma/workspace/gith
 - doc/drive/wiki/bitable 等工具面超出 MyClaw Phase 0。
 - 直接加载会提前引入 OpenClaw 的 config、secret、approval 语义。
 
-MyClaw 结论：
+Phase 0.7 MyClaw 结论：
 
-- Phase 0.6 只参考，不直接加载。
-- 下一阶段先写 MyClaw Feishu adapter facade，再选择性移植安全与 outbound 逻辑。
+- 仍然只参考，不直接加载。
+- 已新增 `packages/feishu-adapter`，先承接 config readiness、x-lark signature、verification token、replay guard 和 event normalize。
+- 下一阶段选择性移植 encrypted challenge decrypt 和 outbound result normalization。
 
 ## OpenClaw Lobster 观察
 

@@ -1,6 +1,6 @@
 # MyClaw
 
-MyClaw is a local-first Node.js workflow and agent runtime in early Phase 0.6.
+MyClaw is a local-first Node.js workflow and agent runtime in early Phase 0.7.
 
 Current runnable surface:
 
@@ -30,13 +30,13 @@ Dashboard:
 
 Gateway:
 
-- `gateway`: local HTTP control surface. Phase 0.6 supports `GET /api/status`, `GET /api/reference-completion`, `GET /api/feishu-adoption`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, and `POST /api/openclaw-migration/stage`.
+- `gateway`: local HTTP control surface. Phase 0.7 supports `GET /api/status`, `GET /api/reference-completion`, `GET /api/feishu-adoption`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, and `POST /api/openclaw-migration/stage`.
 - Mutations stay open only for loopback development. Set `MYCLAW_GATEWAY_TOKEN` or pass `--token` before exposing the gateway beyond `127.0.0.1`.
 
 Feishu/Lark:
 
-- The OpenClaw Feishu package at `/Users/yanfenma/workspace/github/openclaw/extensions/feishu` is a strong reference, but MyClaw does not directly load it in Phase 0.6.
-- MyClaw will first mirror the needed adapter contract: config schema, webhook verification, encrypt/replay posture, event normalization, policy, and outbound result shape.
+- The OpenClaw Feishu package at `/Users/yanfenma/workspace/github/openclaw/extensions/feishu` is a strong reference, but MyClaw does not directly load it in Phase 0.7.
+- MyClaw now has a local `packages/feishu-adapter` facade for config readiness, x-lark signature validation, replay guard, token verification, and event normalization.
 - Direct loading is deferred because the plugin depends on OpenClaw plugin-sdk/runtime/config/secrets/approval contracts that MyClaw has not implemented yet.
 
 Feishu event callback smoke test:

@@ -1,5 +1,6 @@
 import { listChannels } from "../../channels/src/index.mjs";
 import { listRuns, readEvents } from "../../core/src/state.mjs";
+import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
 import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
@@ -60,10 +61,15 @@ export function buildReferenceCompletionStatusPayload() {
   };
 }
 
-export function buildFeishuAdoptionStatusPayload() {
+export function buildFeishuAdoptionStatusPayload(context = {}) {
+  const adapterConfig = buildFeishuAdapterConfig({
+    verificationToken: context.feishuVerifyToken,
+    encryptKey: context.feishuEncryptKey,
+  });
   return {
     ok: true,
     feishuAdoption: buildFeishuAdoptionPayload(),
+    feishuAdapter: describeFeishuAdapterReadiness(adapterConfig),
   };
 }
 

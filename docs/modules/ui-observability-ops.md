@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.6 已经把 dashboard 从粗糙状态页推进为参考完成度工作台：状态、OpenClaw 迁移、Feishu 复用决策、OpenClaw/Hermes-agent/OpenHuman 模块差距在同一页呈现。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.7 的 dashboard 已展示 Feishu adapter readiness：能看到当前是 `ready/partial/blocked`，以及 signed webhook 是否 ready。
 
 ## 参考项目观察
 
@@ -57,7 +57,13 @@ Phase 0.6 dashboard 当前已经具备：
 - OpenClaw migration stage 摘要。
 - runs/events/channels/raw JSON。
 
-Phase 0.7 应补：
+Phase 0.7 dashboard 新增：
+
+- Feishu adapter facade readiness。
+- signed webhook readiness。
+- adapter issues/warnings 展示。
+
+Phase 0.8 应补：
 
 - run detail drawer。
 - stage snapshot diff。

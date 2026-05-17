@@ -39,11 +39,10 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <a href="#当前阶段">当前阶段</a>
 <a href="#已完成">已完成</a>
 <a href="#当前可用命令">当前可用命令</a>
-<a href="#openclaw-feishu-lark-结论">OpenClaw Feishu/Lark 结论</a>
+<a href="#feishu-lark-当前能力">Feishu/Lark 当前能力</a>
 <a href="#参考完成度">参考完成度</a>
 <a href="#当前实现架构">当前实现架构</a>
 <a href="#下一步">下一步</a>
-<a href="#风险">风险</a>
 <a href="#验证记录">验证记录</a>
         </nav>
       </aside>
@@ -59,69 +58,41 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content"><p>更新时间：2026-05-17</p>
 <h2 id="当前阶段">当前阶段</h2>
-<p>Phase 0.6: Reference-aware Dashboard + Feishu/Lark Adoption Review。</p>
-<p>这一轮解决两个问题：第一，明确 OpenClaw Feishu/Lark 插件的复用方式；第二，重做 dashboard 的信息结构，让每个模块都和 OpenClaw、Hermes-agent、OpenHuman 做完成度对比。结论是：Feishu 可以强参考 OpenClaw <code>extensions/feishu</code>，但 Phase 0.6 不直接加载 OpenClaw 插件 runtime。</p>
+<p>Phase 0.7: Feishu Adapter Facade + Gateway Route Split。</p>
+<p>这一轮把 Phase 0.6 的设计结论落成代码：MyClaw 不直接加载 OpenClaw <code>extensions/feishu</code>，而是先建立自己的 Feishu adapter facade；gateway 不再把 auth、Feishu、message、migration、dashboard 全塞进 <code>index.mjs</code>，改成 route 模块。</p>
 <h2 id="已完成">已完成</h2>
-<ul><li>初始化 git 仓库，创建 public GitHub 仓库：<code>https://github.com/mayf3/myclaw</code>。</li><li>新增 <code>packages/runtime</code>：共享 message send/receive/reply runtime。</li><li>新增 <code>packages/control-plane</code>：dashboard 和 gateway 共用 status/runs/events/migration 聚合层。</li><li>新增 <code>packages/gateway</code>：本地 HTTP gateway，支持 <code>/messages</code>、<code>/feishu/events</code>、<code>/api/openclaw-migration/stage</code>。</li><li>新增 <code>packages/dashboard</code>：只读 dashboard server。</li><li>新增 <code>scripts/check-file-lines.mjs</code>：强制单文件不超过 500 行。</li><li>新增 <code>feishu-webhook</code> 与 <code>feishu-event</code> channel adapter。</li><li>Feishu endpoint 支持 challenge、verify token、event id 去重，并拒绝 encrypt payload。</li><li>OpenClaw migration 已有 dry-run <code>plan</code> 与可落盘 <code>stage snapshot</code>。</li><li><code>myclaw dashboard</code> 保持只读；mutation 只在显式 <code>myclaw gateway</code> 中开放。</li><li>Phase 0.6 新增 <code>packages/control-plane/src/reference-completion.mjs</code>：每个阶段输出 OpenClaw/Hermes-agent/OpenHuman 完成度矩阵。</li><li>Phase 0.6 dashboard 拆成 <code>view/styles/client/assets</code>，不再把 HTML/CSS/JS 全部塞进一个文件。</li><li>新增 <code>/api/reference-completion</code> 与 <code>/api/feishu-adoption</code>，dashboard 并行读取，避免 <code>/api/status</code> 混入评审态数据。</li></ul>
+<ul><li>新增 <code>packages/feishu-adapter</code>：</li><li><code>buildFeishuAdapterConfig</code>：兼容 OpenClaw Feishu 的关键字段 <code>appId/appSecret/verificationToken/encryptKey/domain/connectionMode</code>。</li><li><code>describeFeishuAdapterReadiness</code>：输出 adapter 当前 readiness。</li><li><code>validateFeishuWebhookSignature</code>：按 OpenClaw/Feishu 公式校验 <code>x-lark-request-*</code> 签名。</li><li><code>validateFeishuVerificationToken</code>：保持 verification token 边界。</li><li><code>createFeishuReplayGuard</code>：把 Feishu event id 去重从 gateway 主文件移出。</li><li><code>normalizeFeishuEvent</code>：Feishu text event normalize 迁到 adapter facade。</li><li><code>packages/channels</code> 的 <code>feishu-event</code> channel 改为调用 adapter facade。</li><li><code>packages/gateway/src/index.mjs</code> 从 321 行降到 90 行。</li><li>新增 gateway 模块：</li><li><code>auth.mjs</code></li><li><code>http.mjs</code></li><li><code>routes/control.mjs</code></li><li><code>routes/feishu.mjs</code></li><li><code>routes/messages.mjs</code></li><li><code>routes/migration.mjs</code></li><li><code>GET /api/feishu-adoption</code> 返回 <code>feishuAdapter</code> readiness。</li><li>Dashboard Feishu 面板展示 adapter readiness、signed webhook 是否 ready。</li><li>Gateway 增加 <code>--feishu-encrypt-key</code>，也支持 <code>MYCLAW_FEISHU_ENCRYPT_KEY</code>。</li><li>测试从 21 个增加到 27 个，覆盖 Feishu adapter config、签名、replay、normalize 和 gateway signed callback。</li></ul>
 <h2 id="当前可用命令">当前可用命令</h2>
 <pre class="code" data-lang="bash"><code>npm run myclaw -- doctor
 npm run myclaw -- channels
 npm run myclaw -- send --text &quot;hello&quot;
 npm run myclaw -- receive --from local-user --conversation local-thread --text &quot;hello&quot; --reply &quot;received&quot; --json
 npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw
-npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw
-npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json
+npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw --feishu-verify-token verify-token --feishu-encrypt-key encrypt-key
 npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json</code></pre>
-<p>Gateway mutation token：</p>
-<pre class="code" data-lang="bash"><code>MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322
-
-curl -sS http://127.0.0.1:4322/messages \
-  -H 'content-type: application/json' \
-  -H 'x-myclaw-token: dev-token' \
-  -d '{&quot;text&quot;:&quot;hello guarded&quot;}'</code></pre>
-<p>Feishu event ingress：</p>
-<pre class="code" data-lang="bash"><code>curl -sS http://127.0.0.1:4322/feishu/events \
-  -H 'content-type: application/json' \
-  -d '{&quot;token&quot;:&quot;verify-token&quot;,&quot;challenge&quot;:&quot;plain_challenge&quot;}'</code></pre>
-<h2 id="openclaw-feishu-lark-结论">OpenClaw Feishu/Lark 结论</h2>
-<div class="table-wrap"><table><thead><tr><th>问题</th><th>当前结论</th></tr></thead><tbody><tr><td>能不能直接用 <code>openclaw-lark</code>？</td><td>Phase 0.6 不直接加载。OpenClaw 仓库里对应的是 <code>extensions/feishu</code>，alias 覆盖 Lark，包名 <code>@openclaw/feishu</code>。</td></tr><tr><td>能不能参考？</td><td>必须参考。优先复用 config schema、安全测试、webhook/WebSocket 接入思路、policy、event/outbound normalization。</td></tr><tr><td>为什么不直接用？</td><td>插件依赖 OpenClaw plugin-sdk/runtime/config/secrets/approval，MyClaw 还没有这些契约。直接加载会把未设计好的运行时语义带进来。</td></tr><tr><td>下一步</td><td>写 MyClaw Feishu adapter facade，再逐项 port OpenClaw Feishu 的安全与事件处理逻辑。</td></tr></tbody></table></div>
+<h2 id="feishu-lark-当前能力">Feishu/Lark 当前能力</h2>
+<div class="table-wrap"><table><thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td>OpenClaw 插件直接加载</td><td>不做</td><td>仍不直接加载 <code>@openclaw/feishu</code></td></tr><tr><td>Config facade</td><td>已有</td><td>覆盖核心字段，暂不做 secret ref runtime</td></tr><tr><td>Verification token</td><td>已有</td><td>支持 body token 验证</td></tr><tr><td>x-lark signature</td><td>已有</td><td>有 <code>encryptKey</code> 时在 JSON parse 前校验</td></tr><tr><td>Replay guard</td><td>已有</td><td>内存 TTL 去重，后续要持久化</td></tr><tr><td>encrypt payload 解密</td><td>未做</td><td>当前仍 501</td></tr><tr><td>WebSocket mode</td><td>未做</td><td>仅 readiness 字段，不启动连接</td></tr><tr><td>outbound rich card</td><td>未做</td><td>下一阶段再做 outbound facade</td></tr></tbody></table></div>
 <h2 id="参考完成度">参考完成度</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>下一步</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>58</td><td>90</td><td>78</td><td>86</td><td>拆 auth/feishu/migration routes，增加 mutation audit</td></tr><tr><td>Feishu/Lark 接入</td><td>28</td><td>92</td><td>42</td><td>35</td><td>参考 OpenClaw Feishu，先做 adapter facade</td></tr><tr><td>Dashboard / 观测</td><td>45</td><td>78</td><td>55</td><td>90</td><td>增加 run detail、stage diff、approval queue</td></tr><tr><td>OpenClaw 迁移</td><td>50</td><td>0</td><td>82</td><td>35</td><td>从 staged snapshot apply <code>--module feishu</code></td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>先做 run/resume/approval 状态机</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>先做 run/session FTS</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>approval 从 reply 提升为独立 state</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>先做只读 skill loader</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>60</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>45</td><td>92</td><td>42</td><td>35</td><td>有 adapter/signature，缺 encrypt/WebSocket/policy/outbound</td></tr><tr><td>Dashboard / 观测</td><td>47</td><td>78</td><td>55</td><td>90</td><td>缺 run detail、stage diff、approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>50</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage，缺 apply/rollback/diff UI</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn/tool loop</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>还没有 SQLite/FTS/长期记忆</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>还没有 plugin manifest/skill loader</td></tr></tbody></table></div>
 <h2 id="当前实现架构">当前实现架构</h2>
-<pre class="code" data-lang="text"><code>CLI send/receive
-  -&gt; packages/runtime
-  -&gt; packages/channels
-  -&gt; packages/core state
-
-HTTP POST /messages
-  -&gt; packages/gateway mutation token guard
-  -&gt; packages/runtime.receiveMessage
-  -&gt; packages/core state
-
-HTTP POST /feishu/events
-  -&gt; packages/gateway Feishu verify/encrypt guard
+<pre class="code" data-lang="text"><code>POST /feishu/events
+  -&gt; packages/gateway/src/routes/feishu.mjs
+  -&gt; packages/feishu-adapter signature/token/replay/normalize contract
   -&gt; packages/runtime.receiveMessage(rawInbound)
-  -&gt; packages/channels feishu-event.normalizeInbound
+  -&gt; packages/channels feishu-event
   -&gt; packages/core state
 
-Dashboard GET /api/status
+GET /api/feishu-adoption
   -&gt; packages/control-plane
-  -&gt; state + migration plan
-
-Dashboard GET /api/reference-completion
-  -&gt; packages/control-plane reference completion criteria
-
-Dashboard GET /api/feishu-adoption
-  -&gt; packages/control-plane Feishu reuse decision</code></pre>
+  -&gt; packages/feishu-adapter readiness
+  -&gt; dashboard Feishu panel</code></pre>
 <h2 id="下一步">下一步</h2>
-<ul><li>做 MyClaw Feishu adapter facade，先定义 config schema、event normalization、verification contract。</li><li>从 OpenClaw Feishu 安全测试中移植 webhook verification、encrypt/replay 行为。</li><li>在 dashboard 增加 run detail、stage diff、<code>apply --module feishu</code> 前的人工确认。</li><li>继续保持每个阶段：design review HTML、Linus 视角独立审查、<code>npm run check</code>、<code>npm test</code>、commit、push、HTML Center 发布。</li></ul>
-<h2 id="风险">风险</h2>
-<ul><li>Dashboard 信息结构已经改善，但还没有实时事件、run detail drawer、stage diff。</li><li>Feishu 当前仍不能生产暴露；缺签名、encrypt、持久 replay window。</li><li>OpenClaw migration 仍是 dry-run/stage，不会直接迁移 secrets、tools、sessions、memory。</li><li>参考完成度分数是工程判断，不是自动扫描结果；后续应让 status payload 接入更客观的验收项。</li></ul>
+<ul><li>Phase 0.8：实现 Feishu encrypted challenge decrypt，继续参考 OpenClaw 的 AES-256-CBC 流程。</li><li>Dashboard 做 run detail 和 stage diff，避免继续依赖 raw JSON。</li><li>Gateway 增加 scoped token 和 mutation audit。</li><li>Feishu outbound facade：先定义 text/card/thread reply result，不直接接完整 OpenClaw tools。</li></ul>
 <h2 id="验证记录">验证记录</h2>
 <pre class="code" data-lang="bash"><code>npm run check
 npm test</code></pre>
 <p>结果：</p>
-<ul><li>单文件行数检查通过：74 个文件，最大 500 行限制未触发。</li><li>Node test 通过：21 个测试全部通过。</li><li>Dashboard/gateway 测试覆盖 asset routes、<code>referenceCompletion</code>、<code>feishuAdoption</code>。</li></ul></article>
+<ul><li>单文件行数检查通过：83 个文件，最大 500 行限制未触发。</li><li>Node test 通过：27 个测试全部通过。</li><li>新增测试覆盖 Feishu adapter facade 和 gateway signed webhook callback。</li></ul></article>
       </main>
     </div>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>
