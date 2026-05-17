@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyClaw 阶段状态 · MyClaw</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>MyClaw 阶段状态</h1>
+          <p>当前阶段与实现状态</p>
+        </div>
+        <a class="back" href="./index.html">← 返回全局索引</a>
+        <nav aria-label="阶段状态导航">
+          <a href="#module-summary">状态摘要</a>
+          <a href="#当前阶段">当前阶段</a>
+<a href="#已完成">已完成</a>
+<a href="#当前可用命令">当前可用命令</a>
+<a href="#当前实现架构">当前实现架构</a>
+<a href="#openclaw-一键迁移路线">OpenClaw 一键迁移路线</a>
+<a href="#下一步">下一步</a>
+<a href="#风险">风险</a>
+<a href="#验证记录">验证记录</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>阶段状态</h2>
+          <p>MyClaw 当前 Phase 0 的可运行能力、验证记录、下一步和风险。</p>
+          <div class="meta">
+            <span class="tag p0">P0</span>
+            <span class="tag phase">Phase 0</span>
+            <span class="tag">状态文档</span>
+          </div>
+        </section>
+        <article class="content"><p>更新时间：2026-05-17</p>
+<h2 id="当前阶段">当前阶段</h2>
+<p>Phase 0.2: Dashboard First + OpenClaw Migration Dry-run。</p>
+<p>这一步把优先级从 gateway 暂时调整为 dashboard。原因是现在已有 <code>send/receive/reply</code> 和 state JSONL，先做本地控制台可以更快看见系统状态、通道能力、run timeline 和 OpenClaw 迁移阻塞项。gateway 仍然是下一阶段接飞书事件的必需入口。</p>
+<h2 id="已完成">已完成</h2>
+<ul><li>初始化 Node.js/ESM workspace。</li><li>新增 <code>packages/core</code>：run id、event、统一 envelope、state JSONL、runs/events 读取 API。</li><li>新增 <code>packages/channels</code>：<code>ChannelAdapter</code> registry、能力声明、alias、inbound message normalize。</li><li>新增 <code>packages/cli</code>：<code>doctor</code>、<code>channels</code>、<code>send</code>、<code>receive</code>、<code>dashboard</code>、<code>migrate openclaw</code>。</li><li>新增 <code>packages/dashboard</code>：本地 HTTP dashboard。</li><li><code>GET /</code>：工作型控制台页面。</li><li><code>GET /api/status</code>：state、runs、events、channels、OpenClaw migration plan。</li><li><code>GET /api/runs</code>、<code>GET /api/events</code>、<code>GET /api/openclaw-migration</code>。</li><li>新增 <code>packages/migrate</code>：OpenClaw dry-run 迁移评估。</li><li>识别 <code>openclaw.json</code>。</li><li>盘点 config sections、channels、plugin manifests。</li><li>输出 MyClaw draft mapping、unsupported list、recommended steps。</li><li>默认不修改 OpenClaw 或 MyClaw 状态。</li><li>基础测试覆盖 channel registry、inbound normalize、CLI send/receive、state reader、dashboard API、OpenClaw migration planner。</li></ul>
+<h2 id="当前可用命令">当前可用命令</h2>
+<pre class="code" data-lang="bash"><code>npm run myclaw -- doctor
+npm run myclaw -- channels
+npm run myclaw -- send --text &quot;hello&quot;
+npm run myclaw -- receive --from local-user --conversation local-thread --text &quot;hello&quot; --reply &quot;received&quot; --json
+npm run myclaw -- dashboard --port 4321
+npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw
+npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json</code></pre>
+<p>飞书自定义机器人 webhook 的最小 outbound 形态：</p>
+<pre class="code" data-lang="bash"><code>MYCLAW_FEISHU_WEBHOOK_URL=&quot;https://open.feishu.cn/open-apis/bot/v2/hook/...&quot; \
+  npm run myclaw -- send --channel feishu-webhook --text &quot;hello from MyClaw&quot;</code></pre>
+<p>这不是完整 OpenClaw Feishu/Lark 插件接入，只是先验证 MyClaw 的 outbound message boundary。</p>
+<h2 id="当前实现架构">当前实现架构</h2>
+<pre class="code" data-lang="text"><code>CLI command
+  -&gt; ChannelRegistry.resolve(channel)
+  -&gt; ChannelAdapter.send() 或 ChannelAdapter.normalizeInbound()
+  -&gt; core envelope/events/state
+  -&gt; dashboard API / migration planner / docs report</code></pre>
+<p>Dashboard 数据流：</p>
+<pre class="code" data-lang="text"><code>browser
+  -&gt; GET /api/status
+  -&gt; listRuns + readEvents + listChannels + planOpenClawMigration
+  -&gt; HTML dashboard render</code></pre>
+<p>OpenClaw migration 数据流：</p>
+<pre class="code" data-lang="text"><code>openclaw.json + extensions/*/openclaw.plugin.json
+  -&gt; dry-run inventory
+  -&gt; MyClaw draft mapping
+  -&gt; unsupported runtime surfaces
+  -&gt; recommended next steps</code></pre>
+<h2 id="openclaw-一键迁移路线">OpenClaw 一键迁移路线</h2>
+<p>当前实现的是一键迁移的第一步：<code>dry-run inventory</code>。完整一键迁移建议拆成三段：</p>
+<ul><li><code>plan</code>：读取 OpenClaw config 和插件清单，生成 reviewable migration plan。</li><li><code>stage</code>：把可安全映射的内容写入 MyClaw migration snapshot，不启用运行时。</li><li><code>apply</code>：在 MyClaw schema、gateway、plugin runtime 都具备后，按模块启用。</li></ul>
+<p>必须保留这个顺序。直接从 OpenClaw 全量 runtime apply 到 MyClaw 会把 Feishu、tools、memory、secrets、provider、browser 自动化等高风险面混在一起，难以回滚。</p>
+<h2 id="下一步">下一步</h2>
+<ul><li>把 dashboard 从只读状态页扩展为 gateway 控制台入口。</li><li>增加 <code>packages/gateway</code> 的最小 HTTP 入口：<code>POST /messages</code> 复用 <code>receive</code> 的 inbound normalize。</li><li>将 dashboard 的 <code>/api/status</code> 和 gateway 共用同一套服务对象，避免后续分裂。</li><li>为 Feishu/Lark 决定接入路径：</li><li>直接依赖 OpenClaw <code>@openclaw/feishu</code>，补 runtime facade。</li><li>或先做最小 Feishu app credential client。</li><li>或继续保持 webhook-only，等 gateway/agent 稳定后再接完整插件。</li><li>把 <code>migrate openclaw</code> 从 plan 扩展到 <code>--output</code> snapshot，再评估 <code>--apply</code>。</li><li>为每次阶段推进继续输出 HTML 架构 design review report，并发布到 HTML Center。</li></ul>
+<h2 id="风险">风险</h2>
+<ul><li>当前 dashboard 是只读控制台，没有鉴权；只能绑定本机 <code>127.0.0.1</code>。</li><li>OpenClaw migration 目前是 dry-run，不会直接迁移 secrets、tool permissions、sessions、memory DB。</li><li>OpenClaw Feishu 插件依赖 <code>openclaw/plugin-sdk</code> runtime，不是单文件 SDK；直接接入可能需要适配一层 runtime facade。</li><li>完整飞书通信需要 appId/appSecret、事件订阅、权限 scope、群聊 allowlist 和 mention 策略。</li><li>当前 inbound 只在 CLI 模拟，尚未有 HTTP gateway、签名校验、幂等和重放保护。</li></ul>
+<h2 id="验证记录">验证记录</h2>
+<pre class="code" data-lang="bash"><code>npm run check
+npm test
+npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json</code></pre>
+<p>结果：</p>
+<ul><li>语法检查通过。</li><li>Node test 通过：11 个测试全部通过。</li><li><code>migrate openclaw</code> 对 <code>/Users/yanfenma/workspace/github/openclaw</code> 生成 dry-run plan，识别到当前 OpenClaw config、Feishu channel、插件 manifests 和 unsupported runtime surfaces。</li><li>dashboard API 测试通过，<code>GET /</code> 和 <code>GET /api/status</code> 均可返回内容。</li></ul></article>
+      </main>
+    </div>
+  </body>
+</html>

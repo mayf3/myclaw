@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenHuman 参考分析 · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>OpenHuman 参考分析</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+        <a class="back" href="../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#总诊断">总诊断</a>
+<a href="#项目画像">项目画像</a>
+<a href="#证据与模块拆解">证据与模块拆解</a>
+<a href="#gateway-与接入层">Gateway 与接入层</a>
+<a href="#agent-runtime">Agent Runtime</a>
+<a href="#工具-审批与安全">工具、审批与安全</a>
+<a href="#记忆与搜索">记忆与搜索</a>
+<a href="#skills-与插件">Skills 与插件</a>
+<a href="#ui-观测与运维">UI、观测与运维</a>
+<a href="#不建议进入初期的内容">不建议进入初期的内容</a>
+<a href="#myclaw-吸收顺序">MyClaw 吸收顺序</a>
+<a href="#验收标准">验收标准</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>OpenHuman 参考分析</h2>
+          <p>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</p>
+          <div class="meta">
+            <span class="tag p0">P0</span>
+            <span class="tag phase">Phase 0</span>
+            <span class="tag">新参考输入</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="总诊断">总诊断</h2>
+<p>OpenHuman 对 MyClaw 的最大价值不是技术栈，而是边界划分。它证明一个长期运行的个人 agent 需要稳定的 RPC/controller registry、事件总线、记忆层、工具权限、安全策略、配置中心和 UI 状态聚合；但它的 Rust/Tauri、桌面环境桥接、118+ 集成、语音、Meet、subconscious、memory tree 都不适合作为 MyClaw 初期实现范围。</p>
+<h2 id="项目画像">项目画像</h2>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>OpenHuman 设计</th><th>对 MyClaw 的判断</th></tr></thead><tbody><tr><td>技术栈</td><td>Rust core + Tauri v2 + React 19 + SQLite/FTS5</td><td>不照搬。MyClaw 继续 Node.js/TypeScript，但吸收模块边界</td></tr><tr><td>入口</td><td>React 桌面 UI、Tauri IPC、HTTP JSON-RPC、CLI、channels</td><td>初期只做 CLI；保留 controller registry，后续再挂 HTTP/WS gateway</td></tr><tr><td>Agent</td><td><code>Agent::turn</code>、tool loop、subagent、prompt builder、memory loader</td><td>Phase 3 再做，不要先做人格化桌面助手</td></tr><tr><td>记忆</td><td>UnifiedMemory、ingestion queue、memory tree、conversation JSONL</td><td>初期只做 transcript JSONL + SQLite/FTS session search；memory tree 后置</td></tr><tr><td>工具</td><td>Tool trait、ToolSpec、PermissionLevel、ToolCategory、scope</td><td>直接借鉴成 Node.js <code>ToolDescriptor</code> 和 policy gate</td></tr><tr><td>安全</td><td>AutonomyLevel、risk policy、sandbox、audit、pairing guard</td><td>初期先做 workspace boundary、approval、audit JSONL；sandbox 后置</td></tr><tr><td>Skills</td><td><code>SKILL.md</code> discovery + per-turn injection，执行 runtime 已移除</td><td>适合 MyClaw：先把 skills 当 prompt workflow，不当插件执行代码</td></tr><tr><td>产品体验</td><td>UI-first、onboarding、Intelligence/Memory/Skills/Settings 页面</td><td>后续 Control UI 借鉴，不进入 Phase 0-3</td></tr></tbody></table></div>
+<h2 id="证据与模块拆解">证据与模块拆解</h2>
+<div class="table-wrap"><table><thead><tr><th>模块</th><th>证据路径</th><th>关键观察</th><th>MyClaw 建议</th></tr></thead><tbody><tr><td>Controller registry</td><td><code>src/core/all.rs</code></td><td>所有 domain controller 统一注册、schema 校验、RPC 暴露</td><td>Phase 0 就定义 <code>ControllerDefinition</code>，但先由 CLI 调用</td></tr><tr><td>JSON-RPC gateway</td><td><code>src/core/jsonrpc.rs</code></td><td>HTTP JSON-RPC、health、schema discovery、SSE/WS 边界</td><td>Phase 4 做 HTTP/WS，不要让 gateway 先于 core 成熟</td></tr><tr><td>Event bus</td><td><code>src/core/event_bus/{events,bus}.rs</code></td><td>Agent、Memory、Channel、Cron、Skill、Tool 事件统一发布</td><td>Phase 1 做轻量 <code>EventBus</code>，所有 run/tool/approval 状态都发事件</td></tr><tr><td>Agent harness</td><td><code>src/openhuman/agent/README.md</code>、<code>docs/agent-subagent-tool-flow.md</code></td><td>session runtime 与 subagent runner 分层，parent context 明确</td><td>MyClaw 初期只做单 agent；subagent 保留接口，不实现</td></tr><tr><td>Tool contract</td><td><code>src/openhuman/tools/traits.rs</code></td><td>Tool 有 schema、permission、scope、category、结果预算</td><td>直接落到 TypeScript：<code>name/schema/permission/category/execute</code></td></tr><tr><td>Memory</td><td><code>src/openhuman/memory/README.md</code>、<code>memory/tree/README.md</code></td><td>旧 store 与 memory tree 共存，管线很重</td><td>先做 session search，不做 chunk/entity/graph/tree</td></tr><tr><td>Skills</td><td><code>src/openhuman/skills/README.md</code>、<code>skills/inject.rs</code></td><td><code>SKILL.md</code> 发现、显式 <code>@skill</code>、8KiB 注入上限</td><td>Phase 5 前可以先实现只读 loader；执行 runtime 不做</td></tr><tr><td>Desktop shell</td><td><code>app/src-tauri/</code>、<code>gitbooks/developing/architecture/tauri-shell.md</code></td><td>Tauri 管生命周期、窗口、IPC、桌面权限</td><td>MyClaw 初期不要做桌面壳；先用 HTML Center/本地网页沉淀报告</td></tr><tr><td>Intelligence UI</td><td><code>app/src/pages/Intelligence.tsx</code></td><td>Memory、Subconscious、Calls、Dreams、Tasks 分 tab</td><td>Control UI 后续可以采用“运行/记忆/审批/任务”四区，而不是营销首页</td></tr><tr><td>Subconscious</td><td><code>src/openhuman/subconscious/</code></td><td>周期任务、LLM 判断 act/escalate/noop、反思落库</td><td>MyClaw Phase 0-3 不做主动后台思考，只留 cron/event 基础</td></tr></tbody></table></div>
+<h2 id="gateway-与接入层">Gateway 与接入层</h2>
+<p>OpenHuman 把业务 controller 与 HTTP JSON-RPC transport 分开：<code>src/core/all.rs</code> 聚合 controller，<code>src/core/jsonrpc.rs</code> 只负责 JSON-RPC envelope、错误、health、schema discovery 和实时流。这一点比直接在 HTTP handler 里写业务逻辑更适合 MyClaw。</p>
+<p>MyClaw 推荐：</p>
+<ul><li>Phase 0 定义 controller registry：<code>namespace.method</code>、Zod params、handler、permission、description。</li><li>Phase 1 CLI 直接调用 controller，不启动 HTTP 服务。</li><li>Phase 4 再把同一套 controller 暴露为 Fastify HTTP + WS event stream。</li><li>Gateway 只做 auth、request id、stream、schema discovery、rate limit，不做 workflow 业务。</li></ul>
+<p>不建议照搬：</p>
+<ul><li>不需要 Tauri IPC relay。</li><li>不需要 Socket.IO 双通道。</li><li>不需要桌面 service manager。</li></ul>
+<h2 id="agent-runtime">Agent Runtime</h2>
+<p>OpenHuman 的 agent runtime 已经是成熟系统：prompt builder、memory loader、tool loop、subagent、turn hooks、context compaction、session transcript、provider routing都存在。它的设计说明了一个事实：agent 不应该直接拥有工具执行权，工具调用必须经过统一 registry、permission、history 和事件记录。</p>
+<p>MyClaw 初期建议：</p>
+<ul><li>Phase 3 才实现 <code>myclaw ask</code>。</li><li><code>ask</code> 调用工具时必须走 Phase 2 的 <code>dispatchTool</code>，不能直接 <code>child_process.exec</code>。</li><li>transcript 用 JSONL 存每次 provider request、tool call、tool result、final answer。</li><li>先只支持 OpenAI-compatible chat/completions 或 Responses 风格之一；provider router 后置。</li><li>subagent 先保留 schema，不做并行代理执行。</li></ul>
+<h2 id="工具-审批与安全">工具、审批与安全</h2>
+<p>OpenHuman 的工具 trait 把 <code>ToolScope</code>、<code>ToolCategory</code>、<code>PermissionLevel</code>、<code>supports_markdown</code>、<code>max_result_size_chars</code> 放在统一协议中。这对 MyClaw 很关键，因为早期如果只把工具写成函数，后续 agent、gateway、plugin、channel 会重复发明权限系统。</p>
+<p>MyClaw 初期建议：</p>
+<ul><li><code>ToolPermission = none | read | write | execute | dangerous</code>。</li><li><code>ToolCategory = system | integration | memory | agent</code>。</li><li>工具返回统一 <code>ToolResult</code>：<code>ok</code>、<code>content</code>、<code>metadata</code>、<code>truncated</code>、<code>requiresApproval</code>。</li><li><code>write/execute/dangerous</code> 默认需要 policy 判定；高风险动作产出 <code>approvalId</code>。</li><li>所有工具有 timeout、stdout/stderr cap、workspace boundary。</li></ul>
+<h2 id="记忆与搜索">记忆与搜索</h2>
+<p>OpenHuman 的 memory tree 很强，但成本也高：canonicalize、chunk、content store、score、source/topic/global tree、retrieval、jobs。MyClaw 初期如果照搬，会在还没有核心 run/approval 之前就陷入存储与召回系统。</p>
+<p>MyClaw 初期建议：</p>
+<ul><li>Phase 1 存 run/event JSONL。</li><li>Phase 3 存 transcript JSONL。</li><li>Phase 3.5 增加 SQLite + FTS5：检索历史 run、tool result、assistant answer。</li><li>Phase 6 再考虑 chunk、embedding、graph、summary tree。</li><li>memory 注入必须有 token/字符上限，避免把历史全部塞进 prompt。</li></ul>
+<h2 id="skills-与插件">Skills 与插件</h2>
+<p>OpenHuman 当前代码说明一个重要取舍：skills 可以先作为 metadata 和 prompt instruction 系统存在，不一定一开始执行代码。它的 <code>SKILL.md</code> discovery、frontmatter、<code>@skill</code> 显式触发、8KiB 注入上限很适合 MyClaw。</p>
+<p>MyClaw 初期建议：</p>
+<ul><li>Phase 0-3 不做 plugin runtime。</li><li>Phase 3 可以允许 <code>--skill &lt;name&gt;</code> 或 <code>@skill</code> 只注入说明。</li><li>Phase 5 再做 plugin manifest 和外部工具加载。</li><li>skill 不等于 plugin：skill 改 prompt，plugin 暴露工具。</li></ul>
+<h2 id="ui-观测与运维">UI、观测与运维</h2>
+<p>OpenHuman 的 React UI 给了 MyClaw 后续 Control UI 的方向：不要做欢迎页优先，而是把运行态直接呈现出来。<code>Intelligence</code> 页面按 memory、subconscious、tasks 等 tab 切分；<code>AppState</code> 聚合 daemon、auth、local AI、accessibility 状态。</p>
+<p>MyClaw 后续 UI 推荐：</p>
+<ul><li>第一屏是 run timeline、approval queue、recent sessions、doctor status。</li><li>控制台不应该替代 CLI，只做可观察性和审批。</li><li>事件总线是 UI 的数据来源，不能让 UI 直接读内部 runner 状态。</li></ul>
+<h2 id="不建议进入初期的内容">不建议进入初期的内容</h2>
+<ul><li>Tauri 桌面壳。</li><li>语音、Meet、screen intelligence、accessibility automation。</li><li>118+ OAuth 集成。</li><li>Subconscious 主动任务。</li><li>Memory tree、topic/global digest。</li><li>多 agent 并行与复杂 subagent。</li><li>订阅、billing、团队、邀请、奖励系统。</li></ul>
+<h2 id="myclaw-吸收顺序">MyClaw 吸收顺序</h2>
+<div class="table-wrap"><table><thead><tr><th>顺序</th><th>吸收内容</th><th>阶段</th></tr></thead><tbody><tr><td>1</td><td>controller registry、统一 envelope、event bus</td><td>Phase 0-1</td></tr><tr><td>2</td><td>tool descriptor、permission、audit、approval</td><td>Phase 2</td></tr><tr><td>3</td><td>agent tool loop、transcript、context/result budget</td><td>Phase 3</td></tr><tr><td>4</td><td>session search、light memory</td><td>Phase 3.5</td></tr><tr><td>5</td><td>HTTP/WS gateway、schema discovery、event stream</td><td>Phase 4</td></tr><tr><td>6</td><td><code>SKILL.md</code> loader、plugin manifest</td><td>Phase 5</td></tr><tr><td>7</td><td>memory tree、background jobs、Control UI</td><td>Phase 6+</td></tr></tbody></table></div>
+<h2 id="验收标准">验收标准</h2>
+<ul><li>能明确说出 OpenHuman 每个能力对应 MyClaw 的哪个阶段。</li><li>初期方案没有引入 Tauri/Rust/桌面权限依赖。</li><li>MyClaw 的 core API 不绑定 CLI 或 HTTP transport。</li><li>Agent 调用工具必须经过 policy 和 approval。</li><li>记忆系统先服务 session search，不承诺完整个人知识库。</li></ul>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

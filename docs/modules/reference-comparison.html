@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>参考项目对比 · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>参考项目对比</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+        <a class="back" href="../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#诊断">诊断</a>
+<a href="#hermes-agent-观察">Hermes Agent 观察</a>
+<a href="#openclaw-观察">OpenClaw 观察</a>
+<a href="#openclaw-lobster-观察">OpenClaw Lobster 观察</a>
+<a href="#openhuman-观察">OpenHuman 观察</a>
+<a href="#myclaw-取舍">MyClaw 取舍</a>
+<a href="#关键风险">关键风险</a>
+<a href="#验收标准">验收标准</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>参考项目对比</h2>
+          <p>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</p>
+          <div class="meta">
+            <span class="tag p0">P0</span>
+            <span class="tag phase">Phase 0</span>
+            <span class="tag">战略判断</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="诊断">诊断</h2>
+<p>Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw <code>extensions/lobster</code> 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。</p>
+<h2 id="hermes-agent-观察">Hermes Agent 观察</h2>
+<p>可借鉴：</p>
+<ul><li>一个 agent loop 服务 CLI、gateway、ACP、cron、batch 多入口。</li><li>SQLite + FTS5 存 session，适合长期检索和跨会话召回。</li><li>memory + skills 形成使用后的学习闭环。</li><li>tool registry 将工具 schema、handler、availability check 放在统一位置。</li><li>prompt stability 明确，避免系统 prompt 中途频繁变化。</li></ul>
+<p>不建议照搬：</p>
+<ul><li>核心 <code>AIAgent</code> 和 CLI 文件过大，早期项目会很快变成难拆的大泥球。</li><li>Python 插件和工具生态与用户要求的 Node.js 不一致。</li><li>终端后端、RL、trajectory、Batch runner 对 MyClaw v0 是噪声。</li><li>多渠道 gateway 在未验证核心体验前会拉高维护成本。</li></ul>
+<h2 id="openclaw-观察">OpenClaw 观察</h2>
+<p>可借鉴：</p>
+<ul><li>Node.js/TypeScript、ESM、pnpm workspace 方向与 MyClaw 技术要求一致。</li><li>本地优先 gateway，默认 loopback，外部访问需要明确 auth/pairing。</li><li>plugin manifest 先做 metadata/schema validation，再加载 runtime。</li><li>tool policy 明确：工具是否暴露给模型由配置、provider、sandbox、channel 权限共同决定。</li><li>session key 和路由模型区分 direct、group、cron、agent，后续多入口时很有价值。</li></ul>
+<p>不建议照搬：</p>
+<ul><li>127 个 extensions、完整 channel SDK、移动节点、Control UI、daemon 都不适合第一阶段。</li><li>插件 SDK 已经承担外部兼容，MyClaw 初期不应背这个承诺。</li><li>OpenClaw 的安全文档非常成熟，但实现面很厚，MyClaw 应先做小而强的边界。</li></ul>
+<h2 id="openclaw-lobster-观察">OpenClaw Lobster 观察</h2>
+<p>可直接吸收的核心：</p>
+<ul><li><code>run</code> / <code>resume</code> 双动作。</li><li>typed JSON envelope。</li><li><code>needs_approval</code> 状态。</li><li><code>resumeToken</code> / <code>approvalId</code> 恢复。</li><li>cwd 必须留在 gateway 工作目录内。</li><li>timeout 和 stdout/stderr cap。</li><li>workflow file 与 pipeline string 两种入口。</li></ul>
+<p>需要重新设计的地方：</p>
+<ul><li>不要一开始依赖 OpenClaw plugin runtime。</li><li>不要把 Lobster 当外部黑盒；MyClaw 应把 workflow core 变成自己的主内核。</li><li>approval 不应只是工具返回值，还要进入 state store，方便 CLI/gateway/UI 查询。</li></ul>
+<h2 id="openhuman-观察">OpenHuman 观察</h2>
+<p>可借鉴：</p>
+<ul><li><code>src/core/all.rs</code> 的 controller registry：业务 controller 和 transport 分离，后续 CLI、HTTP、UI 可以复用同一套 handler。</li><li><code>src/core/event_bus/</code> 的 DomainEvent：agent、memory、channel、cron、tool、skill 都通过统一事件面通信。</li><li><code>src/openhuman/tools/traits.rs</code> 的工具协议：ToolSpec、permission、scope、category、结果预算都在工具定义里。</li><li><code>src/openhuman/agent/</code> 的 agent harness：agent turn、tool loop、subagent runner、memory loader 分层清楚。</li><li><code>src/openhuman/skills/</code> 的 <code>SKILL.md</code> 发现和注入：skill 可以先作为 prompt workflow，不急着执行代码。</li><li><code>src/openhuman/memory/</code> 的分层：conversation JSONL、UnifiedMemory、memory tree 清楚区分轻重层。</li></ul>
+<p>不建议照搬：</p>
+<ul><li>Rust/Tauri 桌面壳、CEF、screen intelligence、accessibility、voice、Meet、subconscious 都太重。</li><li>118+ OAuth 集成和 Composio 周期同步不适合 MyClaw 初期。</li><li>memory tree、topic/global digest、entity graph 在还没有稳定 workflow/agent 前是过早复杂化。</li><li>OpenHuman 产品范围已经是个人 AI super assistant，MyClaw 初期应更窄：本地工作流与安全 agent 内核。</li></ul>
+<h2 id="myclaw-取舍">MyClaw 取舍</h2>
+<p>第一阶段吸收顺序：</p>
+<ul><li>Lobster 的 envelope 和 approval/resume。</li><li>OpenHuman 的 controller registry 和 event bus。</li><li>OpenClaw/OpenHuman 的工具权限、安全和 gateway 边界。</li><li>Hermes 的 session search、memory、skills。</li><li>OpenClaw/OpenHuman 的插件、Control UI、长期记忆。</li></ul>
+<h2 id="关键风险">关键风险</h2>
+<ul><li>一开始做成“大平台”，会拖慢核心闭环。</li><li>一开始只做“命令执行器”，后续 agent 接入会重构成本高。</li><li>没有统一 envelope，CLI、gateway、agent、UI 会各自发明结果格式。</li></ul>
+<h2 id="验收标准">验收标准</h2>
+<ul><li>所有模块都以统一 envelope 为核心通信格式。</li><li>第一阶段不依赖参考项目代码。</li><li>每个后续能力都能回答：它接入哪个 core API、写入哪个 state、暴露给哪个 access layer。</li></ul>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+<a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

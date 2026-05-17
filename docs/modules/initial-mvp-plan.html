@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyClaw 初期实现方案 · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>MyClaw 初期实现方案</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+        <a class="back" href="../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#总诊断">总诊断</a>
+<a href="#初期产品边界">初期产品边界</a>
+<a href="#初期阶段总览">初期阶段总览</a>
+<a href="#推荐目录结构">推荐目录结构</a>
+<a href="#核心协议">核心协议</a>
+<a href="#phase-0-contract-skeleton">Phase 0: Contract Skeleton</a>
+<a href="#phase-1-workflow-core">Phase 1: Workflow Core</a>
+<a href="#phase-2-tools-approval">Phase 2: Tools + Approval</a>
+<a href="#phase-3-agent-runtime">Phase 3: Agent Runtime</a>
+<a href="#phase-3-5-session-search">Phase 3.5: Session Search</a>
+<a href="#phase-4-local-gateway">Phase 4: Local Gateway</a>
+<a href="#第一轮实现顺序">第一轮实现顺序</a>
+<a href="#关键取舍">关键取舍</a>
+<a href="#初期-done-definition">初期 Done Definition</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>MyClaw 初期实现方案</h2>
+          <p>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</p>
+          <div class="meta">
+            <span class="tag p0">P0</span>
+            <span class="tag phase">Phase 0-3</span>
+            <span class="tag">初期方案</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="总诊断">总诊断</h2>
+<p>MyClaw 的初期目标应该是“可恢复、可审批、可审计的本地 workflow/agent 内核”，不是“完整个人 AI 操作系统”。参考项目给出的共同结论是：先冻结核心协议，再增加 agent；先做好工具权限和状态恢复，再做 gateway、记忆、插件和 UI。</p>
+<h2 id="初期产品边界">初期产品边界</h2>
+<p>要做：</p>
+<ul><li>Node.js/TypeScript/pnpm workspace。</li><li>CLI-first：<code>myclaw run</code>、<code>myclaw resume</code>、<code>myclaw ask</code>、<code>myclaw doctor</code>。</li><li>可恢复 workflow runner。</li><li>统一 JSON envelope。</li><li>工具 registry、policy、approval。</li><li>run/event/transcript 落盘。</li><li>最小 agent runtime：单 agent、工具调用、transcript。</li></ul>
+<p>不做：</p>
+<ul><li>桌面 App、Tauri、语音、屏幕感知。</li><li>多渠道 Telegram/Slack/Discord。</li><li>大规模 OAuth 集成。</li><li>Memory tree、知识图谱、自动拉取。</li><li>plugin runtime。</li><li>多 subagent 并行。</li></ul>
+<h2 id="初期阶段总览">初期阶段总览</h2>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>名称</th><th>用户可见能力</th><th>核心交付</th><th>参考来源</th></tr></thead><tbody><tr><td>Phase 0</td><td>Contract Skeleton</td><td><code>myclaw --help</code>、<code>myclaw doctor</code></td><td>monorepo、config、controller registry、envelope 类型</td><td>OpenHuman controller registry、OpenClaw config 边界</td></tr><tr><td>Phase 1</td><td>Workflow Core</td><td><code>myclaw run workflow.json --json</code></td><td>runner、state JSONL、event bus、resume 状态</td><td>Lobster run/resume、OpenHuman event bus</td></tr><tr><td>Phase 2</td><td>Tools + Approval</td><td><code>myclaw run &quot;exec echo hi&quot;</code> 安全执行</td><td>ToolDescriptor、policy、approval store、audit</td><td>OpenHuman Tool trait、安全策略；OpenClaw policy</td></tr><tr><td>Phase 3</td><td>Agent Runtime</td><td><code>myclaw ask &quot;...&quot;</code> 调工具完成任务</td><td>provider、tool calling、transcript、context/result budget</td><td>OpenHuman agent harness、Hermes memory/session 思路</td></tr><tr><td>Phase 3.5</td><td>Session Search</td><td><code>myclaw search &quot;...&quot;</code></td><td>SQLite/FTS、历史 run 和 transcript 检索</td><td>Hermes session FTS、OpenHuman memory 轻量切片</td></tr><tr><td>Phase 4</td><td>Local Gateway</td><td>本地 HTTP/WS 控制面</td><td>Fastify、token auth、events stream、schema discovery</td><td>OpenHuman JSON-RPC、OpenClaw gateway</td></tr></tbody></table></div>
+<h2 id="推荐目录结构">推荐目录结构</h2>
+<pre class="code" data-lang="text"><code>myclaw/
+  package.json
+  pnpm-workspace.yaml
+  tsconfig.base.json
+  packages/
+    core/
+      src/
+        envelope.ts
+        controllers.ts
+        events.ts
+        workflow/
+        state/
+    cli/
+      src/index.ts
+    tools/
+      src/
+        descriptor.ts
+        policy.ts
+        builtins/
+    agent/
+      src/
+        provider.ts
+        prompt.ts
+        loop.ts
+        transcript.ts
+    memory/
+      src/
+        session-store.ts
+        search.ts
+    gateway/
+      src/server.ts
+  docs/</code></pre>
+<p>边界要求：</p>
+<ul><li><code>packages/core</code> 不依赖 CLI、gateway、agent。</li><li><code>packages/tools</code> 不直接读 CLI 参数，只接收标准 <code>ToolContext</code>。</li><li><code>packages/agent</code> 只能通过 <code>dispatchTool</code> 调工具。</li><li><code>packages/gateway</code> 只暴露 controller 和 event stream。</li></ul>
+<h2 id="核心协议">核心协议</h2>
+<p>所有入口都返回同一类 envelope：</p>
+<pre class="code" data-lang="ts"><code>type RunStatus = &quot;ok&quot; | &quot;failed&quot; | &quot;cancelled&quot; | &quot;needs_approval&quot;;
+
+interface MyClawEnvelope&lt;T = unknown&gt; {
+  ok: boolean;
+  status: RunStatus;
+  runId: string;
+  stepId?: string;
+  approvalId?: string;
+  resumeToken?: string;
+  result?: T;
+  error?: {
+    code: string;
+    message: string;
+    recoverable: boolean;
+  };
+  events: RunEvent[];
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    elapsedMs: number;
+  };
+}</code></pre>
+<p>这条协议必须早于 agent。否则 CLI、gateway、agent、UI 会各自生成无法统一的结果格式。</p>
+<h2 id="phase-0-contract-skeleton">Phase 0: Contract Skeleton</h2>
+<p>目标：</p>
+<ul><li>项目能安装、测试、运行。</li><li>controller registry 和 envelope 类型稳定。</li><li>config/state 路径可诊断。</li></ul>
+<p>交付：</p>
+<ul><li><code>pnpm test</code>、<code>pnpm typecheck</code>。</li><li><code>myclaw --help</code>。</li><li><code>myclaw doctor --json</code>。</li><li><code>ControllerDefinition</code>：<code>namespace</code>、<code>method</code>、<code>paramsSchema</code>、<code>handler</code>、<code>permission</code>。</li><li><code>~/.myclaw/config.json</code> 或项目 <code>.myclaw/config.json</code>。</li><li><code>~/.myclaw/state/</code> 或工作区 <code>.myclaw/state/</code>。</li></ul>
+<p>验收：</p>
+<ul><li>unknown param 会失败。</li><li>controller name collision 会失败。</li><li>doctor 能输出 Node、pnpm、state dir、workspace dir、config source。</li></ul>
+<h2 id="phase-1-workflow-core">Phase 1: Workflow Core</h2>
+<p>目标：</p>
+<ul><li>没有 LLM，也能执行 workflow。</li><li>每次 run 都有事件和可恢复状态。</li></ul>
+<p>最小 workflow：</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;version&quot;: 1,
+  &quot;steps&quot;: [
+    { &quot;id&quot;: &quot;hello&quot;, &quot;tool&quot;: &quot;shell.exec&quot;, &quot;args&quot;: { &quot;cmd&quot;: &quot;echo hello&quot; } }
+  ]
+}</code></pre>
+<p>交付：</p>
+<ul><li><code>myclaw run workflow.json --json</code>。</li><li><code>myclaw run &quot;shell.exec echo hello&quot; --json</code>。</li><li><code>RunStore</code>：<code>runs.jsonl</code>、<code>events.jsonl</code>、<code>approvals.jsonl</code>。</li><li><code>EventBus</code>：<code>run.started</code>、<code>step.started</code>、<code>tool.started</code>、<code>approval.required</code>、<code>run.completed</code>。</li><li><code>resumeToken</code> 生成和校验。</li></ul>
+<p>验收：</p>
+<ul><li><code>ok/failed/cancelled/needs_approval</code> 都有单测。</li><li>进程中断后可以通过 state 查到未完成 run。</li><li>event 顺序可重放。</li></ul>
+<h2 id="phase-2-tools-approval">Phase 2: Tools + Approval</h2>
+<p>目标：</p>
+<ul><li>所有副作用都经过工具协议和 policy。</li><li>高风险操作暂停为 approval，而不是直接执行。</li></ul>
+<p>内置工具：</p>
+<ul><li><code>fs.read</code></li><li><code>fs.write</code></li><li><code>fs.list</code></li><li><code>search.grep</code></li><li><code>shell.exec</code></li><li><code>state.read</code></li></ul>
+<p>工具协议：</p>
+<pre class="code" data-lang="ts"><code>interface ToolDescriptor&lt;TArgs = unknown&gt; {
+  name: string;
+  description: string;
+  category: &quot;system&quot; | &quot;memory&quot; | &quot;integration&quot; | &quot;agent&quot;;
+  permission: &quot;none&quot; | &quot;read&quot; | &quot;write&quot; | &quot;execute&quot; | &quot;dangerous&quot;;
+  schema: ZodSchema&lt;TArgs&gt;;
+  maxOutputBytes?: number;
+  execute(args: TArgs, context: ToolContext): Promise&lt;ToolResult&gt;;
+}</code></pre>
+<p>policy：</p>
+<ul><li>workspace boundary。</li><li>deny list / allow list。</li><li>timeout。</li><li>max output。</li><li>write/execute/dangerous 风险判定。</li><li>approval 生成、批准、拒绝、过期。</li></ul>
+<p>验收：</p>
+<ul><li><code>shell.exec rm -rf /</code> 被拒绝。</li><li>workspace 外写文件被拒绝。</li><li>高风险命令返回 <code>needs_approval</code>。</li><li><code>myclaw resume &lt;approvalId&gt; --approve</code> 后继续执行。</li><li>tool result 被截断时 envelope 显示 <code>truncated</code>。</li></ul>
+<h2 id="phase-3-agent-runtime">Phase 3: Agent Runtime</h2>
+<p>目标：</p>
+<ul><li>Agent 可以用自然语言调用工具，但不能绕过 Phase 2 的 policy。</li></ul>
+<p>交付：</p>
+<ul><li><code>myclaw ask &quot;列出当前目录并总结&quot;</code>。</li><li>OpenAI-compatible provider。</li><li>prompt builder。</li><li>tool calling loop。</li><li>transcript JSONL。</li><li>result budget 和 context budget。</li><li><code>--dry-run</code> 或 <code>--require-approval</code> 模式。</li></ul>
+<p>限制：</p>
+<ul><li>单 agent。</li><li>无 subagent。</li><li>无自动后台任务。</li><li>无长期 memory tree。</li><li>不直接接 Slack/Telegram。</li></ul>
+<p>验收：</p>
+<ul><li>agent 调 <code>fs.read</code>、<code>search.grep</code>、<code>shell.exec</code> 都进入 transcript。</li><li>agent 的写/执行动作触发 approval。</li><li>provider 错误有结构化 error code。</li><li>prompt 和 tool schema 可 dump，用于调试。</li></ul>
+<h2 id="phase-3-5-session-search">Phase 3.5: Session Search</h2>
+<p>目标：</p>
+<ul><li>让 MyClaw 开始积累长期价值，但不做复杂 memory tree。</li></ul>
+<p>交付：</p>
+<ul><li>SQLite 表：<code>runs</code>、<code>events</code>、<code>messages</code>、<code>tool_calls</code>。</li><li>FTS：对 user message、assistant answer、tool output 建索引。</li><li><code>myclaw search &quot;approval&quot;</code>。</li><li><code>myclaw show &lt;runId&gt;</code>。</li><li>agent 可选注入最近/相关 session 摘要。</li></ul>
+<p>验收：</p>
+<ul><li>能检索历史 run。</li><li>检索结果有来源 runId/stepId/messageId。</li><li>注入 prompt 前有字符/token 上限。</li></ul>
+<h2 id="phase-4-local-gateway">Phase 4: Local Gateway</h2>
+<p>目标：</p>
+<ul><li>把 CLI 已验证的 core 暴露为本地服务。</li></ul>
+<p>交付：</p>
+<ul><li><code>myclaw gateway start</code>。</li><li><code>POST /rpc</code> 或 <code>POST /runs</code>。</li><li><code>GET /health</code>。</li><li><code>GET /schema</code>。</li><li><code>GET /runs/:id/events</code> 或 WebSocket event stream。</li><li>本地 token auth。</li></ul>
+<p>验收：</p>
+<ul><li>无 token 不允许 mutation。</li><li>HTTP 和 CLI 调同一套 controller。</li><li>event stream 与 CLI <code>--json</code> 的事件一致。</li></ul>
+<h2 id="第一轮实现顺序">第一轮实现顺序</h2>
+<ul><li>建 monorepo 和测试基线。</li><li>写 <code>envelope.ts</code>、<code>events.ts</code>、<code>controllers.ts</code>。</li><li>写 <code>RunStore</code>，先 JSONL，不上 SQLite。</li><li>写 workflow parser + runner。</li><li>写 <code>fs.read</code>、<code>fs.list</code>、<code>search.grep</code> 三个只读工具。</li><li>加 <code>shell.exec</code>，接 timeout/output cap。</li><li>加 policy 和 approval store。</li><li>再接 agent。</li></ul>
+<h2 id="关键取舍">关键取舍</h2>
+<ul><li>Gateway 不在第一天做，但 controller registry 第一天做。</li><li>Memory tree 不在初期做，但 transcript 和 run event 第一天落盘。</li><li>Skills 不在初期执行代码，但可以借鉴 <code>SKILL.md</code> 作为 prompt 文档。</li><li>UI 不在初期做，但 event model 要服务未来 UI。</li><li>Agent 不拥有工具，agent 只是 controller/tool 的调用者。</li></ul>
+<h2 id="初期-done-definition">初期 Done Definition</h2>
+<ul><li>每个阶段有 CLI 命令。</li><li>每个命令有 <code>--json</code>。</li><li>每个状态能恢复或解释失败。</li><li>每个 tool 有权限级别。</li><li>每个副作用有 audit event。</li><li>每个模块有单测。</li><li>文档有 HTML 入口并发布到 HTML Center。</li></ul>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

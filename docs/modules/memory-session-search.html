@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>记忆、Session 与搜索 · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>记忆、Session 与搜索</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+        <a class="back" href="../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#诊断">诊断</a>
+<a href="#参考项目观察">参考项目观察</a>
+<a href="#推荐设计">推荐设计</a>
+<a href="#memory-类型">Memory 类型</a>
+<a href="#session-search">Session Search</a>
+<a href="#mvp-边界">MVP 边界</a>
+<a href="#关键风险">关键风险</a>
+<a href="#验收标准">验收标准</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>记忆、Session 与搜索</h2>
+          <p>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</p>
+          <div class="meta">
+            <span class="tag p1">P1</span>
+            <span class="tag phase">Phase 3/6</span>
+            <span class="tag">长期价值</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="诊断">诊断</h2>
+<p>记忆不是第一阶段功能，但数据模型要从第一天为它留口。否则后面接入 agent 后，历史、记忆、workflow run、approval 会分散成多套不可检索日志。</p>
+<h2 id="参考项目观察">参考项目观察</h2>
+<p>Hermes 最值得借鉴：</p>
+<ul><li>SQLite state db。</li><li>messages 表 + sessions 表。</li><li>FTS5 全文搜索。</li><li>parent_session_id 记录压缩/派生 lineage。</li><li>session_search 工具将历史会话召回给 agent。</li><li>MEMORY.md / USER.md 保存持久事实。</li></ul>
+<p>OpenClaw 最值得借鉴：</p>
+<ul><li>JSONL transcript 直观、易调试。</li><li>session key 区分 main/direct/group/cron/agent。</li><li>session 生命周期有 daily/idle/manual reset。</li><li>workspace bootstrap files：AGENTS.md、SOUL.md、TOOLS.md、USER.md。</li></ul>
+<p>OpenHuman 最值得借鉴：</p>
+<ul><li><code>memory/conversations/</code> 把 conversation JSONL 和 searchable memory 分开。</li><li><code>memory/store/</code> 用 SQLite、FTS、vector、graph 做统一 store，但通过 <code>MemoryClient</code> 隔离调用者。</li><li><code>memory/tree/</code> 是重管线：canonicalize、chunk、content_store、score、tree_source/tree_topic/tree_global、retrieval、jobs。</li><li><code>memory/ingestion/</code> 有 singleton queue，避免本地 LLM 抽取并发重入。</li></ul>
+<p>对 MyClaw 的结论：先做 conversation/run/session search，不要初期上 memory tree。</p>
+<h2 id="推荐设计">推荐设计</h2>
+<p>Phase 1/2 先做 run state，不做完整 memory：</p>
+<pre class="code" data-lang="text"><code>~/.myclaw/
+  config.json5
+  state/
+    runs/
+      &lt;runId&gt;.json
+      &lt;runId&gt;.jsonl
+    approvals.json</code></pre>
+<p>Phase 3 agent 加 transcript：</p>
+<pre class="code" data-lang="text"><code>~/.myclaw/
+  agents/main/sessions/
+    sessions.json
+    &lt;sessionId&gt;.jsonl</code></pre>
+<p>Phase 3.5 加轻量 session search：</p>
+<pre class="code" data-lang="text"><code>state.db
+  runs
+  events
+  messages
+  tool_calls
+  messages_fts</code></pre>
+<p>Phase 6 再迁移 SQLite：</p>
+<pre class="code" data-lang="text"><code>state.db
+  runs
+  run_steps
+  approvals
+  sessions
+  messages
+  messages_fts
+  memories</code></pre>
+<h2 id="memory-类型">Memory 类型</h2>
+<p>分三类，避免混在一个文件里：</p>
+<ul><li>User memory：用户偏好、稳定背景、称呼。</li><li>Project memory：当前 workspace 的约定、脚本、路径。</li><li>Procedure memory / skill：可复用工作流步骤。</li></ul>
+<p>推荐文件：</p>
+<pre class="code" data-lang="text"><code>workspace/
+  AGENTS.md
+  MYCLAW.md
+  skills/</code></pre>
+<p>全局：</p>
+<pre class="code" data-lang="text"><code>~/.myclaw/memory/USER.md
+~/.myclaw/memory/MEMORY.md</code></pre>
+<h2 id="session-search">Session Search</h2>
+<p>Phase 6 实现：</p>
+<ul><li>keyword search。</li><li>recent sessions。</li><li>run search。</li><li>approval history search。</li><li>agent 可调用 <code>session_search</code>。</li></ul>
+<p>搜索结果不要直接塞全文，应返回摘要：</p>
+<pre class="code" data-lang="ts"><code>type SearchHit = {
+  sessionId?: string;
+  runId?: string;
+  title: string;
+  when: string;
+  summary: string;
+  source: &quot;session&quot; | &quot;run&quot; | &quot;memory&quot;;
+};</code></pre>
+<h2 id="mvp-边界">MVP 边界</h2>
+<p>Phase 1：</p>
+<ul><li>run JSONL。</li><li>approval index。</li></ul>
+<p>Phase 3：</p>
+<ul><li>agent transcript JSONL。</li><li>session list/status。</li></ul>
+<p>Phase 3.5：</p>
+<ul><li>SQLite + FTS。</li><li>run/session/tool result search。</li><li><code>myclaw search</code>。</li></ul>
+<p>Phase 6：</p>
+<ul><li>memory files。</li><li>session_search tool。</li><li>可选 embedding/chunk/summary tree。</li></ul>
+<h2 id="关键风险">关键风险</h2>
+<ul><li>过早做复杂 memory，会影响 workflow core。</li><li>把临时任务进度写入长期 memory，导致 prompt 污染。</li><li>transcript 没有结构化 tool call，后续搜索无法理解行为。</li></ul>
+<h2 id="验收标准">验收标准</h2>
+<ul><li>每个 run 可追溯到 step 和 approval。</li><li>每个 agent turn 可追溯到 tool call 和 tool result。</li><li>memory 注入 prompt 前有大小限制和来源标注。</li><li>session search 返回摘要和来源，不直接塞超长全文。</li></ul>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+<a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>
