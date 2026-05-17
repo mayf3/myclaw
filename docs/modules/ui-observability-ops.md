@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.6 已经把 dashboard 从粗糙状态页推进为参考完成度工作台：状态、OpenClaw 迁移、Feishu 复用决策、OpenClaw/Hermes-agent/OpenHuman 模块差距在同一页呈现。
 
 ## 参考项目观察
 
@@ -18,6 +18,11 @@ Hermes：
 - CLI/TUI 对工具执行有实时 progress。
 - session search 和 usage/cost 对长期使用有帮助。
 - gateway 平台状态能帮助定位 channel 问题。
+
+OpenHuman：
+
+- UI-first 的 memory tree、controller registry 和 intelligence 页面说明：控制台不能只是 raw JSON，必须帮助人判断下一步。
+- 本地状态、事件和 controller schema 适合做成可比较、可审阅的操作面。
 
 ## 推荐设计
 
@@ -43,6 +48,21 @@ Phase 5/6 UI：
 - run step timeline。
 - approval pending queue。
 - config read-only view，后续可编辑。
+
+Phase 0.6 dashboard 当前已经具备：
+
+- 只读 `/api/status` 工作台，并通过 `/api/reference-completion`、`/api/feishu-adoption` 加载评审态数据。
+- 参考完成度矩阵。
+- Feishu/Lark 复用决策卡片。
+- OpenClaw migration stage 摘要。
+- runs/events/channels/raw JSON。
+
+Phase 0.7 应补：
+
+- run detail drawer。
+- stage snapshot diff。
+- `apply --module feishu` 人工确认入口。
+- 事件 stream 或轮询刷新。
 
 ## HTML/Control UI 信息架构
 

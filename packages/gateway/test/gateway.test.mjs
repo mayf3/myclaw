@@ -33,6 +33,16 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
 
+    const reference = await fetch(`${gateway.url}/api/reference-completion`).then((response) => response.json());
+    assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
+
+    const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
+    assert.equal(feishu.feishuAdoption.referenceUse, true);
+
+    const asset = await fetch(`${gateway.url}/assets/dashboard.js`);
+    assert.equal(asset.status, 200);
+    assert.match(await asset.text(), /renderFeishu/);
+
     const events = await readFile(path.join(stateDir, "events.jsonl"), "utf8");
     assert.match(events, /message\.receive\.completed/);
     assert.match(events, /message\.reply\.completed/);

@@ -59,12 +59,14 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。</p>
+<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.6 已经把 dashboard 从粗糙状态页推进为参考完成度工作台：状态、OpenClaw 迁移、Feishu 复用决策、OpenClaw/Hermes-agent/OpenHuman 模块差距在同一页呈现。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw：</p>
 <ul><li>Control UI 通过 gateway schema 渲染 config 表单。</li><li>gateway health/status 是运维入口。</li><li>WS events 支撑实时 UI。</li><li>security audit 和 doctor 是用户自查入口。</li></ul>
 <p>Hermes：</p>
 <ul><li>CLI/TUI 对工具执行有实时 progress。</li><li>session search 和 usage/cost 对长期使用有帮助。</li><li>gateway 平台状态能帮助定位 channel 问题。</li></ul>
+<p>OpenHuman：</p>
+<ul><li>UI-first 的 memory tree、controller registry 和 intelligence 页面说明：控制台不能只是 raw JSON，必须帮助人判断下一步。</li><li>本地状态、事件和 controller schema 适合做成可比较、可审阅的操作面。</li></ul>
 <h2 id="推荐设计">推荐设计</h2>
 <p>Phase 0/1 CLI observability：</p>
 <ul><li><code>myclaw doctor</code>。</li><li><code>myclaw status &lt;runId&gt;</code>。</li><li><code>myclaw runs list</code>。</li><li><code>--json</code> 输出。</li><li>run event JSONL。</li></ul>
@@ -72,6 +74,10 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li><code>/health</code>。</li><li><code>/status</code>。</li><li>WS event stream。</li><li><code>/runs/:id/events</code>。</li></ul>
 <p>Phase 5/6 UI：</p>
 <ul><li>本地 Control UI。</li><li>runs 列表。</li><li>run step timeline。</li><li>approval pending queue。</li><li>config read-only view，后续可编辑。</li></ul>
+<p>Phase 0.6 dashboard 当前已经具备：</p>
+<ul><li>只读 <code>/api/status</code> 工作台，并通过 <code>/api/reference-completion</code>、<code>/api/feishu-adoption</code> 加载评审态数据。</li><li>参考完成度矩阵。</li><li>Feishu/Lark 复用决策卡片。</li><li>OpenClaw migration stage 摘要。</li><li>runs/events/channels/raw JSON。</li></ul>
+<p>Phase 0.7 应补：</p>
+<ul><li>run detail drawer。</li><li>stage snapshot diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li></ul>
 <h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>
 <p>第一版 UI 不做营销页，直接是工具界面：</p>
 <pre class="code" data-lang="text"><code>Runs

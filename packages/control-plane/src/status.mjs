@@ -2,6 +2,7 @@ import { listChannels } from "../../channels/src/index.mjs";
 import { listRuns, readEvents } from "../../core/src/state.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
+import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
 
 const MIGRATION_PLAN_CACHE_MS = 5000;
 const migrationPlanCache = new Map();
@@ -49,6 +50,20 @@ export async function buildOpenClawMigrationPayload(context, options = {}) {
     ok: true,
     plan,
     stage,
+  };
+}
+
+export function buildReferenceCompletionStatusPayload() {
+  return {
+    ok: true,
+    referenceCompletion: buildReferenceCompletionPayload(),
+  };
+}
+
+export function buildFeishuAdoptionStatusPayload() {
+  return {
+    ok: true,
+    feishuAdoption: buildFeishuAdoptionPayload(),
   };
 }
 
