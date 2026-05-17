@@ -15,11 +15,13 @@ async function loadStatus() {
     const statusPayload = await statusResponse.json();
     const referencePayload = await referenceResponse.json();
     const feishuPayload = await feishuResponse.json();
+    const runDetail = statusPayload.runs?.[0]?.runId ? await fetchRunDetail(statusPayload.runs[0].runId) : null;
     const payload = {
       ...statusPayload,
       referenceCompletion: referencePayload.referenceCompletion,
       feishuAdoption: feishuPayload.feishuAdoption,
       feishuAdapter: feishuPayload.feishuAdapter,
+      runDetail,
     };
     $("rawJson").textContent = JSON.stringify(payload, null, 2);
     if (!payload.ok) {
@@ -29,13 +31,23 @@ async function loadStatus() {
     renderOverview(payload);
     renderReferenceCompletion(payload.referenceCompletion);
     renderFeishu(payload.feishuAdoption, payload.feishuAdapter);
-    renderMigration(payload.openclawMigration, payload.openclawStage);
+    renderMigration(payload.openclawMigration, payload.openclawStage, payload.openclawStageSummary);
+    renderRunDetail(payload.runDetail);
     renderRuns(payload.runs || []);
     renderEvents(payload.events || []);
     renderChannels(payload.channels || []);
   } catch (error) {
     $("subtitle").textContent = error instanceof Error ? error.message : String(error);
   }
+}
+
+async function fetchRunDetail(runId) {
+  const response = await fetch("/api/runs/" + encodeURIComponent(runId));
+  if (!response.ok) {
+    return null;
+  }
+  const payload = await response.json();
+  return payload.run || null;
 }
 
 function renderOverview(payload) {
@@ -130,7 +142,7 @@ function decisionList(title, items, tone) {
     '</div>';
 }
 
-function renderMigration(plan, stage) {
+function renderMigration(plan, stage, summary) {
   if (!plan) {
     $("migrationPanel").outerHTML = '<div id="migrationPanel" class="empty">暂无迁移计划</div>';
     return;
@@ -146,8 +158,41 @@ function renderMigration(plan, stage) {
     '<p><strong>通道</strong><br>' + esc(channels) + '</p>' +
     '<p><strong>插件清单</strong><br>' + plugins + ' 个 entries/manifests</p>' +
     '<p><strong>Latest stage</strong><br>' + (stage ? '<span class="mono">' + esc(stage.stageId || stage.status) + '</span>' : "尚未 stage") + '</p>' +
+    stageSummaryText(summary) +
     '<p>' + (unsupported.length ? '<span class="tag warn">' + unsupported.length + ' 个阻塞项</span>' : '<span class="tag ok">可继续拆解</span>') + '</p>' +
     '</div>';
+}
+
+function stageSummaryText(summary) {
+  if (!summary) {
+    return "";
+  }
+  return '<p><strong>Stage summary</strong><br>' +
+    '<span class="tag info">modules ' + esc(summary.counts?.stagedModules ?? 0) + '</span> ' +
+    '<span class="tag ' + ((summary.missingExpected || []).length ? "warn" : "ok") + '">missing ' + esc((summary.missingExpected || []).length) + '</span> ' +
+    '<span class="tag ' + (summary.blocked ? "warn" : "ok") + '">blocked ' + esc(summary.blocked || 0) + '</span> ' +
+    '<span class="tag warn">review only</span></p>' +
+    '<details class="criteria"><summary>模块摘要</summary>' +
+    (summary.modules || []).map((item) => '<p><span class="tag info">' + esc(item.id) + '</span> ' + esc(item.status) + '<br><span class="small">' + esc(item.nextAction || "-") + '</span></p>').join("") +
+    '</details>';
+}
+
+function renderRunDetail(run) {
+  if (!run) {
+    $("runDetailStatus").className = "pill";
+    $("runDetailStatus").textContent = "无 run";
+    $("runDetailPanel").outerHTML = '<div id="runDetailPanel" class="empty">暂无 run detail</div>';
+    return;
+  }
+  $("runDetailStatus").className = "pill " + (run.ok ? "ok" : "fail");
+  $("runDetailStatus").textContent = run.status || "-";
+  const inbound = run.envelope?.result?.inbound;
+  const resultText = inbound ? inbound.text : run.envelope?.result?.text || run.envelope?.error?.message || "-";
+  $("runDetailPanel").outerHTML = '<div id="runDetailPanel" class="decision-grid">' +
+    '<div class="decision-card"><strong>' + esc(run.runId) + '</strong><p>' + esc(run.summary) + '</p><p><span class="small">' + esc(resultText) + '</span></p></div>' +
+    '<div class="decision-card"><strong>事件</strong>' +
+    (run.events || []).map((event) => '<p><span class="tag info">' + esc(event.type) + '</span><br><span class="small">' + esc(event.at || "-") + '</span></p>').join("") +
+    '</div></div>';
 }
 
 function renderRuns(runs) {

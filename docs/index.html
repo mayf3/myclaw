@@ -16,7 +16,7 @@
 <nav aria-label="评审导航">
 <a href="#summary">总诊断</a>
 <a href="./implementation-architecture.html">当前实现架构</a>
-<a href="#phase-07">Phase 0.7</a>
+<a href="#phase-08">Phase 0.8</a>
 <a href="#modules">模块文档</a>
 <a href="#priority">实现优先级</a>
 <a href="#dependency">依赖关系</a>
@@ -31,9 +31,9 @@
 MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-tool permission。Phase 0.7 已新增 MyClaw Feishu adapter facade，并把 gateway
-主文件拆成 auth/http/routes；Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，
-但不直接加载插件 runtime。
+tool permission。Phase 0.8 已在 MyClaw Feishu adapter facade 上补齐 signed
+encrypted challenge，dashboard 也能展示 run detail 和 OpenClaw stage summary；
+Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
 <div class="quick-actions">
 <a class="button" href="./design-review.html">打开总览文档</a>
@@ -42,8 +42,8 @@ tool permission。Phase 0.7 已新增 MyClaw Feishu adapter facade，并把 gate
 <a class="button secondary" href="./modules/README.html">打开模块索引</a>
 </div>
 </section>
-<section id="phase-07">
-<h2>Phase 0.7 当前焦点</h2>
+<section id="phase-08">
+<h2>Phase 0.8 当前焦点</h2>
 <table>
 <thead>
 <tr>
@@ -55,17 +55,17 @@ tool permission。Phase 0.7 已新增 MyClaw Feishu adapter facade，并把 gate
 <tbody>
 <tr>
 <td>Dashboard</td>
-<td>显示 Feishu adapter readiness、参考完成度、迁移 stage 和运行状态。</td>
-<td>补 run detail、stage diff、approval queue。</td>
+<td>显示 Feishu adapter readiness、参考完成度、迁移 stage summary 和最新 run detail。</td>
+<td>补 approval queue、字段级 diff 和实时事件。</td>
 </tr>
 <tr>
 <td>Feishu/Lark</td>
-<td>已有 MyClaw adapter facade 和 x-lark signature 校验，仍不直接加载 OpenClaw runtime。</td>
-<td>实现 encrypted challenge decrypt 和 outbound facade。</td>
+<td>已有 MyClaw adapter facade、x-lark signature 和 encrypted challenge decrypt，仍不直接加载 OpenClaw runtime。</td>
+<td>实现 outbound facade、持久 replay 和更完整 event 类型。</td>
 </tr>
 <tr>
 <td>Gateway</td>
-<td>主文件从 321 行拆到 90 行，route/auth/http 独立。</td>
+<td>主文件从 321 行拆到 90 行，route/auth/http 独立，并提供 <code>GET /api/runs/:runId</code>。</td>
 <td>补 scoped token 和 mutation audit。</td>
 </tr>
 </tbody>

@@ -26,27 +26,31 @@ test("dashboard serves HTML and status API", async () => {
 
   const dashboard = await startDashboard({ port: 0, stateDir, openclawSource: stateDir });
   try {
-    const [htmlResponse, cssResponse, jsResponse, statusResponse, referenceResponse, feishuResponse] =
-      await Promise.all([
-        fetch(`${dashboard.url}/`),
-        fetch(`${dashboard.url}/assets/dashboard.css`),
+  const [htmlResponse, cssResponse, jsResponse, statusResponse, referenceResponse, feishuResponse, runResponse, badRun] =
+    await Promise.all([
+      fetch(`${dashboard.url}/`),
+      fetch(`${dashboard.url}/assets/dashboard.css`),
         fetch(`${dashboard.url}/assets/dashboard.js`),
         fetch(`${dashboard.url}/api/status`),
-        fetch(`${dashboard.url}/api/reference-completion`),
-        fetch(`${dashboard.url}/api/feishu-adoption`),
-      ]);
+      fetch(`${dashboard.url}/api/reference-completion`),
+      fetch(`${dashboard.url}/api/feishu-adoption`),
+      fetch(`${dashboard.url}/api/runs/in_test`),
+      fetch(`${dashboard.url}/api/runs/..%2Fsecret`),
+    ]);
     const html = await htmlResponse.text();
     const css = await cssResponse.text();
     const js = await jsResponse.text();
     const status = await statusResponse.json();
     const reference = await referenceResponse.json();
     const feishu = await feishuResponse.json();
+    const run = await runResponse.json();
 
     assert.equal(htmlResponse.status, 200);
     assert.match(html, /MyClaw Dashboard/);
     assert.match(html, /assets\/dashboard\.js/);
     assert.match(css, /reference-row/);
     assert.match(js, /renderReferenceCompletion/);
+    assert.match(js, /renderRunDetail/);
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 1);
@@ -55,6 +59,9 @@ test("dashboard serves HTML and status API", async () => {
     assert.equal(reference.referenceCompletion.modules[0].criteria.length, 3);
     assert.equal(feishu.feishuAdoption.directUse, false);
     assert.equal(feishu.feishuAdapter.connectionMode, "webhook");
+    assert.equal(run.run.runId, "in_test");
+    assert.equal(run.run.events.length, 1);
+    assert.equal(badRun.status, 400);
   } finally {
     await new Promise((resolve) => dashboard.server.close(resolve));
   }

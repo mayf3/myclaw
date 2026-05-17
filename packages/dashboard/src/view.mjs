@@ -11,7 +11,7 @@ export function renderDashboardHtml() {
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <p class="eyebrow">MyClaw Phase 0.7</p>
+          <p class="eyebrow">MyClaw Phase 0.8</p>
           <h1>运行与参考完成度</h1>
           <p>本地状态、OpenClaw 迁移、Feishu 复用决策、参考项目差距。</p>
         </div>
@@ -20,6 +20,7 @@ export function renderDashboardHtml() {
           <a href="#references">参考完成度</a>
           <a href="#feishu">Feishu/Lark</a>
           <a href="#migration">OpenClaw 迁移</a>
+          <a href="#run-detail">Run 详情</a>
           <a href="#activity">运行与事件</a>
           <a href="#channels">通道</a>
           <a href="#raw">原始状态</a>
@@ -77,6 +78,17 @@ export function renderDashboardHtml() {
             <div id="migrationPanel" class="empty">暂无迁移计划</div>
           </section>
         </div>
+
+        <section id="run-detail" class="panel">
+          <div class="section-head">
+            <div>
+              <h3>最新 Run 详情</h3>
+              <p>显示最近一次 run 的 envelope、事件和关键结果，避免只看摘要。</p>
+            </div>
+            <span id="runDetailStatus" class="pill">未加载</span>
+          </div>
+          <div id="runDetailPanel" class="empty">暂无 run detail</div>
+        </section>
 
         <section id="activity" class="two-col">
           <div class="panel">

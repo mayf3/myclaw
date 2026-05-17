@@ -38,10 +38,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <a href="#module-summary">状态摘要</a>
           <a href="#当前阶段">当前阶段</a>
 <a href="#已完成">已完成</a>
-<a href="#当前可用命令">当前可用命令</a>
 <a href="#feishu-lark-当前能力">Feishu/Lark 当前能力</a>
 <a href="#参考完成度">参考完成度</a>
-<a href="#当前实现架构">当前实现架构</a>
+<a href="#当前可用命令">当前可用命令</a>
 <a href="#下一步">下一步</a>
 <a href="#验证记录">验证记录</a>
         </nav>
@@ -56,43 +55,28 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
             <span class="tag">状态文档</span>
           </div>
         </section>
-        <article class="content"><p>更新时间：2026-05-17</p>
+        <article class="content"><p>更新时间：2026-05-18</p>
 <h2 id="当前阶段">当前阶段</h2>
-<p>Phase 0.7: Feishu Adapter Facade + Gateway Route Split。</p>
-<p>这一轮把 Phase 0.6 的设计结论落成代码：MyClaw 不直接加载 OpenClaw <code>extensions/feishu</code>，而是先建立自己的 Feishu adapter facade；gateway 不再把 auth、Feishu、message、migration、dashboard 全塞进 <code>index.mjs</code>，改成 route 模块。</p>
+<p>Phase 0.8: Feishu Encrypted Challenge + Run Detail + Stage Summary。</p>
+<p>这一轮把 Phase 0.7 留下的三个可落地问题补上：Feishu encrypted challenge 可以按 OpenClaw/Feishu 的 AES-256-CBC 方式解密；dashboard 和 API 能打开最新 run 的 detail；OpenClaw migration status 能返回 stage review summary。这个 summary 只用于人工审阅，不是字段级 diff，也不能作为 apply 输入。</p>
 <h2 id="已完成">已完成</h2>
-<ul><li>新增 <code>packages/feishu-adapter</code>：</li><li><code>buildFeishuAdapterConfig</code>：兼容 OpenClaw Feishu 的关键字段 <code>appId/appSecret/verificationToken/encryptKey/domain/connectionMode</code>。</li><li><code>describeFeishuAdapterReadiness</code>：输出 adapter 当前 readiness。</li><li><code>validateFeishuWebhookSignature</code>：按 OpenClaw/Feishu 公式校验 <code>x-lark-request-*</code> 签名。</li><li><code>validateFeishuVerificationToken</code>：保持 verification token 边界。</li><li><code>createFeishuReplayGuard</code>：把 Feishu event id 去重从 gateway 主文件移出。</li><li><code>normalizeFeishuEvent</code>：Feishu text event normalize 迁到 adapter facade。</li><li><code>packages/channels</code> 的 <code>feishu-event</code> channel 改为调用 adapter facade。</li><li><code>packages/gateway/src/index.mjs</code> 从 321 行降到 90 行。</li><li>新增 gateway 模块：</li><li><code>auth.mjs</code></li><li><code>http.mjs</code></li><li><code>routes/control.mjs</code></li><li><code>routes/feishu.mjs</code></li><li><code>routes/messages.mjs</code></li><li><code>routes/migration.mjs</code></li><li><code>GET /api/feishu-adoption</code> 返回 <code>feishuAdapter</code> readiness。</li><li>Dashboard Feishu 面板展示 adapter readiness、signed webhook 是否 ready。</li><li>Gateway 增加 <code>--feishu-encrypt-key</code>，也支持 <code>MYCLAW_FEISHU_ENCRYPT_KEY</code>。</li><li>测试从 21 个增加到 27 个，覆盖 Feishu adapter config、签名、replay、normalize 和 gateway signed callback。</li></ul>
-<h2 id="当前可用命令">当前可用命令</h2>
-<pre class="code" data-lang="bash"><code>npm run myclaw -- doctor
-npm run myclaw -- channels
-npm run myclaw -- send --text &quot;hello&quot;
-npm run myclaw -- receive --from local-user --conversation local-thread --text &quot;hello&quot; --reply &quot;received&quot; --json
-npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw
-npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw --feishu-verify-token verify-token --feishu-encrypt-key encrypt-key
-npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json</code></pre>
+<ul><li><code>packages/feishu-adapter/src/security.mjs</code> 新增 <code>decryptFeishuPayload</code>。</li><li>使用 <code>sha256(encryptKey)</code> 作为 AES-256-CBC key。</li><li>encrypted payload 格式为 <code>base64(iv[16] + ciphertext)</code>。</li><li>gateway 处理顺序是 signature -&gt; parse envelope -&gt; decrypt -&gt; token/challenge/event。</li><li>Gateway <code>POST /feishu/events</code> 已支持 signed encrypted challenge。</li><li><code>packages/core/src/state.mjs</code> 新增 <code>readRun</code>。</li><li><code>packages/control-plane/src/status.mjs</code> 新增 <code>buildRunPayload</code> 和 <code>openclawStageSummary</code>。</li><li>Dashboard 新增“最新 Run 详情”区块，并通过 <code>GET /api/runs/:runId</code> 读取 detail。</li><li>Dashboard migration panel 新增 stage summary：staged modules、missing expected、blocked、review only 标记。</li><li>Gateway/Dashboard 都支持 <code>GET /api/runs/:runId</code>。</li><li><code>GET /api/runs/:runId</code> 已做 runId 白名单校验，非法 id 返回 400。</li><li>Feishu webhook readiness 不再把 token-only 模式标成可用；缺 encryptKey 时 blocked。</li><li>测试从 27 个增加到 30 个，覆盖 encrypted decrypt、signed encrypted challenge 和 runId 校验。</li></ul>
 <h2 id="feishu-lark-当前能力">Feishu/Lark 当前能力</h2>
-<div class="table-wrap"><table><thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td>OpenClaw 插件直接加载</td><td>不做</td><td>仍不直接加载 <code>@openclaw/feishu</code></td></tr><tr><td>Config facade</td><td>已有</td><td>覆盖核心字段，暂不做 secret ref runtime</td></tr><tr><td>Verification token</td><td>已有</td><td>支持 body token 验证</td></tr><tr><td>x-lark signature</td><td>已有</td><td>有 <code>encryptKey</code> 时在 JSON parse 前校验</td></tr><tr><td>Replay guard</td><td>已有</td><td>内存 TTL 去重，后续要持久化</td></tr><tr><td>encrypt payload 解密</td><td>未做</td><td>当前仍 501</td></tr><tr><td>WebSocket mode</td><td>未做</td><td>仅 readiness 字段，不启动连接</td></tr><tr><td>outbound rich card</td><td>未做</td><td>下一阶段再做 outbound facade</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>能力</th><th>状态</th><th>说明</th></tr></thead><tbody><tr><td>OpenClaw 插件直接加载</td><td>不做</td><td>仍不直接加载 <code>@openclaw/feishu</code></td></tr><tr><td>x-lark signature</td><td>已有</td><td>有 <code>encryptKey</code> 时在 JSON parse 前校验</td></tr><tr><td>encrypted challenge decrypt</td><td>已有</td><td>解密后再 token/challenge</td></tr><tr><td>encrypted message event</td><td>部分</td><td>decrypt 已有，事件语义仍只支持 text normalize</td></tr><tr><td>Replay guard</td><td>部分</td><td>缺 event id 直接拒绝；仍是内存 TTL</td></tr><tr><td>WebSocket mode</td><td>未做</td><td>仅 readiness 字段</td></tr><tr><td>outbound rich card</td><td>未做</td><td>下一阶段再做 outbound facade</td></tr></tbody></table></div>
 <h2 id="参考完成度">参考完成度</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>60</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>45</td><td>92</td><td>42</td><td>35</td><td>有 adapter/signature，缺 encrypt/WebSocket/policy/outbound</td></tr><tr><td>Dashboard / 观测</td><td>47</td><td>78</td><td>55</td><td>90</td><td>缺 run detail、stage diff、approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>50</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage，缺 apply/rollback/diff UI</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn/tool loop</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>还没有 SQLite/FTS/长期记忆</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>还没有 plugin manifest/skill loader</td></tr></tbody></table></div>
-<h2 id="当前实现架构">当前实现架构</h2>
-<pre class="code" data-lang="text"><code>POST /feishu/events
-  -&gt; packages/gateway/src/routes/feishu.mjs
-  -&gt; packages/feishu-adapter signature/token/replay/normalize contract
-  -&gt; packages/runtime.receiveMessage(rawInbound)
-  -&gt; packages/channels feishu-event
-  -&gt; packages/core state
-
-GET /api/feishu-adoption
-  -&gt; packages/control-plane
-  -&gt; packages/feishu-adapter readiness
-  -&gt; dashboard Feishu panel</code></pre>
+<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>60</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>50</td><td>92</td><td>42</td><td>35</td><td>有 adapter/signature/encrypted challenge，缺 WebSocket/policy/outbound</td></tr><tr><td>Dashboard / 观测</td><td>55</td><td>78</td><td>55</td><td>90</td><td>有 run detail/stage summary，缺 approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>55</td><td>0</td><td>82</td><td>35</td><td>有 plan/stage/review summary，缺 apply/rollback/字段级 diff</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn/tool loop</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>还没有 SQLite/FTS/长期记忆</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>还没有 plugin manifest/skill loader</td></tr></tbody></table></div>
+<h2 id="当前可用命令">当前可用命令</h2>
+<pre class="code" data-lang="bash"><code>npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw
+MYCLAW_GATEWAY_TOKEN=dev-token MYCLAW_FEISHU_VERIFY_TOKEN=verify-token MYCLAW_FEISHU_ENCRYPT_KEY=encrypt-key \
+  npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw
+npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json</code></pre>
 <h2 id="下一步">下一步</h2>
-<ul><li>Phase 0.8：实现 Feishu encrypted challenge decrypt，继续参考 OpenClaw 的 AES-256-CBC 流程。</li><li>Dashboard 做 run detail 和 stage diff，避免继续依赖 raw JSON。</li><li>Gateway 增加 scoped token 和 mutation audit。</li><li>Feishu outbound facade：先定义 text/card/thread reply result，不直接接完整 OpenClaw tools。</li></ul>
+<ul><li>Phase 0.9：Feishu outbound facade，先做 text/card/thread result，不接完整 OpenClaw tools。</li><li>Replay guard 持久化到 state 或 SQLite。</li><li>Dashboard 做字段级 diff drawer 和 approval queue。</li><li>Gateway scoped token 和 mutation audit。</li></ul>
 <h2 id="验证记录">验证记录</h2>
 <pre class="code" data-lang="bash"><code>npm run check
 npm test</code></pre>
 <p>结果：</p>
-<ul><li>单文件行数检查通过：83 个文件，最大 500 行限制未触发。</li><li>Node test 通过：27 个测试全部通过。</li><li>新增测试覆盖 Feishu adapter facade 和 gateway signed webhook callback。</li></ul></article>
+<ul><li>单文件行数检查通过：88 个文件，最大 500 行限制未触发。</li><li>文档阶段同步检查通过。</li><li>Node test 通过：30 个测试全部通过。</li></ul></article>
       </main>
     </div>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>

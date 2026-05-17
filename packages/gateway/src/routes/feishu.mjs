@@ -1,6 +1,7 @@
 import {
   buildFeishuAdapterConfig,
   createFeishuReplayGuard,
+  decryptFeishuPayload,
   getFeishuEventId,
   parseFeishuWebhookBody,
   validateFeishuVerificationToken,
@@ -40,14 +41,16 @@ export async function handlePostFeishuEvent(request, response, context) {
   }
 
   if (body.encrypt) {
-    sendJson(response, 501, {
-      ok: false,
-      error: {
-        code: "feishu_encrypt_not_supported",
-        message: "Encrypted Feishu callbacks are not supported yet.",
-      },
-    });
-    return;
+    if (!config.encryptKey) {
+      sendJson(response, 403, { ok: false, error: { code: "feishu_encrypt_key_required" } });
+      return;
+    }
+    try {
+      body = decryptFeishuPayload({ encryptKey: config.encryptKey, encrypt: body.encrypt });
+    } catch {
+      sendJson(response, 400, { ok: false, error: { code: "feishu_decrypt_failed" } });
+      return;
+    }
   }
   const token = validateFeishuVerificationToken({
     body,

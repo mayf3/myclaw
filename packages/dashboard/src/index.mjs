@@ -6,6 +6,7 @@ import {
   buildFeishuAdoptionStatusPayload,
   buildOpenClawMigrationPayload,
   buildReferenceCompletionStatusPayload,
+  buildRunPayload,
   buildRunsPayload,
   buildStatusPayload,
 } from "../../control-plane/src/status.mjs";
@@ -79,6 +80,11 @@ export async function handleDashboardRequest(request, response, context) {
     sendJson(response, 200, await buildRunsPayload(context, { limit }));
     return;
   }
+  if (url.pathname.startsWith("/api/runs/")) {
+    const payload = await buildRunPayload(context, { runId: decodeURIComponent(url.pathname.slice(10)) });
+    sendJson(response, runPayloadStatus(payload), payload);
+    return;
+  }
   if (url.pathname === "/api/events") {
     const limit = Number(url.searchParams.get("limit") || 100);
     sendJson(response, 200, await buildEventsPayload(context, { limit }));
@@ -102,6 +108,13 @@ export async function handleDashboardRequest(request, response, context) {
 
 function sendJson(response, status, payload) {
   sendText(response, status, "application/json; charset=utf-8", JSON.stringify(payload, null, 2));
+}
+
+function runPayloadStatus(payload) {
+  if (payload.ok) {
+    return 200;
+  }
+  return payload.error?.code === "invalid_run_id" ? 400 : 404;
 }
 
 function sendText(response, status, contentType, body, cacheControl = "no-store") {

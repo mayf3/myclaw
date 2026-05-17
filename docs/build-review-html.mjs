@@ -359,10 +359,10 @@ function buildImplementationArchitecture() {
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 0.7 的 Feishu adapter facade、gateway route split、OpenClaw stage 和当前架构审查。</p>
+          <p>MyClaw Phase 0.8 的 Feishu encrypted challenge、run detail、OpenClaw stage summary 和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0.7</span>
+            <span class="tag phase">Phase 0.8</span>
             <span class="tag">实现评审</span>
           </div>
         </section>

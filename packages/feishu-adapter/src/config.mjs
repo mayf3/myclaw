@@ -26,7 +26,7 @@ export function describeFeishuAdapterReadiness(config = buildFeishuAdapterConfig
     issues.push("webhook mode requires verificationToken before exposing callbacks");
   }
   if (config.connectionMode === "webhook" && !config.encryptKey) {
-    warnings.push("encryptKey is missing; signed webhook validation is disabled");
+    issues.push("webhook mode requires encryptKey before exposing callbacks");
   }
   if (config.connectionMode === "websocket" && (!config.appId || !config.appSecret)) {
     issues.push("websocket mode requires appId and appSecret");
