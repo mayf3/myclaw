@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "check": "find packages docs -name '*.mjs' -print0 | xargs -0 -n1 node --check",
+    "check": "find packages docs scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check && node scripts/check-file-lines.mjs",
     "test": "node --test",
     "myclaw": "node packages/cli/src/index.mjs"
   },

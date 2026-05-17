@@ -1,0 +1,103 @@
+export const moduleOrder = [
+  "reference-comparison",
+  "openhuman-analysis",
+  "initial-mvp-plan",
+  "openclaw-migration",
+  "workflow-core",
+  "access-layer",
+  "gateway",
+  "agent-runtime",
+  "tools-approval-security",
+  "memory-session-search",
+  "plugins-skills",
+  "config-state-storage",
+  "ui-observability-ops",
+  "roadmap-acceptance",
+];
+
+export const moduleMeta = {
+  "reference-comparison": {
+    phase: "Phase 0",
+    priority: "P0",
+    label: "战略判断",
+    summary: "比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。",
+  },
+  "openhuman-analysis": {
+    phase: "Phase 0",
+    priority: "P0",
+    label: "新参考输入",
+    summary: "拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。",
+  },
+  "initial-mvp-plan": {
+    phase: "Phase 0-3",
+    priority: "P0",
+    label: "初期方案",
+    summary: "把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。",
+  },
+  "openclaw-migration": {
+    phase: "Phase 0.2-4",
+    priority: "P0",
+    label: "迁移方案",
+    summary: "把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。",
+  },
+  "workflow-core": {
+    phase: "Phase 1",
+    priority: "P0",
+    label: "核心地基",
+    summary: "定义 workflow AST、runner、统一 envelope、approval/resume 状态机。",
+  },
+  "access-layer": {
+    phase: "Phase 0-4",
+    priority: "P1",
+    label: "接口边界",
+    summary: "拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。",
+  },
+  gateway: {
+    phase: "Phase 0.3/4",
+    priority: "P1",
+    label: "控制平面",
+    summary: "本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。",
+  },
+  "agent-runtime": {
+    phase: "Phase 3",
+    priority: "P1",
+    label: "智能层",
+    summary: "LLM provider、prompt builder、tool calling、transcript 和 approval pause。",
+  },
+  "tools-approval-security": {
+    phase: "Phase 2",
+    priority: "P0",
+    label: "安全边界",
+    summary: "ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。",
+  },
+  "memory-session-search": {
+    phase: "Phase 3/6",
+    priority: "P1",
+    label: "长期价值",
+    summary: "JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。",
+  },
+  "plugins-skills": {
+    phase: "Phase 5",
+    priority: "P2",
+    label: "扩展机制",
+    summary: "区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。",
+  },
+  "config-state-storage": {
+    phase: "Phase 0/1",
+    priority: "P0",
+    label: "可恢复基础",
+    summary: "JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。",
+  },
+  "ui-observability-ops": {
+    phase: "Phase 1/4/6",
+    priority: "P1",
+    label: "可观察性",
+    summary: "doctor/status、run timeline、approval queue、logs、未来 Control UI。",
+  },
+  "roadmap-acceptance": {
+    phase: "全阶段",
+    priority: "P0",
+    label: "执行计划",
+    summary: "Phase 0-6 的交付、测试、验收标准和全局 Done Definition。",
+  },
+};

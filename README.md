@@ -10,6 +10,7 @@ npm run myclaw -- channels
 npm run myclaw -- send --text "hello"
 npm run myclaw -- receive --from local-user --conversation local-thread --text "hello" --reply "received"
 npm run myclaw -- dashboard --port 4321
+npm run myclaw -- gateway --port 4321
 npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw
 ```
 
@@ -23,7 +24,11 @@ The later OpenClaw Feishu/Lark plugin integration should attach behind the same 
 
 Dashboard:
 
-- `dashboard`: local web console for state, runs, events, channel capabilities, and OpenClaw migration readiness.
+- `dashboard`: local web console for state, runs, events, channel capabilities, OpenClaw migration readiness, and the gateway `/messages` endpoint.
+
+Gateway:
+
+- `gateway`: local HTTP control surface. Phase 0.3 supports `GET /api/status`, `GET /api/health`, and `POST /messages`.
 
 Migration:
 

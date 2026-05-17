@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { createEvent, createRunId, errorEnvelope, okEnvelope } from "../../core/src/envelope.mjs";
-import { recordRun, resolveStateDir } from "../../core/src/state.mjs";
-import { listChannels, resolveChannel } from "../../channels/src/index.mjs";
-import { startDashboard } from "../../dashboard/src/index.mjs";
+import { resolveStateDir } from "../../core/src/state.mjs";
+import { listChannels } from "../../channels/src/index.mjs";
+import { receiveMessage, sendMessage } from "../../runtime/src/messages.mjs";
+import { startGateway } from "../../gateway/src/index.mjs";
 import { planOpenClawMigration, writeMigrationPlan } from "../../migrate/src/openclaw.mjs";
 
 const VERSION = "0.1.0";
@@ -32,6 +32,9 @@ async function main(argv = process.argv.slice(2)) {
   if (command === "dashboard") {
     return await runDashboard(parseArgs(rest));
   }
+  if (command === "gateway") {
+    return await runGateway(parseArgs(rest));
+  }
   if (command === "migrate") {
     return await runMigrate(rest);
   }
@@ -44,60 +47,14 @@ async function runSend(args) {
     throw new CliError("Missing message text. Use --text \"hello\" or pass text after send.", "missing_text");
   }
 
-  const started = Date.now();
-  const runId = createRunId("msg");
-  const events = [
-    createEvent("message.send.started", {
-      channel: args.channel || "console",
-      target: args.target || null,
-    }),
-  ];
-
-  let envelope;
-  try {
-    const channel = resolveChannel(args.channel || "console", { webhookUrl: args.webhookUrl });
-    const result = await channel.send({
-      text,
-      target: args.target,
-      metadata: {
-        runId,
-      },
-    });
-    events.push(
-      createEvent("message.send.completed", {
-        channel: result.channel,
-        messageId: result.messageId,
-        target: result.target,
-      }),
-    );
-    envelope = okEnvelope({
-      runId,
-      result,
-      events,
-      usage: {
-        elapsedMs: Date.now() - started,
-      },
-    });
-  } catch (error) {
-    events.push(
-      createEvent("message.send.failed", {
-        message: error instanceof Error ? error.message : String(error),
-      }),
-    );
-    envelope = errorEnvelope({
-      runId,
-      code: "send_failed",
-      message: error instanceof Error ? error.message : String(error),
-      recoverable: true,
-      events,
-      usage: {
-        elapsedMs: Date.now() - started,
-      },
-    });
-  }
-
-  const stateDir = resolveStateDir(args.stateDir);
-  await recordRun(stateDir, runId, envelope);
+  const envelope = await sendMessage({
+    text,
+    channelId: args.channel || "console",
+    target: args.target,
+    webhookUrl: args.webhookUrl,
+    stateDir: args.stateDir,
+    source: "cli",
+  });
   printEnvelope(envelope, args.json);
   return envelope.ok ? 0 : 1;
 }
@@ -108,103 +65,17 @@ async function runReceive(args) {
     throw new CliError("Missing message text. Use --text \"hello\" or pass text after receive.", "missing_text");
   }
 
-  const started = Date.now();
-  const runId = createRunId("in");
-  const channelId = args.channel || "console";
-  const events = [
-    createEvent("message.receive.started", {
-      channel: channelId,
-      conversationId: args.conversation || args.conversationId || args.target || null,
-      senderId: args.from || args.senderId || null,
-    }),
-  ];
-
-  let envelope;
-  try {
-    const channel = resolveChannel(channelId, { webhookUrl: args.webhookUrl });
-    if (typeof channel.normalizeInbound !== "function") {
-      throw new Error(`Channel ${channel.id} does not support inbound messages.`);
-    }
-
-    const inbound = channel.normalizeInbound({
-      text,
-      senderId: args.from || args.senderId || "local-user",
-      senderName: args.senderName,
-      conversationId: args.conversation || args.conversationId || args.target,
-      raw: {
-        source: "cli",
-        channel: channel.id,
-      },
-    });
-    events.push(
-      createEvent("message.receive.completed", {
-        channel: inbound.channel,
-        messageId: inbound.id,
-        conversationId: inbound.conversationId,
-        senderId: inbound.sender.id,
-      }),
-    );
-
-    const replyText = args.reply && args.reply !== "true" ? args.reply : "";
-    let reply;
-    if (replyText) {
-      if (typeof channel.send !== "function") {
-        throw new Error(`Channel ${channel.id} does not support replies.`);
-      }
-      events.push(
-        createEvent("message.reply.started", {
-          channel: channel.id,
-          target: inbound.conversationId,
-        }),
-      );
-      reply = await channel.send({
-        text: replyText,
-        target: inbound.conversationId,
-        metadata: {
-          runId,
-          inboundMessageId: inbound.id,
-        },
-      });
-      events.push(
-        createEvent("message.reply.completed", {
-          channel: reply.channel,
-          messageId: reply.messageId,
-          target: reply.target,
-        }),
-      );
-    }
-
-    envelope = okEnvelope({
-      runId,
-      result: {
-        inbound,
-        ...(reply ? { reply } : {}),
-      },
-      events,
-      usage: {
-        elapsedMs: Date.now() - started,
-      },
-    });
-  } catch (error) {
-    events.push(
-      createEvent("message.receive.failed", {
-        message: error instanceof Error ? error.message : String(error),
-      }),
-    );
-    envelope = errorEnvelope({
-      runId,
-      code: "receive_failed",
-      message: error instanceof Error ? error.message : String(error),
-      recoverable: true,
-      events,
-      usage: {
-        elapsedMs: Date.now() - started,
-      },
-    });
-  }
-
-  const stateDir = resolveStateDir(args.stateDir);
-  await recordRun(stateDir, runId, envelope);
+  const envelope = await receiveMessage({
+    text,
+    channelId: args.channel || "console",
+    senderId: args.from || args.senderId || "local-user",
+    senderName: args.senderName,
+    conversationId: args.conversation || args.conversationId || args.target,
+    replyText: args.reply && args.reply !== "true" ? args.reply : "",
+    webhookUrl: args.webhookUrl,
+    stateDir: args.stateDir,
+    source: "cli",
+  });
   printEnvelope(envelope, args.json);
   return envelope.ok ? 0 : 1;
 }
@@ -248,7 +119,7 @@ function runChannels(args) {
 }
 
 async function runDashboard(args) {
-  const dashboard = await startDashboard({
+  const dashboard = await startGateway({
     host: args.host || "127.0.0.1",
     port: args.port || 4321,
     stateDir: args.stateDir,
@@ -261,6 +132,23 @@ async function runDashboard(args) {
     console.log(`State: ${dashboard.stateDir}`);
   }
   await waitForShutdown(dashboard.server);
+  return 0;
+}
+
+async function runGateway(args) {
+  const gateway = await startGateway({
+    host: args.host || "127.0.0.1",
+    port: args.port || 4321,
+    stateDir: args.stateDir,
+    openclawSource: args.openclawSource,
+  });
+  if (args.json) {
+    console.log(JSON.stringify({ ok: true, url: gateway.url, stateDir: gateway.stateDir }, null, 2));
+  } else {
+    console.log(`MyClaw gateway: ${gateway.url}`);
+    console.log(`State: ${gateway.stateDir}`);
+  }
+  await waitForShutdown(gateway.server);
   return 0;
 }
 
@@ -363,12 +251,14 @@ Usage:
   myclaw send --text <message> [--channel console|webhook|feishu-webhook] [--target <id>] [--webhook-url <url>] [--json]
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
   myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
+  myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
   myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--output <path>] [--json]
 
 Examples:
   myclaw send --text "hello"
   myclaw receive --from local-user --conversation local-thread --text "hello" --reply "received"
   myclaw dashboard --port 4321
+  myclaw gateway --port 4321
   myclaw migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json
   myclaw send --channel feishu-webhook --webhook-url "$MYCLAW_FEISHU_WEBHOOK_URL" --text "hello"
 `);

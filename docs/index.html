@@ -1,610 +1,321 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyClaw 模块化设计评审索引</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f6f7f8;
-        --panel: #ffffff;
-        --ink: #1b1f23;
-        --muted: #65717d;
-        --line: #d9dee3;
-        --accent: #0f766e;
-        --accent-soft: #e0f2ef;
-        --warn: #9a3412;
-        --warn-soft: #ffedd5;
-        --critical: #991b1b;
-        --critical-soft: #fee2e2;
-        --code: #111827;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--ink);
-        font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-          "Noto Sans SC", "Microsoft YaHei", sans-serif;
-        font-size: 15px;
-        line-height: 1.55;
-      }
-
-      a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      a:hover,
-      a:focus {
-        text-decoration: underline;
-      }
-
-      .shell {
-        display: grid;
-        grid-template-columns: 280px minmax(0, 1fr);
-        min-height: 100vh;
-      }
-
-      aside {
-        position: sticky;
-        top: 0;
-        height: 100vh;
-        overflow: auto;
-        border-right: 1px solid var(--line);
-        background: #ffffff;
-        padding: 24px 18px;
-      }
-
-      main {
-        max-width: 1180px;
-        width: 100%;
-        padding: 32px;
-      }
-
-      .brand {
-        display: grid;
-        gap: 8px;
-        margin-bottom: 22px;
-      }
-
-      .brand h1 {
-        margin: 0;
-        font-size: 22px;
-        line-height: 1.2;
-      }
-
-      .brand p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 13px;
-      }
-
-      nav {
-        display: grid;
-        gap: 6px;
-      }
-
-      nav a {
-        display: block;
-        border-radius: 6px;
-        padding: 8px 10px;
-        color: #26323d;
-      }
-
-      nav a:hover,
-      nav a:focus {
-        background: var(--accent-soft);
-        text-decoration: none;
-      }
-
-      section {
-        margin-bottom: 30px;
-      }
-
-      .hero {
-        border: 1px solid var(--line);
-        border-left: 5px solid var(--accent);
-        background: var(--panel);
-        padding: 22px 24px;
-      }
-
-      .hero h2,
-      section h2 {
-        margin: 0 0 12px;
-        font-size: 24px;
-        line-height: 1.25;
-      }
-
-      .hero p {
-        max-width: 920px;
-        margin: 0;
-        color: #34404b;
-      }
-
-      .quick-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-
-      .button {
-        border: 1px solid var(--accent);
-        border-radius: 6px;
-        padding: 8px 12px;
-        background: var(--accent);
-        color: #fff;
-        font-weight: 650;
-      }
-
-      .button.secondary {
-        background: #fff;
-        color: var(--accent);
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-      }
-
-      .card {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: var(--panel);
-        padding: 16px;
-      }
-
-      .card h3 {
-        margin: 0 0 8px;
-        font-size: 17px;
-      }
-
-      .card p {
-        margin: 0 0 12px;
-        color: var(--muted);
-      }
-
-      .meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
-      }
-
-      .tag {
-        border-radius: 999px;
-        background: #eef2f6;
-        color: #334155;
-        padding: 3px 9px;
-        font-size: 12px;
-        font-weight: 650;
-      }
-
-      .tag.critical {
-        background: var(--critical-soft);
-        color: var(--critical);
-      }
-
-      .tag.major {
-        background: var(--warn-soft);
-        color: var(--warn);
-      }
-
-      .tag.phase {
-        background: var(--accent-soft);
-        color: #115e59;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        background: var(--panel);
-        border: 1px solid var(--line);
-      }
-
-      th,
-      td {
-        border-bottom: 1px solid var(--line);
-        padding: 10px 12px;
-        text-align: left;
-        vertical-align: top;
-      }
-
-      th {
-        background: #eef2f6;
-        color: #25313d;
-        font-size: 13px;
-      }
-
-      tr:last-child td {
-        border-bottom: 0;
-      }
-
-      code {
-        border-radius: 4px;
-        background: #eef2f6;
-        color: var(--code);
-        padding: 2px 5px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 0.92em;
-      }
-
-      .flow {
-        border: 1px solid var(--line);
-        background: #fff;
-        padding: 16px;
-        overflow-x: auto;
-      }
-
-      .flow pre {
-        margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 13px;
-      }
-
-      @media (max-width: 860px) {
-        .shell {
-          display: block;
-        }
-
-        aside {
-          position: static;
-          height: auto;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
-
-        nav {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        main {
-          padding: 20px;
-        }
-
-        .grid {
-          grid-template-columns: 1fr;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="shell">
-      <aside>
-        <div class="brand">
-          <h1>MyClaw 设计评审</h1>
-          <p>模块化索引 · Node.js 本地优先工作流与 agent runtime</p>
-        </div>
-        <nav aria-label="评审导航">
-          <a href="#summary">总诊断</a>
-          <a href="./implementation-architecture.html">当前实现架构</a>
-          <a href="#modules">模块文档</a>
-          <a href="#priority">实现优先级</a>
-          <a href="#dependency">依赖关系</a>
-          <a href="#phase">阶段路线</a>
-          <a href="#source">参考对象</a>
-        </nav>
-      </aside>
-
-      <main>
-        <section id="summary" class="hero">
-          <h2>总诊断</h2>
-          <p>
-            MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
-            本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
-            approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-            tool permission，然后逐步扩展 gateway、agent runtime、记忆、插件和控制台。
-          </p>
-          <div class="quick-actions">
-            <a class="button" href="./design-review.html">打开总览文档</a>
-            <a class="button secondary" href="./implementation-architecture.html">当前实现架构</a>
-            <a class="button secondary" href="./stage-status.html">查看阶段状态</a>
-            <a class="button secondary" href="./modules/README.html">打开模块索引</a>
-          </div>
-        </section>
-
-        <section id="modules">
-          <h2>模块文档</h2>
-          <div class="grid">
-            <article class="card">
-              <h3><a href="./modules/reference-comparison.html">参考项目对比</a></h3>
-              <p>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，拆出可借鉴设计和不应照搬的部分。</p>
-              <div class="meta">
-                <span class="tag critical">战略判断</span>
-                <span class="tag phase">Phase 0</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/openhuman-analysis.html">OpenHuman 参考分析</a></h3>
-              <p>拆解 RPC、event bus、agent、记忆、工具、skills、桌面壳和 UI 边界。</p>
-              <div class="meta">
-                <span class="tag critical">新参考输入</span>
-                <span class="tag phase">Phase 0</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/initial-mvp-plan.html">MyClaw 初期实现方案</a></h3>
-              <p>把三个参考项目收敛成 Node.js Phase 0-4 的实现切片和验收顺序。</p>
-              <div class="meta">
-                <span class="tag critical">初期方案</span>
-                <span class="tag phase">Phase 0-3</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/openclaw-migration.html">OpenClaw 一键迁移方案</a></h3>
-              <p>把 OpenClaw 迁移拆成 plan、stage、apply 三段，先做可审计 dry-run inventory。</p>
-              <div class="meta">
-                <span class="tag critical">迁移方案</span>
-                <span class="tag phase">Phase 0.2-4</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/workflow-core.html">Workflow Core</a></h3>
-              <p>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</p>
-              <div class="meta">
-                <span class="tag critical">核心地基</span>
-                <span class="tag phase">Phase 1</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/access-layer.html">接入层</a></h3>
-              <p>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</p>
-              <div class="meta">
-                <span class="tag major">接口边界</span>
-                <span class="tag phase">Phase 0-4</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/gateway.html">Gateway</a></h3>
-              <p>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</p>
-              <div class="meta">
-                <span class="tag major">控制平面</span>
-                <span class="tag phase">Phase 4</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/agent-runtime.html">Agent Runtime</a></h3>
-              <p>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</p>
-              <div class="meta">
-                <span class="tag major">智能层</span>
-                <span class="tag phase">Phase 3</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/tools-approval-security.html">工具、审批与安全</a></h3>
-              <p>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</p>
-              <div class="meta">
-                <span class="tag critical">安全边界</span>
-                <span class="tag phase">Phase 2</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/memory-session-search.html">记忆、Session 与搜索</a></h3>
-              <p>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</p>
-              <div class="meta">
-                <span class="tag major">长期价值</span>
-                <span class="tag phase">Phase 3/6</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/plugins-skills.html">插件与 Skills</a></h3>
-              <p>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</p>
-              <div class="meta">
-                <span class="tag major">扩展机制</span>
-                <span class="tag phase">Phase 5</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/config-state-storage.html">配置、状态与存储</a></h3>
-              <p>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</p>
-              <div class="meta">
-                <span class="tag critical">可恢复基础</span>
-                <span class="tag phase">Phase 0/1</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/ui-observability-ops.html">控制台、观测与运维</a></h3>
-              <p>doctor/status、run timeline、approval queue、logs、未来 Control UI。</p>
-              <div class="meta">
-                <span class="tag major">可观察性</span>
-                <span class="tag phase">Phase 1/4/6</span>
-              </div>
-            </article>
-
-            <article class="card">
-              <h3><a href="./modules/roadmap-acceptance.html">阶段路线与验收</a></h3>
-              <p>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</p>
-              <div class="meta">
-                <span class="tag critical">执行计划</span>
-                <span class="tag phase">全阶段</span>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section id="priority">
-          <h2>实现优先级</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>优先级</th>
-                <th>模块</th>
-                <th>原因</th>
-                <th>第一验收</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><span class="tag critical">P0</span></td>
-                <td><a href="./modules/initial-mvp-plan.html">MyClaw 初期实现方案</a></td>
-                <td>决定 Phase 0-4 的边界，避免一开始复制 OpenHuman 的全平台范围。</td>
-                <td>按 contract → workflow → tools → agent 的顺序开工。</td>
-              </tr>
-              <tr>
-                <td><span class="tag critical">P0</span></td>
-                <td><a href="./modules/openclaw-migration.html">OpenClaw 一键迁移方案</a></td>
-                <td>迁移必须先 inventory 和 staged snapshot，不能直接运行 OpenClaw runtime。</td>
-                <td><code>migrate openclaw</code> 输出 dry-run plan。</td>
-              </tr>
-              <tr>
-                <td><span class="tag critical">P0</span></td>
-                <td><a href="./modules/workflow-core.html">Workflow Core</a></td>
-                <td>所有入口、agent、gateway、UI 都依赖统一 runner 和 envelope。</td>
-                <td><code>myclaw run</code> 和 <code>myclaw resume</code> 可用。</td>
-              </tr>
-              <tr>
-                <td><span class="tag critical">P0</span></td>
-                <td><a href="./modules/tools-approval-security.html">工具、审批与安全</a></td>
-                <td>防止模型或外部输入绕过副作用审批。</td>
-                <td>高风险 exec/write 生成 approvalId。</td>
-              </tr>
-              <tr>
-                <td><span class="tag critical">P0</span></td>
-                <td><a href="./modules/config-state-storage.html">配置、状态与存储</a></td>
-                <td>approval/resume 和 run audit 需要落盘恢复。</td>
-                <td>state JSONL + approval index。</td>
-              </tr>
-              <tr>
-                <td><span class="tag major">P1</span></td>
-                <td><a href="./modules/agent-runtime.html">Agent Runtime</a></td>
-                <td>自然语言入口建立在稳定工具和 workflow 之上。</td>
-                <td><code>myclaw ask</code> 能安全调用工具。</td>
-              </tr>
-              <tr>
-                <td><span class="tag major">P1</span></td>
-                <td><a href="./modules/gateway.html">Gateway</a></td>
-                <td>UI、远程 CLI 和未来 channel adapter 的控制平面。</td>
-                <td>HTTP/WS run events 可用。</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section id="dependency">
-          <h2>依赖关系</h2>
-          <div class="flow" aria-label="模块依赖关系图">
-            <pre>Controller Registry / Envelope / Event Bus
-  -> Workflow Core
-  -> Tools / Approval / Security
-  -> CLI Access Layer
-  -> Gateway
-      -> Agent Runtime
-      -> Memory / Session / Search
-      -> UI / Observability
-  -> Plugins / Skills</pre>
-          </div>
-        </section>
-
-        <section id="phase">
-          <h2>阶段路线</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>阶段</th>
-                <th>目标</th>
-                <th>关键模块</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Phase 0</td>
-                <td>项目骨架、CLI、测试、doctor、controller registry、envelope。</td>
-                <td>初期方案、接入层、配置状态、路线验收</td>
-              </tr>
-              <tr>
-                <td>Phase 1</td>
-                <td>Workflow core、run/resume、state store、event bus。</td>
-                <td>Workflow Core、配置状态、观测</td>
-              </tr>
-              <tr>
-                <td>Phase 2</td>
-                <td>工具注册、policy、approval。</td>
-                <td>工具审批安全</td>
-              </tr>
-              <tr>
-                <td>Phase 3</td>
-                <td>Agent runtime、tool calling、transcript。</td>
-                <td>Agent Runtime、记忆 Session</td>
-              </tr>
-              <tr>
-                <td>Phase 3.5</td>
-                <td>SQLite/FTS session search，不做完整 memory tree。</td>
-                <td>记忆 Session 搜索</td>
-              </tr>
-              <tr>
-                <td>Phase 4</td>
-                <td>Local gateway、HTTP/WS、events。</td>
-                <td>Gateway、接入层、观测</td>
-              </tr>
-              <tr>
-                <td>Phase 5</td>
-                <td>Plugins and skills。</td>
-                <td>插件 Skills</td>
-              </tr>
-              <tr>
-                <td>Phase 6</td>
-                <td>Memory、SQLite/FTS、session_search。</td>
-                <td>记忆 Session 搜索</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        <section id="source">
-          <h2>参考对象</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>项目</th>
-                <th>路径</th>
-                <th>主要借鉴点</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Hermes Agent</td>
-                <td><code>/Users/yanfenma/workspace/github/hermes-agent</code></td>
-                <td>agent loop、memory、skills、session FTS、tool registry。</td>
-              </tr>
-              <tr>
-                <td>OpenClaw</td>
-                <td><code>/Users/yanfenma/workspace/github/openclaw</code></td>
-                <td>Node/TS、gateway、plugin manifest、tool policy、安全模型。</td>
-              </tr>
-              <tr>
-                <td>OpenClaw Lobster</td>
-                <td><code>/Users/yanfenma/workspace/github/openclaw/extensions/lobster</code></td>
-                <td>typed workflow、JSON envelope、approval/resume。</td>
-              </tr>
-              <tr>
-                <td>OpenHuman</td>
-                <td><code>/Users/yanfenma/workspace/github/openhuman</code></td>
-                <td>controller registry、event bus、agent harness、memory 分层、tool permission、skills 注入和 UI 状态聚合。</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-      </main>
-    </div>
-  </body>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MyClaw 模块化设计评审索引</title>
+<style>:root{color-scheme:light;--bg:#f6f7f8;--panel:#ffffff;--ink:#1b1f23;--muted:#65717d;--line:#d9dee3;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#111827;}*{box-sizing:border-box;}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.55;}a{color:var(--accent);text-decoration:none;}a:hover,a:focus{text-decoration:underline;}.shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:100vh;}aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#ffffff;padding:24px 18px;}main{max-width:1180px;width:100%;padding:32px;}.brand{display:grid;gap:8px;margin-bottom:22px;}.brand h1{margin:0;font-size:22px;line-height:1.2;}.brand p{margin:0;color:var(--muted);font-size:13px;}nav{display:grid;gap:6px;}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d;}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none;}section{margin-bottom:30px;}.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:var(--panel);padding:22px 24px;}.hero h2,section h2{margin:0 0 12px;font-size:24px;line-height:1.25;}.hero p{max-width:920px;margin:0;color:#34404b;}.quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}.button{border:1px solid var(--accent);border-radius:6px;padding:8px 12px;background:var(--accent);color:#fff;font-weight:650;}.button.secondary{background:#fff;color:var(--accent);}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px;}.card h3{margin:0 0 8px;font-size:17px;}.card p{margin:0 0 12px;color:var(--muted);}.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:650;}.tag.critical{background:var(--critical-soft);color:var(--critical);}.tag.major{background:var(--warn-soft);color:var(--warn);}.tag.phase{background:var(--accent-soft);color:#115e59;}table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top;}th{background:#eef2f6;color:#25313d;font-size:13px;}tr:last-child td{border-bottom:0;}code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.92em;}.flow{border:1px solid var(--line);background:#fff;padding:16px;overflow-x:auto;}.flow pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;}@media (max-width:860px){.shell{display:block;}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);}nav{grid-template-columns:repeat(2,minmax(0,1fr));}main{padding:20px;}.grid{grid-template-columns:1fr;}}</style>
+</head>
+<body>
+<div class="shell">
+<aside>
+<div class="brand">
+<h1>MyClaw 设计评审</h1>
+<p>模块化索引 · Node.js 本地优先工作流与 agent runtime</p>
+</div>
+<nav aria-label="评审导航">
+<a href="#summary">总诊断</a>
+<a href="./implementation-architecture.html">当前实现架构</a>
+<a href="#modules">模块文档</a>
+<a href="#priority">实现优先级</a>
+<a href="#dependency">依赖关系</a>
+<a href="#phase">阶段路线</a>
+<a href="#source">参考对象</a>
+</nav>
+</aside>
+<main>
+<section id="summary" class="hero">
+<h2>总诊断</h2>
+<p>
+MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
+本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
+approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
+tool permission，然后逐步扩展 gateway、agent runtime、记忆、插件和控制台。
+</p>
+<div class="quick-actions">
+<a class="button" href="./design-review.html">打开总览文档</a>
+<a class="button secondary" href="./implementation-architecture.html">当前实现架构</a>
+<a class="button secondary" href="./stage-status.html">查看阶段状态</a>
+<a class="button secondary" href="./modules/README.html">打开模块索引</a>
+</div>
+</section>
+<section id="modules">
+<h2>模块文档</h2>
+<div class="grid">
+<article class="card">
+<h3><a href="./modules/reference-comparison.html">参考项目对比</a></h3>
+<p>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，拆出可借鉴设计和不应照搬的部分。</p>
+<div class="meta">
+<span class="tag critical">战略判断</span>
+<span class="tag phase">Phase 0</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/openhuman-analysis.html">OpenHuman 参考分析</a></h3>
+<p>拆解 RPC、event bus、agent、记忆、工具、skills、桌面壳和 UI 边界。</p>
+<div class="meta">
+<span class="tag critical">新参考输入</span>
+<span class="tag phase">Phase 0</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/initial-mvp-plan.html">MyClaw 初期实现方案</a></h3>
+<p>把三个参考项目收敛成 Node.js Phase 0-4 的实现切片和验收顺序。</p>
+<div class="meta">
+<span class="tag critical">初期方案</span>
+<span class="tag phase">Phase 0-3</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/openclaw-migration.html">OpenClaw 一键迁移方案</a></h3>
+<p>把 OpenClaw 迁移拆成 plan、stage、apply 三段，先做可审计 dry-run inventory。</p>
+<div class="meta">
+<span class="tag critical">迁移方案</span>
+<span class="tag phase">Phase 0.2-4</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/workflow-core.html">Workflow Core</a></h3>
+<p>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</p>
+<div class="meta">
+<span class="tag critical">核心地基</span>
+<span class="tag phase">Phase 1</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/access-layer.html">接入层</a></h3>
+<p>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</p>
+<div class="meta">
+<span class="tag major">接口边界</span>
+<span class="tag phase">Phase 0-4</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/gateway.html">Gateway</a></h3>
+<p>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</p>
+<div class="meta">
+<span class="tag major">控制平面</span>
+<span class="tag phase">Phase 4</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/agent-runtime.html">Agent Runtime</a></h3>
+<p>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</p>
+<div class="meta">
+<span class="tag major">智能层</span>
+<span class="tag phase">Phase 3</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/tools-approval-security.html">工具、审批与安全</a></h3>
+<p>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</p>
+<div class="meta">
+<span class="tag critical">安全边界</span>
+<span class="tag phase">Phase 2</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/memory-session-search.html">记忆、Session 与搜索</a></h3>
+<p>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</p>
+<div class="meta">
+<span class="tag major">长期价值</span>
+<span class="tag phase">Phase 3/6</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/plugins-skills.html">插件与 Skills</a></h3>
+<p>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</p>
+<div class="meta">
+<span class="tag major">扩展机制</span>
+<span class="tag phase">Phase 5</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/config-state-storage.html">配置、状态与存储</a></h3>
+<p>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</p>
+<div class="meta">
+<span class="tag critical">可恢复基础</span>
+<span class="tag phase">Phase 0/1</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/ui-observability-ops.html">控制台、观测与运维</a></h3>
+<p>doctor/status、run timeline、approval queue、logs、未来 Control UI。</p>
+<div class="meta">
+<span class="tag major">可观察性</span>
+<span class="tag phase">Phase 1/4/6</span>
+</div>
+</article>
+<article class="card">
+<h3><a href="./modules/roadmap-acceptance.html">阶段路线与验收</a></h3>
+<p>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</p>
+<div class="meta">
+<span class="tag critical">执行计划</span>
+<span class="tag phase">全阶段</span>
+</div>
+</article>
+</div>
+</section>
+<section id="priority">
+<h2>实现优先级</h2>
+<table>
+<thead>
+<tr>
+<th>优先级</th>
+<th>模块</th>
+<th>原因</th>
+<th>第一验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><span class="tag critical">P0</span></td>
+<td><a href="./modules/initial-mvp-plan.html">MyClaw 初期实现方案</a></td>
+<td>决定 Phase 0-4 的边界，避免一开始复制 OpenHuman 的全平台范围。</td>
+<td>按 contract → workflow → tools → agent 的顺序开工。</td>
+</tr>
+<tr>
+<td><span class="tag critical">P0</span></td>
+<td><a href="./modules/openclaw-migration.html">OpenClaw 一键迁移方案</a></td>
+<td>迁移必须先 inventory 和 staged snapshot，不能直接运行 OpenClaw runtime。</td>
+<td><code>migrate openclaw</code> 输出 dry-run plan。</td>
+</tr>
+<tr>
+<td><span class="tag critical">P0</span></td>
+<td><a href="./modules/workflow-core.html">Workflow Core</a></td>
+<td>所有入口、agent、gateway、UI 都依赖统一 runner 和 envelope。</td>
+<td><code>myclaw run</code> 和 <code>myclaw resume</code> 可用。</td>
+</tr>
+<tr>
+<td><span class="tag critical">P0</span></td>
+<td><a href="./modules/tools-approval-security.html">工具、审批与安全</a></td>
+<td>防止模型或外部输入绕过副作用审批。</td>
+<td>高风险 exec/write 生成 approvalId。</td>
+</tr>
+<tr>
+<td><span class="tag critical">P0</span></td>
+<td><a href="./modules/config-state-storage.html">配置、状态与存储</a></td>
+<td>approval/resume 和 run audit 需要落盘恢复。</td>
+<td>state JSONL + approval index。</td>
+</tr>
+<tr>
+<td><span class="tag major">P1</span></td>
+<td><a href="./modules/agent-runtime.html">Agent Runtime</a></td>
+<td>自然语言入口建立在稳定工具和 workflow 之上。</td>
+<td><code>myclaw ask</code> 能安全调用工具。</td>
+</tr>
+<tr>
+<td><span class="tag major">P1</span></td>
+<td><a href="./modules/gateway.html">Gateway</a></td>
+<td>UI、远程 CLI 和未来 channel adapter 的控制平面。</td>
+<td>HTTP/WS run events 可用。</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="dependency">
+<h2>依赖关系</h2>
+<div class="flow" aria-label="模块依赖关系图">
+<pre>Controller Registry / Envelope / Event Bus
+-> Workflow Core
+-> Tools / Approval / Security
+-> CLI Access Layer
+-> Gateway
+-> Agent Runtime
+-> Memory / Session / Search
+-> UI / Observability
+-> Plugins / Skills</pre>
+</div>
+</section>
+<section id="phase">
+<h2>阶段路线</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>目标</th>
+<th>关键模块</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phase 0</td>
+<td>项目骨架、CLI、测试、doctor、controller registry、envelope。</td>
+<td>初期方案、接入层、配置状态、路线验收</td>
+</tr>
+<tr>
+<td>Phase 1</td>
+<td>Workflow core、run/resume、state store、event bus。</td>
+<td>Workflow Core、配置状态、观测</td>
+</tr>
+<tr>
+<td>Phase 2</td>
+<td>工具注册、policy、approval。</td>
+<td>工具审批安全</td>
+</tr>
+<tr>
+<td>Phase 3</td>
+<td>Agent runtime、tool calling、transcript。</td>
+<td>Agent Runtime、记忆 Session</td>
+</tr>
+<tr>
+<td>Phase 3.5</td>
+<td>SQLite/FTS session search，不做完整 memory tree。</td>
+<td>记忆 Session 搜索</td>
+</tr>
+<tr>
+<td>Phase 4</td>
+<td>Local gateway、HTTP/WS、events。</td>
+<td>Gateway、接入层、观测</td>
+</tr>
+<tr>
+<td>Phase 5</td>
+<td>Plugins and skills。</td>
+<td>插件 Skills</td>
+</tr>
+<tr>
+<td>Phase 6</td>
+<td>Memory、SQLite/FTS、session_search。</td>
+<td>记忆 Session 搜索</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="source">
+<h2>参考对象</h2>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>路径</th>
+<th>主要借鉴点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hermes Agent</td>
+<td><code>/Users/yanfenma/workspace/github/hermes-agent</code></td>
+<td>agent loop、memory、skills、session FTS、tool registry。</td>
+</tr>
+<tr>
+<td>OpenClaw</td>
+<td><code>/Users/yanfenma/workspace/github/openclaw</code></td>
+<td>Node/TS、gateway、plugin manifest、tool policy、安全模型。</td>
+</tr>
+<tr>
+<td>OpenClaw Lobster</td>
+<td><code>/Users/yanfenma/workspace/github/openclaw/extensions/lobster</code></td>
+<td>typed workflow、JSON envelope、approval/resume。</td>
+</tr>
+<tr>
+<td>OpenHuman</td>
+<td><code>/Users/yanfenma/workspace/github/openhuman</code></td>
+<td>controller registry、event bus、agent harness、memory 分层、tool permission、skills 注入和 UI 状态聚合。</td>
+</tr>
+</tbody>
+</table>
+</section>
+</main>
+</div>
+</body>
 </html>
