@@ -1,5 +1,5 @@
 import { listChannels } from "../../channels/src/index.mjs";
-import { listRuns, readEvents } from "../../core/src/state.mjs";
+import { listRuns, readEvents, readRun } from "../../core/src/state.mjs";
 import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
@@ -15,6 +15,7 @@ export async function buildStatusPayload(context) {
     cachedOpenClawPlan(context.openclawSource),
     readLatestOpenClawStage(context.stateDir),
   ]);
+  const stageSummary = buildOpenClawStageSummary(migrationPlan, migrationStage);
   return {
     ok: true,
     service: context.service || "myclaw-control-plane",
@@ -25,6 +26,8 @@ export async function buildStatusPayload(context) {
     events,
     openclawMigration: migrationPlan,
     openclawStage: migrationStage,
+    openclawStageSummary: stageSummary,
+    openclawStageDiff: stageSummary,
   };
 }
 
@@ -32,6 +35,21 @@ export async function buildRunsPayload(context, options = {}) {
   return {
     ok: true,
     runs: await listRuns(context.stateDir, { limit: options.limit || 50 }),
+  };
+}
+
+export async function buildRunPayload(context, options = {}) {
+  const run = await readRun(context.stateDir, options.runId);
+  if (run.status === "invalid_run_id" || run.status === "not_found") {
+    return {
+      ok: false,
+      error: { code: run.status, message: run.summary },
+      run,
+    };
+  }
+  return {
+    ok: true,
+    run,
   };
 }
 
@@ -47,10 +65,13 @@ export async function buildOpenClawMigrationPayload(context, options = {}) {
     cachedOpenClawPlan(options.source || context.openclawSource),
     readLatestOpenClawStage(context.stateDir),
   ]);
+  const stageSummary = buildOpenClawStageSummary(plan, stage);
   return {
     ok: true,
     plan,
     stage,
+    stageSummary,
+    diff: stageSummary,
   };
 }
 
@@ -99,4 +120,59 @@ async function cachedOpenClawPlan(source) {
       destructive: false,
     };
   }
+}
+
+export function buildOpenClawStageSummary(plan, stage) {
+  if (!stage) {
+    return {
+      kind: "openclaw-stage-summary",
+      schemaVersion: 1,
+      forReviewOnly: true,
+      status: "not-staged",
+      modules: [],
+      missingExpected: [],
+      blocked: plan.unsupported.length,
+      counts: {
+        planChannels: plan.inventory.channels.length,
+        planPlugins: plan.inventory.pluginEntries.length,
+        planUnsupported: plan.unsupported.length,
+        stagedModules: 0,
+      },
+    };
+  }
+  const stagedIds = new Set((stage.modules || []).map((module) => module.id));
+  const expected = ["feishu", "plugins", "config", "unsupported"].filter((id) => {
+    if (id === "feishu") {
+      return plan.inventory.channels.some((channel) => ["feishu", "lark"].includes(channel.id));
+    }
+    if (id === "plugins") {
+      return plan.inventory.pluginEntries.length > 0;
+    }
+    if (id === "config") {
+      return plan.config.sections.length > 0;
+    }
+    return plan.unsupported.length > 0;
+  });
+  return {
+    kind: "openclaw-stage-summary",
+    schemaVersion: 1,
+    forReviewOnly: true,
+    status: stage.status || "staged",
+    stageId: stage.stageId,
+    checksum: stage.checksum,
+    blocked: stage.blocked?.length || 0,
+    modules: (stage.modules || []).map((module) => ({
+      id: module.id,
+      status: module.status,
+      nextAction: module.nextAction,
+      expected: expected.includes(module.id),
+    })),
+    missingExpected: expected.filter((id) => !stagedIds.has(id)),
+    counts: {
+      planChannels: plan.inventory.channels.length,
+      planPlugins: plan.inventory.pluginEntries.length,
+      planUnsupported: plan.unsupported.length,
+      stagedModules: stage.modules?.length || 0,
+    },
+  };
 }

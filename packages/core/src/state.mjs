@@ -79,6 +79,42 @@ export async function listRuns(stateDir, options = {}) {
     .slice(0, limit);
 }
 
+export async function readRun(stateDir, runId) {
+  const id = String(runId || "").trim();
+  if (!isSafeRunId(id)) {
+    return missingRun(id, "invalid_run_id", "Invalid run id");
+  }
+  let envelope;
+  try {
+    envelope = await readJson(runStatePath(stateDir, id, ".json"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return missingRun(id, "not_found", "Run not found");
+    }
+    throw error;
+  }
+  let events = [];
+  try {
+    const text = await readFile(runStatePath(stateDir, id, ".jsonl"), "utf8");
+    events = text
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+  }
+  return {
+    runId: envelope.runId || id,
+    ok: Boolean(envelope.ok),
+    status: envelope.status || (envelope.ok ? "ok" : "failed"),
+    summary: summarizeEnvelope(envelope),
+    events,
+    envelope,
+  };
+}
+
 export async function readEvents(stateDir, options = {}) {
   const limit = Math.max(1, Number(options.limit || 100));
   let text;
@@ -107,11 +143,36 @@ export async function readEvents(stateDir, options = {}) {
 
 export async function recordRun(stateDir, runId, envelope) {
   await ensureStateDir(stateDir);
-  await writeJson(path.join(stateDir, "runs", `${runId}.json`), envelope);
+  await writeJson(runStatePath(stateDir, runId, ".json"), envelope);
   for (const event of envelope.events ?? []) {
     await appendJsonl(path.join(stateDir, "events.jsonl"), { runId, ...event });
-    await appendJsonl(path.join(stateDir, "runs", `${runId}.jsonl`), event);
+    await appendJsonl(runStatePath(stateDir, runId, ".jsonl"), event);
   }
+}
+
+function isSafeRunId(value) {
+  return /^[A-Za-z0-9_-]+$/.test(String(value || ""));
+}
+
+function runStatePath(stateDir, runId, suffix) {
+  const id = String(runId || "").trim();
+  if (!isSafeRunId(id)) {
+    const error = new Error("Invalid run id");
+    error.code = "INVALID_RUN_ID";
+    throw error;
+  }
+  return path.join(stateDir, "runs", `${id}${suffix}`);
+}
+
+function missingRun(runId, status, summary) {
+  return {
+    runId,
+    ok: false,
+    status,
+    summary,
+    events: [],
+    envelope: null,
+  };
 }
 
 function summarizeEnvelope(envelope) {

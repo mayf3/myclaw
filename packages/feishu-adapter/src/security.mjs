@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createDecipheriv, createHash, timingSafeEqual } from "node:crypto";
 
 const SIGNATURE_HEADERS = {
   timestamp: "x-lark-request-timestamp",
@@ -12,6 +12,19 @@ export function parseFeishuWebhookBody(rawBody) {
     return {};
   }
   return JSON.parse(rawBody);
+}
+
+export function decryptFeishuPayload({ encryptKey, encrypt }) {
+  const key = createHash("sha256").update(String(encryptKey || "")).digest();
+  const encrypted = Buffer.from(String(encrypt || ""), "base64");
+  if (encrypted.length <= 16) {
+    throw new Error("Encrypted Feishu payload is too short.");
+  }
+  const iv = encrypted.subarray(0, 16);
+  const payload = encrypted.subarray(16);
+  const decipher = createDecipheriv("aes-256-cbc", key, iv);
+  const plaintext = Buffer.concat([decipher.update(payload), decipher.final()]).toString("utf8");
+  return JSON.parse(plaintext);
 }
 
 export function validateFeishuWebhookSignature({

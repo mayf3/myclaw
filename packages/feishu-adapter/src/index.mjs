@@ -4,6 +4,7 @@ export {
 } from "./config.mjs";
 export {
   buildFeishuWebhookSignature,
+  decryptFeishuPayload,
   parseFeishuWebhookBody,
   validateFeishuVerificationToken,
   validateFeishuWebhookSignature,

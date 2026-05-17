@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { createCipheriv, createHash } from "node:crypto";
 import { test } from "node:test";
 import {
   buildFeishuAdapterConfig,
   buildFeishuWebhookSignature,
   createFeishuReplayGuard,
+  decryptFeishuPayload,
   describeFeishuAdapterReadiness,
   normalizeFeishuEvent,
   validateFeishuVerificationToken,
@@ -26,15 +28,31 @@ test("adapter config mirrors the OpenClaw Feishu security fields", () => {
   assert.equal(readiness.signedWebhookReady, true);
 });
 
-test("adapter reports token-only webhook mode as partial", () => {
+test("adapter decrypts Feishu encrypted payloads", () => {
+  const payload = { token: "verify", challenge: "encrypted_challenge" };
+  const encrypt = encryptFeishuPayload("encrypt", payload);
+  assert.deepEqual(decryptFeishuPayload({ encryptKey: "encrypt", encrypt }), payload);
+  assert.throws(() => decryptFeishuPayload({ encryptKey: "wrong", encrypt }), /bad decrypt|padding|final/i);
+});
+
+test("adapter reports token-only webhook mode as blocked", () => {
   const config = buildFeishuAdapterConfig({ env: {}, verificationToken: "verify" });
   const readiness = describeFeishuAdapterReadiness(config);
 
-  assert.equal(readiness.ok, true);
-  assert.equal(readiness.level, "partial");
+  assert.equal(readiness.ok, false);
+  assert.equal(readiness.level, "blocked");
   assert.equal(readiness.signedWebhookReady, false);
-  assert.match(readiness.warnings[0], /encryptKey/);
+  assert.match(readiness.issues[0], /encryptKey/);
 });
+
+function encryptFeishuPayload(encryptKey, payload) {
+  const iv = Buffer.alloc(16, 7);
+  const key = createHash("sha256").update(encryptKey).digest();
+  const cipher = createCipheriv("aes-256-cbc", key, iv);
+  const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return Buffer.concat([iv, encrypted]).toString("base64");
+}
 
 test("adapter validates OpenClaw-compatible Feishu webhook signatures", () => {
   const rawBody = JSON.stringify({ token: "verify", challenge: "ok" });

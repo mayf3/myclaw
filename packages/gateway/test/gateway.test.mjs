@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createCipheriv, createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -33,6 +34,16 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     const status = await fetch(`${gateway.url}/api/status`).then((statusResponse) => statusResponse.json());
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
+    assert.equal(status.openclawStageSummary.status, "not-staged");
+    assert.equal(status.openclawStageSummary.forReviewOnly, true);
+
+    const runDetail = await fetch(`${gateway.url}/api/runs/${status.runs[0].runId}`).then((runResponse) =>
+      runResponse.json(),
+    );
+    assert.equal(runDetail.run.runId, status.runs[0].runId);
+
+    const unsafeRun = await fetch(`${gateway.url}/api/runs/..%2Fsecret`);
+    assert.equal(unsafeRun.status, 400);
 
     const reference = await fetch(`${gateway.url}/api/reference-completion`).then((response) => response.json());
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
@@ -148,11 +159,13 @@ test("gateway stages OpenClaw migration snapshots behind mutation auth", async (
     assert.equal(payload.ok, true);
     assert.equal(payload.stage.status, "staged");
     assert.equal(payload.stage.modules.some((module) => module.id === "feishu"), true);
+    assert.equal(payload.stageSummary.forReviewOnly, true);
 
     const migration = await fetch(`${gateway.url}/api/openclaw-migration`).then((migrationResponse) =>
       migrationResponse.json(),
     );
     assert.equal(migration.stage.stageId, payload.stage.stageId);
+    assert.equal(migration.stageSummary.stageId, payload.stage.stageId);
   } finally {
     await new Promise((resolve) => gateway.server.close(resolve));
   }
@@ -174,7 +187,7 @@ test("gateway validates Feishu verification tokens and rejects encrypted callbac
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token: "verify", encrypt: "cipher" }),
     });
-    assert.equal(encrypted.status, 501);
+    assert.equal(encrypted.status, 403);
 
     const challenge = await fetch(`${gateway.url}/feishu/events`, {
       method: "POST",
@@ -229,6 +242,43 @@ test("gateway validates signed Feishu webhook callbacks when encryptKey is confi
   }
 });
 
+test("gateway decrypts signed Feishu encrypted challenges", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-encrypted-"));
+  const gateway = await startGateway({
+    port: 0,
+    stateDir,
+    openclawSource: stateDir,
+    feishuVerifyToken: "verify",
+    feishuEncryptKey: "encrypt",
+  });
+  try {
+    const encryptedBody = JSON.stringify({
+      encrypt: encryptFeishuPayload("encrypt", { token: "verify", challenge: "encrypted_challenge" }),
+    });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const nonce = "encrypted-nonce";
+    const signature = buildFeishuWebhookSignature({
+      timestamp,
+      nonce,
+      encryptKey: "encrypt",
+      rawBody: encryptedBody,
+    });
+    const response = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-lark-request-timestamp": timestamp,
+        "x-lark-request-nonce": nonce,
+        "x-lark-signature": signature,
+      },
+      body: encryptedBody,
+    });
+    assert.deepEqual(await response.json(), { challenge: "encrypted_challenge" });
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
 test("gateway token does not replace Feishu verification on non-loopback hosts", async () => {
   const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-nonloopback-"));
   const gateway = await startGateway({ host: "0.0.0.0", port: 0, stateDir, openclawSource: stateDir, token: "secret" });
@@ -245,3 +295,12 @@ test("gateway token does not replace Feishu verification on non-loopback hosts",
     await new Promise((resolve) => gateway.server.close(resolve));
   }
 });
+
+function encryptFeishuPayload(encryptKey, payload) {
+  const iv = Buffer.alloc(16, 9);
+  const key = createHash("sha256").update(encryptKey).digest();
+  const cipher = createCipheriv("aes-256-cbc", key, iv);
+  const plaintext = Buffer.from(JSON.stringify(payload), "utf8");
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return Buffer.concat([iv, encrypted]).toString("base64");
+}

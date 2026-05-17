@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.7 的 dashboard 已展示 Feishu adapter readiness：能看到当前是 `ready/partial/blocked`，以及 signed webhook 是否 ready。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.8 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、最新 run detail，以及 OpenClaw stage review summary。
 
 ## 参考项目观察
 
@@ -63,10 +63,16 @@ Phase 0.7 dashboard 新增：
 - signed webhook readiness。
 - adapter issues/warnings 展示。
 
-Phase 0.8 应补：
+Phase 0.8 dashboard 新增：
 
-- run detail drawer。
-- stage snapshot diff。
+- 最新 run detail 区块，通过 `GET /api/runs/:runId` 读取 envelope 与 events。
+- stage snapshot review summary，显示 staged modules、missing expected、blocked 和 review-only 标记。
+- Feishu encrypted challenge readiness 通过 adapter readiness 和 tests 体现。
+
+Phase 0.9 应补：
+
+- run detail drawer 或独立详情页。
+- stage snapshot 字段级 diff。
 - `apply --module feishu` 人工确认入口。
 - 事件 stream 或轮询刷新。
 
@@ -119,10 +125,13 @@ myclaw security audit
 - UI 只展示最终答案，不展示 step 和 approval。
 - logs 泄露 secret。
 - HTML/Control UI 变成 landing page，反而不服务操作。
+- stage summary 只停留在摘要，无法审具体字段变更。
 
 ## 验收标准
 
 - 任意 run 都能从 state 复原 timeline。
+- Dashboard 能通过 API 打开单个 run detail，而不是读取 raw JSON。
+- Dashboard 能把 OpenClaw staged modules 和缺失项展示出来。
 - pending approvals 有独立列表。
 - status/doctor 能定位 config、state、tool policy 常见问题。
 - UI 所需数据全部来自 gateway API，不读私有文件。

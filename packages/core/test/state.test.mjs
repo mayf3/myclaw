@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { createEvent, okEnvelope } from "../src/envelope.mjs";
-import { listRuns, readEvents, recordRun } from "../src/state.mjs";
+import { listRuns, readEvents, readRun, recordRun } from "../src/state.mjs";
 
 test("state reader lists runs and events", async () => {
   const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-state-"));
@@ -27,4 +27,13 @@ test("state reader lists runs and events", async () => {
   assert.equal(runs[0].summary, "console send: hello");
   assert.equal(events.length, 2);
   assert.equal(events[0].type, "message.send.completed");
+});
+
+test("state reader rejects unsafe run ids", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-state-"));
+  const invalid = await readRun(stateDir, "../secret");
+
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.status, "invalid_run_id");
+  assert.equal(invalid.envelope, null);
 });
