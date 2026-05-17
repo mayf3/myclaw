@@ -12,6 +12,7 @@ npm run myclaw -- receive --from local-user --conversation local-thread --text "
 npm run myclaw -- dashboard --port 4321
 npm run myclaw -- gateway --port 4321
 npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw
+npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage
 ```
 
 The first channel implementation is intentionally small:
@@ -25,11 +26,12 @@ The later OpenClaw Feishu/Lark plugin integration should attach behind the same 
 
 Dashboard:
 
-- `dashboard`: local web console for state, runs, events, channel capabilities, OpenClaw migration readiness, and the gateway `/messages` endpoint.
+- `dashboard`: read-only local web console for state, runs, events, channel capabilities, and OpenClaw migration readiness.
 
 Gateway:
 
-- `gateway`: local HTTP control surface. Phase 0.4 supports `GET /api/status`, `GET /api/health`, `POST /messages`, and `POST /feishu/events`.
+- `gateway`: local HTTP control surface. Phase 0.5 supports `GET /api/status`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, and `POST /api/openclaw-migration/stage`.
+- Mutations stay open only for loopback development. Set `MYCLAW_GATEWAY_TOKEN` or pass `--token` before exposing the gateway beyond `127.0.0.1`.
 
 Feishu event callback smoke test:
 
@@ -42,3 +44,4 @@ curl -sS http://127.0.0.1:4321/feishu/events \
 Migration:
 
 - `migrate openclaw`: dry-run inventory for OpenClaw config, channels, plugin manifests, unsupported runtime surfaces, and a MyClaw draft mapping. It does not mutate OpenClaw or MyClaw state by default.
+- `migrate openclaw --stage`: writes a reviewable stage snapshot into MyClaw state. It still does not apply runtime config.

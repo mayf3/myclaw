@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -84,6 +84,109 @@ test("gateway handles feishu challenge, event normalization, and duplicate event
 
     const status = await fetch(`${gateway.url}/api/status`).then((statusResponse) => statusResponse.json());
     assert.equal(status.runs.length, 1);
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway protects mutations with tokens when configured", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-gateway-token-"));
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: stateDir, token: "secret" });
+  try {
+    const denied = await fetch(`${gateway.url}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "blocked" }),
+    });
+    assert.equal(denied.status, 401);
+
+    const allowed = await fetch(`${gateway.url}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-myclaw-token": "secret" },
+      body: JSON.stringify({ text: "allowed" }),
+    });
+    const envelope = await allowed.json();
+    assert.equal(allowed.status, 200);
+    assert.equal(envelope.ok, true);
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway stages OpenClaw migration snapshots behind mutation auth", async () => {
+  const source = await mkdtemp(path.join(tmpdir(), "myclaw-openclaw-gateway-"));
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-gateway-stage-"));
+  await mkdir(path.join(source, "extensions", "lark"), { recursive: true });
+  await writeFile(path.join(source, "openclaw.json"), "{ channels: { lark: { enabled: true } } }", "utf8");
+  await writeFile(
+    path.join(source, "extensions", "lark", "openclaw.plugin.json"),
+    JSON.stringify({ id: "lark", channels: ["lark"] }),
+    "utf8",
+  );
+
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: source, token: "secret" });
+  try {
+    const response = await fetch(`${gateway.url}/api/openclaw-migration/stage`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer secret" },
+      body: JSON.stringify({}),
+    });
+    const payload = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.stage.status, "staged");
+    assert.equal(payload.stage.modules.some((module) => module.id === "feishu"), true);
+
+    const migration = await fetch(`${gateway.url}/api/openclaw-migration`).then((migrationResponse) =>
+      migrationResponse.json(),
+    );
+    assert.equal(migration.stage.stageId, payload.stage.stageId);
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway validates Feishu verification tokens and rejects encrypted callbacks", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-token-"));
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: stateDir, feishuVerifyToken: "verify" });
+  try {
+    const denied = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ challenge: "plain_challenge" }),
+    });
+    assert.equal(denied.status, 401);
+
+    const encrypted = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "verify", encrypt: "cipher" }),
+    });
+    assert.equal(encrypted.status, 501);
+
+    const challenge = await fetch(`${gateway.url}/feishu/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "verify", challenge: "plain_challenge" }),
+    });
+    assert.deepEqual(await challenge.json(), { challenge: "plain_challenge" });
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway token does not replace Feishu verification on non-loopback hosts", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-nonloopback-"));
+  const gateway = await startGateway({ host: "0.0.0.0", port: 0, stateDir, openclawSource: stateDir, token: "secret" });
+  const address = gateway.server.address();
+  const localUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    const denied = await fetch(`${localUrl}/feishu/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer secret" },
+      body: JSON.stringify({ challenge: "plain_challenge" }),
+    });
+    assert.equal(denied.status, 403);
   } finally {
     await new Promise((resolve) => gateway.server.close(resolve));
   }

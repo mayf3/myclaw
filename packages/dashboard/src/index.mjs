@@ -72,8 +72,7 @@ export async function handleDashboardRequest(request, response, context) {
     return;
   }
   if (url.pathname === "/api/openclaw-migration") {
-    const source = url.searchParams.get("source") || context.openclawSource;
-    sendJson(response, 200, await buildOpenClawMigrationPayload(context, { source }));
+    sendJson(response, 200, await buildOpenClawMigrationPayload(context));
     return;
   }
 
@@ -228,7 +227,7 @@ Content-Type: application/json
         renderRuns(payload.runs);
         renderEvents(payload.events);
         renderChannels(payload.channels);
-        renderMigration(payload.openclawMigration);
+        renderMigration(payload.openclawMigration, payload.openclawStage);
       }
 
       function renderRuns(runs) {
@@ -257,15 +256,17 @@ Content-Type: application/json
           '</tbody></table></div>';
       }
 
-      function renderMigration(plan) {
+      function renderMigration(plan, stage) {
         const channels = plan.inventory.channels.map((item) => item.id).join(", ") || "无";
         const plugins = plan.inventory.pluginEntries.length;
         const risk = plan.unsupported.length ? '<span class="tag warn">' + plan.unsupported.length + ' 个阻塞项</span>' : '<span class="tag ok">可继续拆解</span>';
+        const stageText = stage ? '<p><strong>Latest stage</strong><br><span class="mono">' + esc(stage.stageId || stage.status) + '</span></p>' : '<p><strong>Latest stage</strong><br>尚未 stage</p>';
         $("migrationPanel").outerHTML = '<div id="migrationPanel">' +
           '<p><strong>来源</strong><br><span class="mono">' + esc(plan.source || "-") + '</span></p>' +
           '<p><strong>配置</strong><br>' + (plan.config.exists ? '已找到' : '未找到') + ' · ' + (plan.config.parsed ? '可解析' : '需人工确认') + '</p>' +
           '<p><strong>通道</strong><br>' + esc(channels) + '</p>' +
           '<p><strong>插件清单</strong><br>' + plugins + ' 个 entries/manifests</p>' +
+          stageText +
           '<p>' + risk + '</p>' +
           '</div>';
       }

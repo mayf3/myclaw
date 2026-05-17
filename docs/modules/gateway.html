@@ -60,7 +60,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>Gateway 是 MyClaw 的控制平面。Phase 0.4 已实现通用 <code>POST /messages</code> 和 Feishu/Lark <code>POST /feishu/events</code> 入站，是为了让 dashboard、飞书事件入口和 OpenClaw staged migration 有同一个控制面；它仍然不能承担业务逻辑，也不能在无鉴权情况下绑定公网。</p>
+<p>Gateway 是 MyClaw 的控制平面。Phase 0.5 已实现通用 <code>POST /messages</code>、Feishu/Lark <code>POST /feishu/events</code>、OpenClaw <code>POST /api/openclaw-migration/stage</code> 和 mutation token guard。它仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw gateway 的核心设计值得借鉴：</p>
 <ul><li>单个长生命周期 gateway。</li><li>默认绑定 <code>127.0.0.1</code>。</li><li>WebSocket 使用 connect handshake。</li><li>request/response/event 三类消息。</li><li>side-effecting request 使用 idempotency key。</li><li>local trust 和 remote trust 分开。</li><li>gateway 负责 session、routing、channel、event、health。</li></ul>
@@ -69,21 +69,30 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li><code>src/core/all.rs</code> 先聚合 controller registry。</li><li><code>src/core/jsonrpc.rs</code> 只处理 JSON-RPC、health、schema discovery、错误 envelope 和实时流。</li><li>业务 controller 不依赖 HTTP transport。</li></ul>
 <p>这说明 MyClaw 不应该一开始就写 gateway handler，而应该先写 controller registry，等 CLI 跑通后再挂到 HTTP/WS。</p>
 <h2 id="推荐设计">推荐设计</h2>
-<p>Phase 0.4 已实现的最小 gateway：</p>
+<p>Phase 0.5 已实现的最小 gateway：</p>
 <pre class="code" data-lang="text"><code>HTTP
   GET  /
   GET  /api/health
   GET  /api/status
   POST /messages
-  POST /feishu/events</code></pre>
+  POST /feishu/events
+  POST /api/openclaw-migration/stage</code></pre>
 <p>它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。</p>
 <p>Feishu event 路径必须保持薄：</p>
 <pre class="code" data-lang="text"><code>POST /feishu/events
+  -&gt; Feishu verify token / gateway token / local dev guard
+  -&gt; reject encrypt payload
   -&gt; challenge response
   -&gt; event id idempotency
   -&gt; runtime.receiveMessage(rawInbound)
   -&gt; feishu-event channel normalize
   -&gt; state envelope</code></pre>
+<p>OpenClaw stage 路径：</p>
+<pre class="code" data-lang="text"><code>POST /api/openclaw-migration/stage
+  -&gt; gateway mutation token guard
+  -&gt; stageOpenClawMigration
+  -&gt; state/migrations/openclaw/&lt;stageId&gt;.json
+  -&gt; latest.json pointer</code></pre>
 <p>Phase 4 的完整 gateway：</p>
 <pre class="code" data-lang="text"><code>HTTP
   GET  /health
@@ -120,7 +129,7 @@ EventBus
   | { type: &quot;event&quot;; event: string; payload: unknown; seq?: number };</code></pre>
 <h2 id="auth-与默认安全">Auth 与默认安全</h2>
 <p>默认：</p>
-<ul><li>bind: <code>127.0.0.1</code>。</li><li>auth: token。</li><li>local-only 也保留 token 配置，但可允许 bootstrap 时生成。</li><li>非 loopback 禁止无 token。</li></ul>
+<ul><li>bind: <code>127.0.0.1</code>。</li><li>auth: local loopback 可无 token；配置 <code>MYCLAW_GATEWAY_TOKEN</code> 或 <code>--token</code> 后所有 mutation 必须带 token。</li><li>非 loopback mutation 禁止无 token。</li><li>token 支持 <code>Authorization: Bearer &lt;token&gt;</code> 和 <code>x-myclaw-token</code>。</li><li>Feishu endpoint 支持 <code>MYCLAW_FEISHU_VERIFY_TOKEN</code>，正式暴露前必须配置。</li></ul>
 <p>后续再加：</p>
 <ul><li>device pairing。</li><li>trusted proxy。</li><li>Tailscale/VPN profile。</li></ul>
 <h2 id="gateway-不负责">Gateway 不负责</h2>
@@ -136,14 +145,16 @@ EventBus
 <ul><li>本机 HTTP gateway。</li><li>Dashboard GET routes。</li><li><code>POST /messages</code> 复用 runtime receive pipeline。</li><li>写入统一 envelope/state。</li></ul>
 <p>Phase 0.4：</p>
 <ul><li><code>POST /feishu/events</code> / <code>POST /api/feishu/events</code>。</li><li>Feishu challenge 回显。</li><li>Feishu 文本消息事件 normalize。</li><li>event id 内存幂等，避免本机测试重复写入。</li><li>Mermaid 可视化 design review report。</li></ul>
+<p>Phase 0.5：</p>
+<ul><li>Gateway mutation token guard。</li><li>Feishu verify token 与 encrypted callback 拒绝路径。</li><li>OpenClaw stage snapshot API。</li><li>Dashboard <code>/api/status</code> 展示 latest stage 指针。</li><li><code>myclaw dashboard</code> 使用只读 dashboard server；mutation endpoints 只在显式 gateway 打开。</li><li>OpenClaw migration GET route 不再接受任意 <code>source</code> query override。</li></ul>
 <p>Phase 4：</p>
 <ul><li>HTTP + WS。</li><li>token auth。</li><li>run/resume/status。</li><li>event stream。</li><li>graceful shutdown。</li></ul>
 <p>先不做：</p>
-<ul><li>多账号 channel。</li><li>设备节点。</li><li>Control UI config editor。</li><li>public remote access。</li><li>launchd/systemd。</li><li>Feishu encrypt payload、token、签名校验。</li></ul>
+<ul><li>多账号 channel。</li><li>设备节点。</li><li>Control UI config editor。</li><li>public remote access。</li><li>launchd/systemd。</li><li>Feishu encrypt payload 解密和正式签名校验。</li><li>持久 replay window。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>过早把 gateway 做成 OpenClaw 级别控制平面。</li><li>auth 作为后补，会导致 UI/channel 接入时重构。</li><li>event 没有 seq，前端断线后无法判断丢事件。</li><li>Feishu idempotency 目前是内存 Map，服务重启后不保留 replay window。</li></ul>
+<ul><li>过早把 gateway 做成 OpenClaw 级别控制平面。</li><li>auth 作为后补，会导致 UI/channel 接入时重构。</li><li>event 没有 seq，前端断线后无法判断丢事件。</li><li>Feishu idempotency 目前是内存 Map，服务重启后不保留 replay window。</li><li>token 现在只是 shared secret，没有用户/角色/作用域。</li><li><code>/api/status</code> 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li><code>POST /messages</code> 返回与 CLI receive 一致的 envelope。</li><li><code>POST /feishu/events</code> 能回显 challenge，并把文本事件写入 <code>feishu-event</code> run。</li><li><code>GET /api/status</code> 能显示最新 gateway message run。</li><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
+<ul><li><code>POST /messages</code> 返回与 CLI receive 一致的 envelope。</li><li><code>POST /feishu/events</code> 能回显 challenge，并把文本事件写入 <code>feishu-event</code> run。</li><li><code>POST /messages</code> 在配置 token 后拒绝无 token 请求。</li><li><code>POST /api/openclaw-migration/stage</code> 只写 snapshot，不修改 runtime config。</li><li><code>GET /api/status</code> 能显示最新 gateway message run。</li><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>

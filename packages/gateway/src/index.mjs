@@ -3,6 +3,7 @@ import { URL } from "node:url";
 import { renderDashboardHtml } from "../../dashboard/src/index.mjs";
 import { receiveMessage } from "../../runtime/src/messages.mjs";
 import { resolveStateDir } from "../../core/src/state.mjs";
+import { stageOpenClawMigration } from "../../migrate/src/stage.mjs";
 import {
   buildEventsPayload,
   buildOpenClawMigrationPayload,
@@ -19,8 +20,10 @@ export async function startGateway(options = {}) {
   const port = Number(options.port ?? process.env.MYCLAW_GATEWAY_PORT ?? 4321);
   const stateDir = resolveStateDir(options.stateDir);
   const openclawSource = options.openclawSource;
+  const token = options.token ?? process.env.MYCLAW_GATEWAY_TOKEN ?? "";
+  const feishuVerifyToken = options.feishuVerifyToken ?? process.env.MYCLAW_FEISHU_VERIFY_TOKEN ?? "";
   const server = http.createServer((request, response) => {
-    handleGatewayRequest(request, response, { stateDir, openclawSource }).catch((error) => {
+    handleGatewayRequest(request, response, { stateDir, openclawSource, host, token, feishuVerifyToken }).catch((error) => {
       sendJson(response, 500, {
         ok: false,
         error: {
@@ -55,7 +58,17 @@ export async function handleGatewayRequest(request, response, context) {
     return;
   }
   if (request.method === "POST" && (url.pathname === "/messages" || url.pathname === "/api/messages")) {
+    if (!authorizeGatewayMutation(request, response, context)) {
+      return;
+    }
     await handlePostMessage(request, response, context);
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/openclaw-migration/stage") {
+    if (!authorizeGatewayMutation(request, response, context)) {
+      return;
+    }
+    await handlePostOpenClawMigrationStage(request, response, context);
     return;
   }
 
@@ -89,8 +102,7 @@ async function handleGetRequest(url, response, context) {
     return;
   }
   if (url.pathname === "/api/openclaw-migration") {
-    const source = url.searchParams.get("source") || context.openclawSource;
-    sendJson(response, 200, await buildOpenClawMigrationPayload(context, { source }));
+    sendJson(response, 200, await buildOpenClawMigrationPayload(context));
     return;
   }
   sendJson(response, 404, { ok: false, error: { code: "not_found" } });
@@ -128,6 +140,19 @@ async function handlePostMessage(request, response, context) {
 
 async function handlePostFeishuEvent(request, response, context) {
   const body = await readJsonBody(request);
+  if (!authorizeFeishuEvent(request, response, context, body)) {
+    return;
+  }
+  if (body.encrypt) {
+    sendJson(response, 501, {
+      ok: false,
+      error: {
+        code: "feishu_encrypt_not_supported",
+        message: "Encrypted Feishu callbacks are not supported yet.",
+      },
+    });
+    return;
+  }
   if (body.challenge) {
     sendJson(response, 200, { challenge: String(body.challenge) });
     return;
@@ -154,6 +179,15 @@ async function handlePostFeishuEvent(request, response, context) {
   });
 }
 
+async function handlePostOpenClawMigrationStage(request, response, context) {
+  const body = await readJsonBody(request);
+  const stage = await stageOpenClawMigration({
+    source: body.source || context.openclawSource,
+    stateDir: context.stateDir,
+  });
+  sendJson(response, 200, { ok: true, stage });
+}
+
 function getFeishuEventId(body = {}) {
   return body.header?.event_id || body.event?.message?.message_id || body.message?.message_id || null;
 }
@@ -174,6 +208,56 @@ function cleanupFeishuEvents() {
       seenFeishuEvents.delete(eventId);
     }
   }
+}
+
+function authorizeGatewayMutation(request, response, context) {
+  const token = String(context.token || "");
+  if (!token && !isLoopbackHost(context.host)) {
+    sendJson(response, 403, {
+      ok: false,
+      error: {
+        code: "gateway_token_required",
+        message: "Set MYCLAW_GATEWAY_TOKEN before enabling mutations on a non-loopback host.",
+      },
+    });
+    return false;
+  }
+  if (!token) {
+    return true;
+  }
+  if (readRequestToken(request) === token) {
+    return true;
+  }
+  sendJson(response, 401, { ok: false, error: { code: "unauthorized", message: "Invalid gateway token." } });
+  return false;
+}
+
+function authorizeFeishuEvent(request, response, context, body) {
+  const feishuToken = String(context.feishuVerifyToken || "");
+  if (body.token && feishuToken && body.token === feishuToken) {
+    return true;
+  }
+  if (!feishuToken && isLoopbackHost(context.host)) {
+    return true;
+  }
+  const code = feishuToken ? "unauthorized" : "feishu_verification_required";
+  const message = feishuToken
+    ? "Invalid Feishu verification token."
+    : "Set MYCLAW_FEISHU_VERIFY_TOKEN before exposing Feishu callbacks.";
+  sendJson(response, code === "unauthorized" ? 401 : 403, { ok: false, error: { code, message } });
+  return false;
+}
+
+function readRequestToken(request) {
+  const authorization = request.headers.authorization || "";
+  if (authorization.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length).trim();
+  }
+  return String(request.headers["x-myclaw-token"] || "");
+}
+
+function isLoopbackHost(host) {
+  return ["127.0.0.1", "localhost", "::1"].includes(String(host || "").toLowerCase());
 }
 
 function readJsonBody(request) {

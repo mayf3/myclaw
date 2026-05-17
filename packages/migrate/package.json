@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./src/openclaw.mjs"
+    ".": "./src/openclaw.mjs",
+    "./stage": "./src/stage.mjs"
   }
 }

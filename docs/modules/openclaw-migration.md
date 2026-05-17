@@ -4,7 +4,7 @@
 
 “一键迁移 OpenClaw”必须被设计成可审计、可分阶段启用、可回滚的迁移流程，而不是复制目录后直接运行。OpenClaw 的 config、channels、plugins、secrets、tools、memory、browser 自动化和 gateway runtime 耦合面很大；MyClaw 当前只具备 channel boundary、state、dashboard 和 dry-run inventory。
 
-推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan` 的最小版本。
+推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan`，Phase 0.5 已实现 `stage snapshot`，但还没有任何 runtime apply。
 
 ## 参考项目观察
 
@@ -46,7 +46,7 @@ OpenClaw source
 |---|---|---|
 | `myclaw migrate openclaw --source <path>` | Phase 0.2 | dry-run inventory，不写状态 |
 | `myclaw migrate openclaw --source <path> --output plan.json` | Phase 0.2 | 写可审计 plan 文件 |
-| `myclaw migrate openclaw --stage plan.json` | Phase 1 | 写 MyClaw migration snapshot，不启用 runtime |
+| `myclaw migrate openclaw --source <path> --stage` | Phase 0.5 | 写 MyClaw migration snapshot，不启用 runtime |
 | `myclaw migrate openclaw --apply --module feishu` | Phase 2 | 只启用 Feishu 相关可控配置 |
 | `myclaw migrate openclaw --rollback <snapshot>` | Phase 2+ | 回滚 staged/apply 结果 |
 
@@ -61,6 +61,16 @@ Phase 0.2 已完成：
 - 输出 channels、pluginEntries、unsupported、recommendedSteps、myclawDraft。
 - dashboard 展示 migration risk。
 
+Phase 0.5 已完成：
+
+- `packages/migrate/src/stage.mjs` 生成 `openclaw-migration-stage`。
+- 默认写入 `state/migrations/openclaw/<stageId>.json`。
+- 写入 `state/migrations/openclaw/latest.json` 作为 dashboard/API 指针。
+- stage 内包含 modules、applyOrder、blocked、rollback strategy。
+- stage snapshot 包含 `schemaVersion`、`checksum`，并使用临时文件 rename 做原子写。
+- rollback 不再自称 supported；stage 没有 runtime mutation，只能删除 proposal。
+- Gateway 暴露 `POST /api/openclaw-migration/stage`，受 mutation token guard 保护。
+
 Phase 0.2 不做：
 
 - 不读取 secrets 的真实值。
@@ -74,7 +84,8 @@ Phase 0.2 不做：
 | 阶段 | 目标 | 验收标准 |
 |---|---|---|
 | Phase 0.2 | dry-run plan | `migrate openclaw` 输出稳定 JSON |
-| Phase 1 | staged snapshot | plan 可写入 MyClaw state，并在 dashboard 展示 diff |
+| Phase 0.5 | staged snapshot | plan 可写入 MyClaw state，并在 dashboard/API 展示 latest stage |
+| Phase 1 | staged diff UI | dashboard 展示 stage diff，并支持确认/拒绝 |
 | Phase 2 | Feishu module apply | 只迁移 Feishu config 到 MyClaw Feishu adapter |
 | Phase 3 | providers/tools apply | provider 和 tool contracts 分批迁移 |
 | Phase 4 | memory/session migration | 明确 schema 后再迁移长期状态 |
@@ -93,6 +104,8 @@ Phase 0.2 不做：
 
 - `migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json` 能返回 `ok: true`。
 - 输出包含 `config.sections`、`inventory.channels`、`inventory.pluginEntries`、`unsupported`。
-- dashboard `/api/status` 能展示 migration risk。
+- dashboard `/api/status` 能展示 migration risk 和 latest stage 指针。
+- `migrate openclaw --stage --json` 能写入 snapshot。
+- `POST /api/openclaw-migration/stage` 只写 snapshot，不修改 runtime config。
 - dry-run 不修改 OpenClaw 目录、不修改 MyClaw state。
 - docs 中明确 plan/stage/apply 顺序。

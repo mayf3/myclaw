@@ -3,7 +3,9 @@ import { resolveStateDir } from "../../core/src/state.mjs";
 import { listChannels } from "../../channels/src/index.mjs";
 import { receiveMessage, sendMessage } from "../../runtime/src/messages.mjs";
 import { startGateway } from "../../gateway/src/index.mjs";
+import { startDashboard } from "../../dashboard/src/index.mjs";
 import { planOpenClawMigration, writeMigrationPlan } from "../../migrate/src/openclaw.mjs";
+import { stageOpenClawMigration } from "../../migrate/src/stage.mjs";
 
 const VERSION = "0.1.0";
 
@@ -119,7 +121,7 @@ function runChannels(args) {
 }
 
 async function runDashboard(args) {
-  const dashboard = await startGateway({
+  const dashboard = await startDashboard({
     host: args.host || "127.0.0.1",
     port: args.port || 4321,
     stateDir: args.stateDir,
@@ -141,6 +143,8 @@ async function runGateway(args) {
     port: args.port || 4321,
     stateDir: args.stateDir,
     openclawSource: args.openclawSource,
+    token: args.token,
+    feishuVerifyToken: args.feishuVerifyToken,
   });
   if (args.json) {
     console.log(JSON.stringify({ ok: true, url: gateway.url, stateDir: gateway.stateDir }, null, 2));
@@ -163,6 +167,24 @@ async function runMigrate(argv) {
   }
   const args = parseArgs(rest);
   const plan = await planOpenClawMigration({ source: args.source });
+  if (args.stage) {
+    const stage = await stageOpenClawMigration({
+      source: args.source,
+      stateDir: args.stateDir,
+      outputPath: args.output && args.output !== "true" ? args.output : undefined,
+      plan,
+    });
+    if (args.json) {
+      console.log(JSON.stringify({ ok: true, stage }, null, 2));
+    } else {
+      console.log("OpenClaw migration staged");
+      console.log(`Stage: ${stage.stageId}`);
+      console.log(`Path: ${stage.path}`);
+      console.log(`Modules: ${stage.modules.map((module) => module.id).join(", ") || "none"}`);
+      console.log(`Blocked: ${stage.blocked.length}`);
+    }
+    return 0;
+  }
   let outputPath = null;
   if (args.output && args.output !== "true") {
     outputPath = await writeMigrationPlan(plan, args.output);
@@ -251,8 +273,8 @@ Usage:
   myclaw send --text <message> [--channel console|webhook|feishu-webhook] [--target <id>] [--webhook-url <url>] [--json]
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
   myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
-  myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
-  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--output <path>] [--json]
+  myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>] [--token <token>]
+  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--json]
 
 Examples:
   myclaw send --text "hello"
@@ -268,10 +290,11 @@ function printMigrateHelp() {
   console.log(`MyClaw migration
 
 Usage:
-  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--output <path>] [--json]
+  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--state-dir <path>] [--json]
 
 The OpenClaw migration command is dry-run by default. It inventories config sections,
 channels, plugin manifests, unsupported runtime surfaces, and a MyClaw draft mapping.
+With --stage it writes a reviewable snapshot but still does not apply runtime changes.
 `);
 }
 
