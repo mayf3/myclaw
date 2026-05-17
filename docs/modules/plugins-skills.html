@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>插件与 Skills · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>插件与 Skills</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+        <a class="back" href="../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#诊断">诊断</a>
+<a href="#参考项目观察">参考项目观察</a>
+<a href="#推荐设计">推荐设计</a>
+<a href="#skills-设计">Skills 设计</a>
+<a href="#capability-边界">Capability 边界</a>
+<a href="#不建议第一阶段做">不建议第一阶段做</a>
+<a href="#关键风险">关键风险</a>
+<a href="#验收标准">验收标准</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>插件与 Skills</h2>
+          <p>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</p>
+          <div class="meta">
+            <span class="tag p2">P2</span>
+            <span class="tag phase">Phase 5</span>
+            <span class="tag">扩展机制</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="诊断">诊断</h2>
+<p>插件和 skills 都是扩展机制，但职责不同。插件给 MyClaw 增加 runtime capability；skills 给 agent 增加操作说明。MyClaw 初期必须把两者分开。</p>
+<h2 id="参考项目观察">参考项目观察</h2>
+<p>Hermes：</p>
+<ul><li>skills 是过程性记忆，适合沉淀工作流。</li><li>plugin 可注册工具、hooks、CLI 命令。</li><li>memory provider 和 context engine 是可插拔的，但属于后期能力。</li></ul>
+<p>OpenClaw：</p>
+<ul><li>native plugin manifest 非常完整，可做配置验证和 capability ownership。</li><li>plugin SDK 通过窄 subpath 暴露能力，避免大 barrel。</li><li>plugin runtime 与 metadata snapshot 分离。</li><li>bundled plugins 与外部插件兼容边界很清楚。</li></ul>
+<h2 id="推荐设计">推荐设计</h2>
+<p>Phase 5 最小 plugin manifest：</p>
+<pre class="code" data-lang="json"><code>{
+  &quot;id&quot;: &quot;github&quot;,
+  &quot;name&quot;: &quot;GitHub&quot;,
+  &quot;version&quot;: &quot;0.1.0&quot;,
+  &quot;tools&quot;: [&quot;github.issue.list&quot;],
+  &quot;configSchema&quot;: {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;additionalProperties&quot;: false,
+    &quot;properties&quot;: {
+      &quot;token&quot;: { &quot;type&quot;: &quot;string&quot; }
+    }
+  }
+}</code></pre>
+<p>Runtime entry：</p>
+<pre class="code" data-lang="ts"><code>export function register(api: MyClawPluginApi) {
+  api.registerTool(...);
+}</code></pre>
+<p>最小 API：</p>
+<pre class="code" data-lang="ts"><code>type MyClawPluginApi = {
+  registerTool(tool: ToolDescriptor): void;
+  registerSkill?(skillRoot: string): void;
+  logger: Logger;
+};</code></pre>
+<h2 id="skills-设计">Skills 设计</h2>
+<p>Skill 是文件，不是 runtime code：</p>
+<pre class="code" data-lang="text"><code>skills/
+  gh-pr-review/
+    SKILL.md</code></pre>
+<p>加载顺序：</p>
+<ul><li>workspace skills。</li><li>user skills。</li><li>bundled skills。</li><li>plugin-provided skills。</li></ul>
+<p>Phase 3 只读 skills；Phase 6 再支持 skill create/update。</p>
+<h2 id="capability-边界">Capability 边界</h2>
+<p>插件可以注册：</p>
+<ul><li>tools。</li><li>providers。</li><li>skills。</li><li>hooks。</li><li>gateway routes。</li></ul>
+<p>但 MyClaw 初期只开放 tools + skills。providers 和 routes 后续再开放。</p>
+<h2 id="不建议第一阶段做">不建议第一阶段做</h2>
+<ul><li>插件市场。</li><li>外部兼容承诺。</li><li>插件 lifecycle hook 大全。</li><li>插件覆盖 core tool。</li><li>插件直接改 prompt builder 内部。</li></ul>
+<h2 id="关键风险">关键风险</h2>
+<ul><li>插件和 skill 混用，导致文本说明里偷偷改变 runtime 行为。</li><li>插件 loader 无 schema validation，坏插件让 gateway 起不来。</li><li>插件能覆盖 core tool，造成安全绕过。</li></ul>
+<h2 id="验收标准">验收标准</h2>
+<ul><li>plugin manifest 缺失或 schema 不合法时拒绝加载。</li><li>plugin tool name 不能与 core tool 冲突。</li><li>skill 只能影响 prompt，不直接执行代码。</li><li>plugin enable/disable 后 visible tools 变化可由 <code>doctor</code> 或 <code>status</code> 显示。</li></ul>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+<a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "myclaw-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "check": "find packages docs -name '*.mjs' -print0 | xargs -0 -n1 node --check",
+    "test": "node --test",
+    "myclaw": "node packages/cli/src/index.mjs"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

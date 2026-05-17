@@ -1,0 +1,9 @@
+{
+  "name": "@myclaw/core",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./envelope": "./src/envelope.mjs",
+    "./state": "./src/state.mjs"
+  }
+}
