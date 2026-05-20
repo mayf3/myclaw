@@ -59,7 +59,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.8 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、最新 run detail，以及 OpenClaw stage review summary。</p>
+<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.9 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、最新 run detail，以及 OpenClaw stage review summary。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw：</p>
 <ul><li>Control UI 通过 gateway schema 渲染 config 表单。</li><li>gateway health/status 是运维入口。</li><li>WS events 支撑实时 UI。</li><li>security audit 和 doctor 是用户自查入口。</li></ul>
@@ -80,7 +80,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>Feishu adapter facade readiness。</li><li>signed webhook readiness。</li><li>adapter issues/warnings 展示。</li></ul>
 <p>Phase 0.8 dashboard 新增：</p>
 <ul><li>最新 run detail 区块，通过 <code>GET /api/runs/:runId</code> 读取 envelope 与 events。</li><li>stage snapshot review summary，显示 staged modules、missing expected、blocked 和 review-only 标记。</li><li>Feishu encrypted challenge readiness 通过 adapter readiness 和 tests 体现。</li></ul>
-<p>Phase 0.9 应补：</p>
+<p>Phase 0.9 dashboard 新增：</p>
+<ul><li>Milestones 区块，展示 M0-M5 当前完成度。</li><li><code>/api/status</code> 和 <code>/api/milestones</code> 返回同一套 milestone payload。</li><li>Feishu outbound facade 进度纳入 M2。</li></ul>
+<p>Phase 1 前应补：</p>
 <ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 字段级 diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li></ul>
 <h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>
 <p>第一版 UI 不做营销页，直接是工具界面：</p>

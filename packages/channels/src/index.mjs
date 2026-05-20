@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { normalizeFeishuEvent } from "../../feishu-adapter/src/index.mjs";
+import { createFeishuEventChannel, createFeishuWebhookChannel } from "./feishu.mjs";
+
+export { createFeishuEventChannel, createFeishuWebhookChannel } from "./feishu.mjs";
 
 const DEFAULT_CHANNEL_DEFINITIONS = [
   {
@@ -20,9 +22,8 @@ const DEFAULT_CHANNEL_DEFINITIONS = [
     id: "feishu-webhook",
     aliases: ["lark-webhook"],
     create: ({ env, webhookUrl } = {}) =>
-      createWebhookChannel({
+      createFeishuWebhookChannel({
         url: webhookUrl || env?.MYCLAW_FEISHU_WEBHOOK_URL,
-        format: "feishu",
       }),
   },
   {
@@ -128,14 +129,10 @@ export function createConsoleChannel() {
   };
 }
 
-export function createWebhookChannel({ url, format = "generic" } = {}) {
-  const id = format === "feishu" ? "feishu-webhook" : "webhook";
+export function createWebhookChannel({ url } = {}) {
   return {
-    id,
-    description:
-      format === "feishu"
-        ? "Minimal outbound Feishu/Lark custom-bot webhook. Configure with --webhook-url or MYCLAW_FEISHU_WEBHOOK_URL."
-        : "Generic HTTP POST channel. Configure with --webhook-url or MYCLAW_WEBHOOK_URL.",
+    id: "webhook",
+    description: "Generic HTTP POST channel. Configure with --webhook-url or MYCLAW_WEBHOOK_URL.",
     configured: Boolean(url),
     capabilities: {
       outbound: true,
@@ -144,32 +141,24 @@ export function createWebhookChannel({ url, format = "generic" } = {}) {
     },
     async send(message) {
       if (!url) {
-        throw new Error(
-          format === "feishu"
-            ? "Missing Feishu webhook URL. Set MYCLAW_FEISHU_WEBHOOK_URL or pass --webhook-url."
-            : "Missing webhook URL. Set MYCLAW_WEBHOOK_URL or pass --webhook-url.",
-        );
+        throw new Error("Missing webhook URL. Set MYCLAW_WEBHOOK_URL or pass --webhook-url.");
       }
 
-      const payload =
-        format === "feishu"
-          ? { msg_type: "text", content: { text: message.text } }
-          : {
-              text: message.text,
-              target: message.target || null,
-              source: "myclaw",
-            };
       const response = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          text: message.text,
+          target: message.target || null,
+          source: "myclaw",
+        }),
       });
       const responseText = await response.text();
       if (!response.ok) {
         throw new Error(`Webhook send failed: HTTP ${response.status} ${responseText}`);
       }
       return {
-        channel: id,
+        channel: "webhook",
         messageId: `webhook_${randomUUID().slice(0, 8)}`,
         target: message.target || url,
         text: message.text,
@@ -180,20 +169,6 @@ export function createWebhookChannel({ url, format = "generic" } = {}) {
         },
       };
     },
-  };
-}
-
-export function createFeishuEventChannel() {
-  return {
-    id: "feishu-event",
-    description: "Inbound Feishu/Lark event normalizer for gateway callbacks. Challenge and signature checks live at gateway edge.",
-    configured: true,
-    capabilities: {
-      outbound: false,
-      inbound: true,
-      reply: false,
-    },
-    normalizeInbound: normalizeFeishuEvent,
   };
 }
 

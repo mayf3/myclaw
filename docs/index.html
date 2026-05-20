@@ -16,7 +16,7 @@
 <nav aria-label="评审导航">
 <a href="#summary">总诊断</a>
 <a href="./implementation-architecture.html">当前实现架构</a>
-<a href="#phase-08">Phase 0.8</a>
+<a href="#phase-09">Phase 0.9</a>
 <a href="#modules">模块文档</a>
 <a href="#priority">实现优先级</a>
 <a href="#dependency">依赖关系</a>
@@ -31,8 +31,9 @@
 MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-tool permission。Phase 0.8 已在 MyClaw Feishu adapter facade 上补齐 signed
-encrypted challenge，dashboard 也能展示 run detail 和 OpenClaw stage summary；
+tool permission。Phase 0.9 已在 MyClaw Feishu adapter facade 上补齐 signed
+encrypted challenge 和 outbound text/card facade，dashboard 也能展示 run detail、
+milestones 和 OpenClaw stage summary；
 Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
 <div class="quick-actions">
@@ -42,8 +43,8 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <a class="button secondary" href="./modules/README.html">打开模块索引</a>
 </div>
 </section>
-<section id="phase-08">
-<h2>Phase 0.8 当前焦点</h2>
+<section id="phase-09">
+<h2>Phase 0.9 当前焦点</h2>
 <table>
 <thead>
 <tr>
@@ -55,13 +56,13 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <tbody>
 <tr>
 <td>Dashboard</td>
-<td>显示 Feishu adapter readiness、参考完成度、迁移 stage summary 和最新 run detail。</td>
+<td>显示 Feishu adapter readiness、milestones、参考完成度、迁移 stage summary 和最新 run detail。</td>
 <td>补 approval queue、字段级 diff 和实时事件。</td>
 </tr>
 <tr>
 <td>Feishu/Lark</td>
-<td>已有 MyClaw adapter facade、x-lark signature 和 encrypted challenge decrypt，仍不直接加载 OpenClaw runtime。</td>
-<td>实现 outbound facade、持久 replay 和更完整 event 类型。</td>
+<td>已有 MyClaw adapter facade、x-lark signature、encrypted challenge decrypt 和 outbound text/card facade。</td>
+<td>补 app-token outbound、持久 replay 和更完整 event 类型。</td>
 </tr>
 <tr>
 <td>Gateway</td>

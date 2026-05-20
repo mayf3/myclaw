@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import http from "node:http";
 import { test } from "node:test";
 import {
   createChannelRegistry,
@@ -82,4 +83,33 @@ test("channel list exposes the initial outbound surfaces", () => {
     listChannels().map((channel) => channel.id),
     ["console", "webhook", "feishu-webhook", "feishu-event"],
   );
+});
+
+test("feishu webhook channel uses the adapter outbound facade", async () => {
+  let received;
+  const server = http.createServer((request, response) => {
+    let body = "";
+    request.on("data", (chunk) => {
+      body += chunk;
+    });
+    request.on("end", () => {
+      received = JSON.parse(body);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ StatusCode: 0, StatusMessage: "success" }));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  try {
+    const channel = resolveChannel("feishu-webhook", {
+      webhookUrl: `http://127.0.0.1:${address.port}/hook`,
+    });
+    const result = await channel.send({ text: "hello feishu", metadata: { threadId: "thread_1" } });
+
+    assert.deepEqual(received, { msg_type: "text", content: { text: "hello feishu" } });
+    assert.equal(result.details.provider, "feishu");
+    assert.equal(result.details.threadId, "thread_1");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
 });

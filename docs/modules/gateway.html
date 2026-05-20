@@ -75,6 +75,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   GET  /api/health
   GET  /api/status
   GET  /api/runs/:runId
+  GET  /api/milestones
   POST /messages
   POST /feishu/events
   POST /api/openclaw-migration/stage</code></pre>
@@ -152,6 +153,8 @@ EventBus
 <ul><li><code>packages/gateway/src/index.mjs</code> 从 321 行拆到 90 行。</li><li>新增 <code>auth.mjs</code>、<code>http.mjs</code>、<code>routes/control.mjs</code>、<code>routes/feishu.mjs</code>、<code>routes/messages.mjs</code>、<code>routes/migration.mjs</code>。</li><li>Feishu callback route 调用 <code>packages/feishu-adapter</code>，不再在 gateway 主文件里维护签名、token、replay 和 normalize。</li><li><code>--feishu-encrypt-key</code> / <code>MYCLAW_FEISHU_ENCRYPT_KEY</code> 可启用 <code>x-lark-signature</code> 校验。</li></ul>
 <p>Phase 0.8：</p>
 <ul><li><code>POST /feishu/events</code> 支持 Feishu/Lark encrypted challenge decrypt。</li><li>处理顺序固定为 signature -&gt; parse envelope -&gt; decrypt -&gt; token/challenge/event。</li><li><code>GET /api/runs/:runId</code> 读取单个 run 的 envelope 和 JSONL events。</li><li><code>/api/status</code> 返回 <code>openclawStageSummary</code>，供 dashboard 显示 review-only stage 摘要。</li></ul>
+<p>Phase 0.9：</p>
+<ul><li><code>GET /api/milestones</code> 暴露当前 M0-M5 进度。</li><li><code>/api/status</code> 内联 <code>milestones</code>，Dashboard 首屏可以看到阶段进展。</li><li>Feishu outbound payload/result 已进入 adapter facade；gateway 仍不直接加载 OpenClaw plugin。</li></ul>
 <p>Phase 4：</p>
 <ul><li>HTTP + WS。</li><li>token auth。</li><li>run/resume/status。</li><li>event stream。</li><li>graceful shutdown。</li></ul>
 <p>先不做：</p>

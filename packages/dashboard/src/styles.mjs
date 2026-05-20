@@ -156,6 +156,17 @@ section{margin-bottom:16px}
 .bar.weak span{background:var(--warn)}
 .bar.bad span{background:var(--danger)}
 .score{font-weight:900}
+.milestone-list{display:grid;gap:8px}
+.milestone-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 90px 120px;
+  gap:12px;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 12px;
+}
+.milestone-row p{margin:4px 0 0}
 .small{font-size:12px;color:var(--muted)}
 .criteria{margin-top:6px}
 .criteria summary{cursor:pointer;color:#334155;font-size:12px;font-weight:800}
@@ -191,6 +202,7 @@ pre{
   .topbar{display:block}
   .topbar button{margin-top:12px}
   .stats,.two-col,.decision-grid{grid-template-columns:1fr}
+  .milestone-row{grid-template-columns:1fr}
   .reference-row{grid-template-columns:180px 90px minmax(220px,1fr) 82px 82px 82px}
 }
 `;

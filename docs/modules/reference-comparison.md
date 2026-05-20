@@ -4,15 +4,15 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 0.8 在 Feishu adapter facade 上补了 encrypted challenge decrypt，同时让 dashboard 能打开 run detail，并在 status 中展示 OpenClaw stage review summary。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 0.9 在 Feishu adapter facade 上补了 outbound text/card payload 和 send result normalization，同时让 dashboard 能展示 milestones。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 0.8 完成度矩阵
+## Phase 0.9 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
 | Gateway / 控制面 | 60 | 90 | 78 | 86 | 已拆 routes/auth，仍缺 WS/SSE、scoped token |
-| Feishu/Lark 接入 | 50 | 92 | 42 | 35 | 有 adapter/signature/encrypted challenge，缺 WebSocket/policy/outbound |
-| Dashboard / 观测 | 55 | 78 | 55 | 90 | 有 run detail/stage summary，缺 approval queue、实时事件 |
+| Feishu/Lark 接入 | 58 | 92 | 42 | 35 | 有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token |
+| Dashboard / 观测 | 60 | 78 | 55 | 90 | 有 milestones/run detail/stage summary，缺 approval queue、实时事件 |
 | OpenClaw 迁移 | 55 | 0 | 82 | 35 | 已有 plan/stage/review summary，缺 apply/rollback/字段级 diff UI |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
@@ -70,12 +70,12 @@ OpenClaw 仓库里可参考的飞书实现位于 `/Users/yanfenma/workspace/gith
 - doc/drive/wiki/bitable 等工具面超出 MyClaw Phase 0。
 - 直接加载会提前引入 OpenClaw 的 config、secret、approval 语义。
 
-Phase 0.8 MyClaw 结论：
+Phase 0.9 MyClaw 结论：
 
 - 仍然只参考，不直接加载。
-- `packages/feishu-adapter` 已承接 config readiness、x-lark signature、AES-256-CBC decrypt、verification token、replay guard 和 event normalize。
+- `packages/feishu-adapter` 已承接 config readiness、x-lark signature、AES-256-CBC decrypt、verification token、replay guard、event normalize 和 outbound text/card facade。
 - encrypted challenge 已可通过 gateway；encrypted message event 仍只是有解密入口，事件语义覆盖还很窄。
-- 下一阶段选择性移植 outbound result normalization，先做 text/card/thread result，不直接接 OpenClaw 完整工具面。
+- outbound 当前仍是 custom-bot webhook 契约，不是 app-token rich card API；下一阶段要补 policy、app token client 和持久 replay。
 
 ## OpenClaw Lobster 观察
 

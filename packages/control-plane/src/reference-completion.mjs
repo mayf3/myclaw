@@ -2,7 +2,7 @@ const moduleDefinitions = [
   {
     id: "gateway",
     label: "Gateway / 控制面",
-    phase: "0.8",
+    phase: "0.9",
     openclaw: 90,
     hermes: 78,
     openhuman: 86,
@@ -17,31 +17,31 @@ const moduleDefinitions = [
   {
     id: "feishu",
     label: "Feishu/Lark 接入",
-    phase: "0.8",
+    phase: "0.9",
     openclaw: 92,
     hermes: 42,
     openhuman: 35,
-    gap: "已有 adapter/signature/encrypted challenge，缺 encrypted event、WebSocket、policy、outbound rich card",
-    next: "扩展 encrypted event、outbound facade 和持久 replay",
+    gap: "已有 adapter/signature/encrypted challenge/custom-bot outbound facade，缺 WebSocket、policy、app token rich card",
+    next: "扩展 encrypted event、app token outbound、policy 和持久 replay",
     criteria: [
-      c("feishu-event", "event challenge/text normalization", "partial", 65, "packages/feishu-adapter/src/index.mjs"),
-      c("feishu-security", "verify token, x-lark signature, replay guard, encrypted challenge", "partial", 65, "packages/feishu-adapter/test/feishu-adapter.test.mjs"),
-      c("feishu-runtime", "encrypted events, WebSocket, policy, outbound rich card", "missing", 20, "openclaw/extensions/feishu"),
+      c("feishu-event", "event challenge/text normalization", "partial", 70, "packages/feishu-adapter/src/index.mjs"),
+      c("feishu-security", "verify token, x-lark signature, replay guard, encrypted challenge", "partial", 75, "packages/feishu-adapter/test/feishu-adapter.test.mjs"),
+      c("feishu-runtime", "custom-bot outbound facade, encrypted events, WebSocket, policy", "partial", 30, "packages/feishu-adapter/src/outbound.mjs"),
     ],
   },
   {
     id: "dashboard",
     label: "Dashboard / 观测",
-    phase: "0.8",
+    phase: "0.9",
     openclaw: 78,
     hermes: 55,
     openhuman: 90,
-    gap: "已有 run detail/stage summary，缺 approval queue、实时事件、字段级 diff",
+    gap: "已有 run detail/stage summary/milestones，缺 approval queue、实时事件、字段级 diff",
     next: "把 approval queue 和 event stream 做成一等操作面",
     criteria: [
-      c("dashboard-status", "state/runs/events/channels view", "done", 60, "packages/dashboard/src/client.mjs"),
+      c("dashboard-status", "state/runs/events/channels/milestones view", "done", 65, "packages/dashboard/src/client.mjs"),
       c("dashboard-reference", "reference matrix, Feishu adoption and adapter readiness", "partial", 60, "packages/dashboard/src/client.mjs"),
-      c("dashboard-actions", "run detail and stage review summary", "partial", 45, "packages/dashboard/src/client.mjs"),
+      c("dashboard-actions", "run detail and stage review summary", "partial", 55, "packages/dashboard/src/client.mjs"),
     ],
   },
   {
@@ -152,14 +152,14 @@ export function buildFeishuAdoptionPayload() {
       "security posture: x-lark signature uses sha256(timestamp + nonce + encryptKey + rawBody)",
       "event model: message, card action, reaction, comment, media and dedup keys",
       "policy model: DM/group allowlist, mention requirement, pairing/approval",
-      "outbound model: text/card/threading/send result normalization",
+      "outbound model: text/card/threading/send result normalization; MyClaw has a facade, not app token delivery yet",
     ],
     blockers: [
       "OpenClaw plugin depends on @openclaw/plugin-sdk and OpenClaw runtime APIs",
       "plugin surface includes doc/drive/wiki/bitable tools far beyond MyClaw Phase 0",
       "direct loading would import OpenClaw config, secret and approval semantics before MyClaw owns them",
     ],
-    next: "Use the MyClaw Feishu adapter facade as the only gateway dependency, then port encrypted events and outbound pieces.",
+    next: "Use the MyClaw Feishu adapter facade as the only gateway dependency, then port encrypted events, app-token outbound and policy pieces.",
   };
 }
 

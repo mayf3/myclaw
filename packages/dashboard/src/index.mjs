@@ -4,6 +4,7 @@ import { resolveStateDir } from "../../core/src/state.mjs";
 import {
   buildEventsPayload,
   buildFeishuAdoptionStatusPayload,
+  buildMilestonesStatusPayload,
   buildOpenClawMigrationPayload,
   buildReferenceCompletionStatusPayload,
   buildRunPayload,
@@ -96,6 +97,10 @@ export async function handleDashboardRequest(request, response, context) {
   }
   if (url.pathname === "/api/reference-completion") {
     sendJson(response, 200, buildReferenceCompletionStatusPayload());
+    return;
+  }
+  if (url.pathname === "/api/milestones") {
+    sendJson(response, 200, buildMilestonesStatusPayload());
     return;
   }
   if (url.pathname === "/api/feishu-adoption") {
