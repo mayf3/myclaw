@@ -48,6 +48,9 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     const reference = await fetch(`${gateway.url}/api/reference-completion`).then((response) => response.json());
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
 
+    const milestones = await fetch(`${gateway.url}/api/milestones`).then((response) => response.json());
+    assert.equal(milestones.milestones.currentMilestone, "M2");
+
     const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
     assert.equal(feishu.feishuAdoption.referenceUse, true);
     assert.equal(feishu.feishuAdapter.connectionMode, "webhook");

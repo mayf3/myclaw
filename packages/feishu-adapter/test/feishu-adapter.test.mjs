@@ -3,11 +3,13 @@ import { createCipheriv, createHash } from "node:crypto";
 import { test } from "node:test";
 import {
   buildFeishuAdapterConfig,
+  buildFeishuOutboundPayload,
   buildFeishuWebhookSignature,
   createFeishuReplayGuard,
   decryptFeishuPayload,
   describeFeishuAdapterReadiness,
   normalizeFeishuEvent,
+  normalizeFeishuSendResult,
   validateFeishuVerificationToken,
   validateFeishuWebhookSignature,
 } from "../src/index.mjs";
@@ -33,6 +35,30 @@ test("adapter decrypts Feishu encrypted payloads", () => {
   const encrypt = encryptFeishuPayload("encrypt", payload);
   assert.deepEqual(decryptFeishuPayload({ encryptKey: "encrypt", encrypt }), payload);
   assert.throws(() => decryptFeishuPayload({ encryptKey: "wrong", encrypt }), /bad decrypt|padding|final/i);
+});
+
+test("adapter builds Feishu outbound text and card payloads", () => {
+  assert.deepEqual(buildFeishuOutboundPayload({ text: "hello" }), {
+    msg_type: "text",
+    content: { text: "hello" },
+  });
+  assert.deepEqual(buildFeishuOutboundPayload({ card: { config: { wide_screen_mode: true } } }), {
+    msg_type: "interactive",
+    card: { config: { wide_screen_mode: true } },
+  });
+  assert.throws(() => buildFeishuOutboundPayload({ text: " " }), /missing text/);
+});
+
+test("adapter normalizes Feishu outbound send results", () => {
+  const result = normalizeFeishuSendResult({
+    status: 200,
+    target: "hook",
+    threadId: "thread_1",
+    responseText: JSON.stringify({ StatusCode: 0, StatusMessage: "success" }),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.provider, "feishu");
+  assert.equal(result.threadId, "thread_1");
 });
 
 test("adapter reports token-only webhook mode as blocked", () => {

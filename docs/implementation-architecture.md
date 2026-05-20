@@ -1,36 +1,45 @@
-# MyClaw Phase 0.8 实现架构可视化评审
+# MyClaw Phase 0.9 实现架构可视化评审
 
-更新时间：2026-05-18
+更新时间：2026-05-20
 
 ## 总诊断
 
-Phase 0.8 补上 Feishu encrypted challenge、run detail 和 OpenClaw stage review summary。MyClaw 仍不直接加载 OpenClaw `@openclaw/feishu`，但已经把 OpenClaw Feishu 的关键 webhook 安全路径复制到自己的 adapter facade：签名先于 JSON 解析，加密 envelope 解密后再验证 token/challenge/event。
-
-还不能把它说成生产飞书接入：encrypted message event 只具备解密入口，事件类型仍只支持 text normalize；replay guard 仍是内存 TTL；outbound rich card、WebSocket、policy 和 approval 还没做。stage summary 只用于人工审阅，不是字段级 diff，也不能作为 apply 输入。
+Phase 0.9 把当前进度明确成 milestones，并把 Feishu outbound 从 channel 内部硬编码提升到 `packages/feishu-adapter` facade。结论：方向对，但仍只是 Feishu custom-bot webhook 的 text/card/result normalization，不是完整 OpenClaw Feishu app-token、WebSocket、policy 或 thread reply。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
-| 设计清晰度 | 8/10 | Feishu 安全顺序、run detail、stage summary 边界清楚 |
-| 可扩展性 | 8/10 | adapter 已拆 config/security/replay/normalize |
-| 可靠性 | 6/10 | encrypted challenge 可用；replay 仍非持久 |
-| 可维护性 | 8/10 | 所有文件低于 500 行，热点仍是 report builder |
-| 安全性 | 6/10 | 签名、timestamp freshness、decrypt 已有；缺持久 replay/scoped token |
+| 设计清晰度 | 8/10 | M0-M5 里程碑和 Feishu outbound 边界更清楚 |
+| 可扩展性 | 8/10 | outbound 进入 adapter facade，channel 不再手写 Feishu payload |
+| 可靠性 | 6/10 | 测试覆盖 text/card/result，缺真实 Feishu app-token e2e |
+| 可维护性 | 8/10 | 所有文件低于 500 行，dashboard client 仍在增长 |
+| 安全性 | 6/10 | webhook signature/decrypt 已有，缺 scoped token/redaction/replay persistence |
+
+## 当前 Milestones
+
+| Milestone | 状态 | 完成度 | 说明 |
+|---|---|---:|---|
+| M0 本地消息闭环 | done | 100 | CLI send/receive、state、channel registry |
+| M1 Gateway 与 Dashboard | partial | 70 | HTTP 控制面、run detail、reference matrix |
+| M2 Feishu/Lark 边界 | partial | 58 | encrypted challenge、custom-bot outbound facade |
+| M3 OpenClaw 迁移 | partial | 55 | plan/stage/review summary |
+| M4 Agent Runtime 与审批 | planned | 10 | LLM loop、approval、scoped token |
+| M5 记忆、搜索与插件 | planned | 8 | SQLite/FTS、memory、plugin loader |
 
 ## Feishu/Lark 复用结论
 
 | 问题 | 结论 | 理由 |
 |---|---|---|
 | 直接加载 OpenClaw Feishu？ | 仍不直接加载 | OpenClaw plugin-sdk/runtime/secrets/approval 仍未进入 MyClaw |
-| 当前已 port 什么？ | webhook 安全子集 | x-lark signature、AES-256-CBC decrypt、verification token、event normalize |
-| 下一步 | outbound facade | 先做 text/card/thread result，不接完整 OpenClaw tools |
+| 当前已 port 什么？ | webhook 安全和 outbound 子集 | signature、AES decrypt、text/card payload、send result normalization |
+| 下一步 | app-token/policy | 先接 app-token outbound，再做 access policy 和持久 replay |
 
 ## 参考完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
 | Gateway / 控制面 | 60 | 90 | 78 | 86 | 已拆 routes/auth，仍缺 WS/SSE、scoped token |
-| Feishu/Lark 接入 | 50 | 92 | 42 | 35 | 有 encrypted challenge，缺 WebSocket/policy/outbound |
-| Dashboard / 观测 | 55 | 78 | 55 | 90 | 有 run detail/stage summary，缺 approval queue、实时事件 |
+| Feishu/Lark 接入 | 58 | 92 | 42 | 35 | 有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token |
+| Dashboard / 观测 | 60 | 78 | 55 | 90 | 有 milestones/run detail/stage summary，缺 approval queue、实时事件 |
 | OpenClaw 迁移 | 55 | 0 | 82 | 35 | 有 plan/stage/review summary，缺 apply/rollback/字段级 diff |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state |
@@ -39,219 +48,193 @@ Phase 0.8 补上 Feishu encrypted challenge、run detail 和 OpenClaw stage revi
 
 ## 系统上下文图
 
-这张图回答：MyClaw 当前与 Feishu、OpenClaw、Dashboard、GitHub、HTML Center 的边界。
+这张图回答：MyClaw Phase 0.9 和用户、Feishu、OpenClaw、HTML Center 的边界。
 
 ```mermaid
 flowchart LR
-  Feishu[Feishu/Lark Cloud] -->|signed/encrypted webhook| Gateway[MyClaw Gateway]
+  User[本地用户] --> CLI[CLI]
+  User --> Browser[Dashboard]
+  Feishu[Feishu/Lark Cloud] -->|signed encrypted callback| Gateway[Gateway]
+  Gateway -->|custom bot outbound| Feishu
   OpenClaw[OpenClaw extensions/feishu] -->|reference only| Adapter[Feishu Adapter]
-  User[本地用户] --> Browser[Dashboard]
-  User --> CLI[CLI]
-  GitHub[GitHub] <-->|push| Repo[myclaw]
-  HtmlCenter[HTML Center] <-->|publish| Reports[Design Review]
+  Reports[Design Review HTML] --> HtmlCenter[HTML Center]
 
   subgraph Local[MyClaw 本机]
-    Gateway --> Adapter
-    Gateway --> Runtime[Message Runtime]
+    CLI --> Runtime[Message Runtime]
+    Gateway --> Runtime
+    Runtime --> Channels[Channel Registry]
+    Channels --> Adapter
     Runtime --> State[(runs/events)]
     Browser --> Dashboard[Dashboard server]
     Dashboard --> Control[Control Plane]
-    Control --> State
-    Control --> Stage[(OpenClaw stage)]
-    CLI --> Runtime
+    Control --> Milestones[Milestones Payload]
+    Control --> StageSummary[OpenClaw Stage Summary]
   end
 ```
 
 Review 观察：
 
-- 优点：OpenClaw 只作为 reference，不进入运行时依赖。
-- 优点：Feishu encrypted challenge 可在 MyClaw adapter 内完成。
-- 风险：真实 Feishu message event 的类型覆盖仍很窄。
-- 改进：下一阶段做 outbound facade 前先列清消息/卡片/线程边界。
+- 优点：OpenClaw 仍是 reference，不进入运行时依赖。
+- 优点：Feishu outbound payload/result 进入 adapter facade。
+- 风险：Gateway 和 Dashboard route 仍各自维护 if 链。
+- 改进：Phase 1 前先做 controller/route adapter。
 
 ## 模块架构图
 
-这张图回答：Phase 0.8 的核心模块如何依赖，是否继续保持小文件。
+这张图回答：Phase 0.9 新增模块如何依赖，是否降低耦合。
 
 ```mermaid
 flowchart TB
-  Gateway[index.mjs] --> FeishuRoute[routes/feishu.mjs]
-  Gateway --> ControlRoute[routes/control.mjs]
-  FeishuRoute --> Security[feishu-adapter/security.mjs]
-  FeishuRoute --> Replay[feishu-adapter/replay.mjs]
-  FeishuRoute --> Normalize[feishu-adapter/normalize.mjs]
-  ControlRoute --> Status[control-plane/status.mjs]
-  Status --> State[core/state.mjs]
-  Status --> Stage[Migrate stage]
-  DashboardClient[dashboard/client.mjs] --> RunsApi[/api/runs/:runId]
-  DashboardClient --> StageSummary[/api/status openclawStageSummary]
-  RunsApi --> State
+  Channels[packages/channels] --> FeishuChannel[channels/src/feishu.mjs]
+  FeishuChannel --> Outbound[feishu-adapter/outbound.mjs]
+  GatewayRoute[routes/feishu.mjs] --> Security[feishu-adapter/security.mjs]
+  GatewayRoute --> Normalize[feishu-adapter/normalize.mjs]
+  DashboardClient[dashboard/client.mjs] --> Milestones[/api/status milestones]
+  ControlPlane[control-plane/status.mjs] --> MilestoneBuilder[control-plane/milestones.mjs]
+  ControlPlane --> StageSummary[buildOpenClawStageSummary]
+  Runtime[runtime/messages.mjs] --> Channels
+  Runtime --> State[core/state.mjs]
 ```
 
 Review 观察：
 
-- 优点：adapter 已拆成 config/security/replay/normalize，不再是单文件泥球。
-- 优点：run detail 和 stage summary 走 control-plane，不让 dashboard 读私有文件。
-- 风险：control route 仍集中 dashboard asset/status/runs/events/migration。
-- 改进：后续用 controller/route registry 替代手写 if 链。
+- 优点：Feishu text/card 构造不再散落在通用 channel registry 中。
+- 优点：milestones 是 API payload，不只是文档表格。
+- 风险：Dashboard client 261 行，后续 approval 前需要拆 renderer。
+- 改进：把 milestone/reference/migration renderer 分文件。
 
 ## 核心业务流程图
 
-这张图回答：signed encrypted Feishu challenge 如何通过 MyClaw。
+这张图回答：一次 Feishu outbound send 如何经过 facade。
 
 ```mermaid
 flowchart TD
-  Start[POST /feishu/events] --> Raw[read raw body]
-  Raw --> Signature[x-lark signature before JSON parse]
-  Signature -->|invalid| Deny[401 invalid signature]
-  Signature -->|valid| Parse[parse envelope JSON]
-  Parse --> Encrypt{body.encrypt?}
-  Encrypt -->|yes| Decrypt[AES-256-CBC decrypt]
-  Decrypt -->|failed| Bad[400 decrypt failed]
-  Decrypt -->|ok| Token[verify token]
-  Encrypt -->|no| Token
-  Token -->|invalid| Reject[401/403]
-  Token -->|valid| Challenge{challenge?}
-  Challenge -->|yes| Echo[return challenge]
-  Challenge -->|no| Replay[event id replay guard]
-  Replay --> Runtime[receiveMessage]
-  Runtime --> State[(runs/events)]
+  Start[myclaw send --channel feishu-webhook] --> Runtime[sendMessage]
+  Runtime --> Resolve[resolveChannel feishu-webhook]
+  Resolve --> Payload[buildFeishuOutboundPayload]
+  Payload -->|text| Text[msg_type text]
+  Payload -->|card| Card[msg_type interactive]
+  Text --> Fetch[POST custom bot webhook]
+  Card --> Fetch
+  Fetch --> Result[normalizeFeishuSendResult]
+  Result -->|ok| Persist[record run/events]
+  Result -->|code != 0| Failed[send_failed envelope]
+  Persist --> Dashboard[run detail visible]
 ```
 
 Review 观察：
 
-- 优点：签名在 JSON parse 前，和 OpenClaw 的安全顺序一致。
-- 优点：encrypted envelope 解密后再走 token/challenge/event。
-- 风险：encrypted non-text event 仍可能在 normalize 阶段失败。
-- 改进：拆出 Feishu event type matrix，不要只靠 text。
+- 优点：HTTP 200 但 Feishu code 非 0 会被视为失败。
+- 优点：card payload 有契约，但不假装 app-token API 已完成。
+- 风险：thread 只是 metadata，不能当真实 thread reply。
+- 改进：app-token client 前先明确 credential 和 policy schema。
 
 ## 关键时序图
 
-这张图回答：Dashboard 如何拿到 run detail 和 stage review summary。
+这张图回答：Dashboard 如何展示 milestones。
 
 ```mermaid
 sequenceDiagram
   participant B as Browser
   participant D as Dashboard/Gateway
   participant C as Control Plane
+  participant M as Milestones
   participant S as State
-  participant M as Migration Stage
 
   B->>D: GET /api/status
   D->>C: buildStatusPayload()
+  C->>M: buildMilestonesPayload()
   C->>S: listRuns/readEvents
-  C->>M: readLatestOpenClawStage
-  C-->>D: status + openclawStageSummary
+  C-->>D: status + milestones
   D-->>B: payload
-  B->>D: GET /api/runs/:runId
-  D->>C: buildRunPayload(runId)
-  C->>S: readRun
-  D-->>B: envelope + events
+  B->>B: renderMilestones()
 ```
 
 Review 观察：
 
-- 优点：run detail 有独立 API，dashboard 不再只靠摘要。
-- 优点：stage summary 伴随 status 返回，首屏能看到迁移缺口。
-- 风险：summary 不是字段级 config diff，不能用于 apply。
-- 改进：Phase 0.9 做字段级 diff detail drawer。
+- 优点：milestone 进入运行状态面，用户能看到当前处在哪个阶段。
+- 风险：milestone 目前是静态 payload，后续要从验收项计算。
+- 改进：Phase 1 将 milestone score 绑定 tests/reference criteria。
 
 ## 状态机图
 
-这张图回答：Feishu callback 生命周期中失败、解密、重复、持久化如何流转。
+这张图回答：Feishu outbound run 的成功、失败、重试边界。
 
 ```mermaid
 stateDiagram-v2
-  [*] --> RawReceived
-  RawReceived --> SignatureRejected: invalid signature/stale timestamp
-  RawReceived --> Parsed: signature ok
-  Parsed --> DecryptFailed: encrypt invalid
-  Parsed --> Decrypted: encrypt ok
-  Parsed --> PlainBody: no encrypt
-  Decrypted --> TokenRejected: invalid token
-  PlainBody --> TokenRejected
-  Decrypted --> ChallengeReturned
-  PlainBody --> ChallengeReturned
-  Decrypted --> DuplicateIgnored: event id seen
-  PlainBody --> DuplicateIgnored
-  Decrypted --> Persisted
-  PlainBody --> Persisted
-  Persisted --> VisibleInDashboard
-  SignatureRejected --> [*]
-  DecryptFailed --> [*]
-  TokenRejected --> [*]
-  ChallengeReturned --> [*]
-  DuplicateIgnored --> [*]
-  VisibleInDashboard --> [*]
+  [*] --> Requested
+  Requested --> PayloadInvalid: missing text/card
+  Requested --> PayloadBuilt
+  PayloadBuilt --> HttpFailed: non-2xx
+  PayloadBuilt --> FeishuCodeFailed: code != 0
+  PayloadBuilt --> Sent
+  Sent --> Recorded
+  PayloadInvalid --> RecordedFailed
+  HttpFailed --> RecordedFailed
+  FeishuCodeFailed --> RecordedFailed
+  Recorded --> [*]
+  RecordedFailed --> [*]
 ```
 
 Review 观察：
 
-- 优点：失败路径都在 runtime 前终止。
-- 风险：缺 state-backed replay，重启后状态丢失。
-- 风险：`VisibleInDashboard` 只是读视图，没有人工确认动作。
-- 改进：下一阶段加入 approval queue。
+- 优点：失败进入 envelope/state，不吞掉错误。
+- 风险：没有 idempotency key，重试可能重复发消息。
+- 改进：outbound 前加 mutation idempotency 和 audit。
 
 ## 数据模型 / ER 图
 
-这张图回答：新增 run detail 与 stage summary 涉及哪些数据实体。
+这张图回答：milestone、run、outbound result 的数据关系。
 
 ```mermaid
 erDiagram
   RUN ||--o{ EVENT : emits
-  RUN ||--|| ENVELOPE : stores
-  MIGRATION_STAGE ||--o{ STAGED_MODULE : contains
-  MIGRATION_PLAN ||--o{ UNSUPPORTED_ITEM : contains
-  STAGE_SUMMARY ||--o{ STAGED_MODULE : summarizes
-  FEISHU_ENVELOPE ||--|| DECRYPTED_PAYLOAD : decrypts_to
+  RUN ||--|| OUTBOUND_RESULT : stores
+  MILESTONE_SET ||--o{ MILESTONE : contains
+  FEISHU_PAYLOAD ||--|| OUTBOUND_RESULT : produces
 
-  RUN { string runId boolean ok string status string summary }
+  RUN { string runId boolean ok string status }
   EVENT { string type string at object data }
-  ENVELOPE { object result object error object usage }
-  MIGRATION_STAGE { string stageId string checksum string status }
-  STAGE_SUMMARY { string kind int schemaVersion boolean forReviewOnly string status int blocked }
-  FEISHU_ENVELOPE { string encrypt string rawBody }
-  DECRYPTED_PAYLOAD { string token string challenge object event }
+  OUTBOUND_RESULT { string channel string messageId string target object details }
+  MILESTONE_SET { int schemaVersion string currentPhase string currentMilestone }
+  MILESTONE { string id string label string status int score }
+  FEISHU_PAYLOAD { string msg_type object content object card }
 ```
 
 Review 观察：
 
-- 优点：run detail 使用已有 run JSON + run JSONL，不引入新 store。
-- 优点：stage summary 是派生数据，不修改 stage snapshot。
-- 优点：summary 带 `kind/schemaVersion/forReviewOnly`，避免被误当 apply diff。
-- 风险：真正字段级 config diff 仍未实现。
+- 优点：milestones 不写状态，只作为控制面派生数据。
+- 风险：outbound result 仍没有 provider-specific schema version。
+- 改进：Feishu app-token client 加 `kind/schemaVersion`。
 
 ## 数据流图
 
-这张图回答：Feishu、OpenClaw stage、run detail、HTML report 的数据如何流动。
+这张图回答：消息、里程碑、报告如何流动。
 
 ```mermaid
 flowchart LR
-  Feishu[Feishu signed/encrypted body] --> Gateway
-  Gateway --> Adapter[security decrypt normalize]
-  Adapter --> Runtime
-  Runtime --> RunState[(runs/*.json + jsonl)]
-  OpenClaw[OpenClaw repo] --> Plan[Migration plan]
-  Plan --> Stage[(stage snapshot)]
-  RunState --> Status[/api/status]
-  RunState --> RunDetail[/api/runs/:runId]
-  Stage --> Summary[openclawStageSummary]
-  Summary --> Dashboard
-  RunDetail --> Dashboard
-  Docs[Markdown review] --> Builder[build-review-html]
-  Builder --> HtmlCenter[HTML Center]
+  UserInput[CLI/Gateway send] --> Runtime
+  Runtime --> ChannelRegistry
+  ChannelRegistry --> FeishuOutbound[custom-bot outbound facade]
+  FeishuOutbound --> FeishuWebhook[Feishu custom bot]
+  FeishuWebhook --> SendResult[normalized result]
+  SendResult --> RunState[(runs/events)]
+  Milestones[buildMilestonesPayload] --> Status[/api/status]
+  RunState --> Status
+  Status --> Dashboard
+  Markdown[Review markdown] --> Html[build-review-html]
+  Html --> HtmlCenter
 ```
 
 Review 观察：
 
-- 优点：dashboard 走 API，不读本地文件。
-- 优点：summary/run detail 都是可测试 payload。
-- 风险：report builder 仍手动生成。
-- 改进：继续保留 phase sync check。
+- 优点：outbound 和 dashboard 状态都可测试。
+- 风险：milestones 静态，不能自动反映 test 失败。
+- 改进：CI 或 check 脚本输出 milestone gate。
 
 ## 部署图
 
-这张图回答：Phase 0.8 本地运行拓扑。
+这张图回答：Phase 0.9 本地运行拓扑。
 
 ```mermaid
 flowchart TB
@@ -263,32 +246,32 @@ flowchart TB
     Dashboard --> State
     CLI[myclaw CLI] --> State
   end
-  Feishu[Feishu/Lark Cloud] -->|signed/encrypted webhook| Gateway
+  Feishu[Feishu/Lark Cloud] <-->|webhook callback/custom bot| Gateway
   OpenClawRepo[OpenClaw repo] -->|read-only plan| CLI
 ```
 
 Review 观察：
 
 - 优点：仍默认 loopback，本地调试安全。
-- 风险：webhook 同步路径没有队列。
-- 改进：Agent runtime 前加 run worker/event stream。
+- 风险：custom bot URL 是 secret-like 配置，日志和 raw JSON 后续要脱敏。
+- 改进：scoped token + redaction policy。
 
 ## 概念解释
 
 | 概念 | 含义 | 当前边界 |
 |---|---|---|
-| encrypted challenge | Feishu URL verification 加密 envelope | 已支持 AES-256-CBC decrypt |
-| run detail | 单个 run 的 envelope 与事件 | `GET /api/runs/:runId` |
+| custom-bot outbound facade | MyClaw 自己的 Feishu webhook 发送契约 | text/card payload + send result normalization |
+| milestone | 阶段交付物和完成度 | 当前静态 API payload |
 | stage summary | stage 与 plan 的模块级审阅摘要 | `forReviewOnly: true`，非字段级 diff |
-| replay guard | event id 去重 | 当前内存 TTL，缺 id 拒绝 |
-| freshness window | x-lark timestamp 重放窗口 | 10 分钟 |
+| custom bot webhook | Feishu 入站 webhook URL 发送 | 不等于 app-token rich card API |
+| thread metadata | 记录期望线程上下文 | 当前不保证真实 thread reply |
 
 ## 相似技术比较
 
-| 维度 | MyClaw Phase 0.8 | OpenClaw | Hermes-agent | OpenHuman |
+| 维度 | MyClaw Phase 0.9 | OpenClaw | Hermes-agent | OpenHuman |
 |---|---|---|---|---|
-| Feishu/Lark | signed + encrypted challenge | 完整 Feishu plugin | 有平台 adapter 方向 | 非核心 |
-| Dashboard | run detail + stage summary | Control UI/schema | CLI/TUI/ops | UI-first |
+| Feishu/Lark | encrypted challenge + custom-bot outbound facade | 完整 Feishu plugin | 平台 adapter 方向 | 非核心 |
+| Dashboard | milestones + run detail + stage summary | Control UI/schema | CLI/TUI/ops | UI-first |
 | Gateway | routes/auth/http 拆分 | 成熟 gateway/channel 安全 | 多平台 gateway | JSON-RPC/SSE |
 | 迁移 | plan/stage/review summary | 被迁移源 | 有迁移经验 | controller 思想 |
 | 记忆 | JSON/JSONL state | session/config | SQLite/FTS | memory tree |
@@ -297,11 +280,13 @@ Review 观察：
 
 | 路径 | 行数 | 职责 | 评价 |
 |---|---:|---|---|
-| `packages/feishu-adapter/src/security.mjs` | 101 | signature/decrypt/token | 健康 |
-| `packages/gateway/src/routes/feishu.mjs` | 92 | Feishu HTTP route | 健康 |
-| `packages/dashboard/src/client.mjs` | 238 | dashboard render logic | 可接受；approval 前拆 renderer |
-| `packages/control-plane/src/status.mjs` | 178 | status/run/detail/summary payload | 可接受 |
-| `packages/core/src/state.mjs` | 189 | state read/write/run detail/id guard | 健康 |
+| `packages/feishu-adapter/src/outbound.mjs` | 46 | Feishu outbound payload/result facade | 健康 |
+| `packages/channels/src/index.mjs` | 203 | generic channel registry + generic webhook | 健康 |
+| `packages/channels/src/feishu.mjs` | 64 | Feishu webhook/event channel adapter | 健康；不要再回填到 index |
+| `packages/control-plane/src/milestones.mjs` | 22 | static milestone roadmap payload | 健康；后续绑定检查结果 |
+| `packages/control-plane/src/status.mjs` | 187 | status/run/detail/summary/milestones | 可接受 |
+| `packages/dashboard/src/client.mjs` | 261 | dashboard render logic | 继续增长，approval 前必须拆 |
+| `packages/dashboard/src/styles.mjs` | 208 | dashboard styles | 健康 |
 | `docs/build-review-html.mjs` | 408 | HTML report builder | 接近 450，下一轮拆 |
 
 没有手写文件超过 500 行。
@@ -310,24 +295,23 @@ Review 观察：
 
 | 等级 | 问题 | 影响 | 建议 |
 |---|---|---|---|
-| High | replay guard 仍在内存 | 重启后不能防 replay | state-backed replay guard |
-| High | encrypted event 类型覆盖不足 | 飞书非 text event 会失败 | 建 event type matrix |
-| Medium | stage summary 不是字段级 diff | 不能审字段级迁移 | 做 diff drawer |
-| Medium | dashboard client 继续增长 | approval/run detail 后会变胖 | 拆 renderer |
+| High | custom-bot outbound facade 容易被误解为完整 Feishu outbound | 误导迁移和接入预期 | 文档和 API 明确 custom-bot only |
+| High | GET 只读接口未来可能暴露 prompt/tool output | 安全边界不足 | scoped token + redaction policy |
+| Medium | milestones 目前是静态数据 | 完成度可能漂移 | 绑定 tests/reference criteria |
+| Medium | dashboard client 继续增长 | approval 加入后难维护 | 拆 renderer modules |
 | Low | report builder 408 行 | 接近预警 | 拆 parser/template |
 
 ## Linus 视角严苛审查
 
-独立 subagent 已按 30 年 Linux 内核维护者视角审查当前 diff，结论是“方向可以接受，但接口边界不能继续糊”。
+独立 subagent 已按 30 年 Linux 内核维护者视角审查当前 diff，核心结论是“custom-bot outbound 可以接受，但别让通用 channel 继续塞 provider 分支，也别把静态 milestone 说成真实控制面状态”。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
-| High | `GET /api/runs/:runId` 原先是未校验路径拼接 | 已在 `core/state.mjs` 加 runId 白名单；gateway/dashboard 非法 id 返回 400，缺失 run 返回 404 |
-| High | Feishu token-only webhook 不能包装成 OpenClaw 级别安全 | 已把缺 `encryptKey` 的 webhook readiness 从 partial 可用改为 blocked |
-| High | `openclawStageDiff` 名字会让 apply 误用摘要 | 已新增 `openclawStageSummary`，payload 带 `kind/schemaVersion/forReviewOnly`；旧字段只作为兼容别名 |
-| Medium | gateway 和 dashboard route 仍在复制控制面 if 链 | 本轮先保持；Phase 0.9 必须引入 controller/route adapter |
-| Medium | migration POST 文档说返回 diff，但代码只返回 stage | 已让 `POST /api/openclaw-migration/stage` 返回 `stageSummary`，并把文档改成 review summary |
-| Medium | GET 只读接口未来会吐 prompt/tool output | Phase 0.9 加 scoped token 与 redaction policy |
+| High | `channels/src/index.mjs` 被 Feishu 分支污染 | 已拆出 `channels/src/feishu.mjs`，通用 webhook 不再 import Feishu adapter |
+| High | outbound 能力很窄，`threadId` 只是 metadata | 报告和 stage status 改成 custom-bot outbound facade，不宣称 app-token/thread reply |
+| High | `/api/milestones` 又复制 route if 链 | 本轮记录为 Phase 1 前置；下一轮先做 controller/route adapter |
+| Medium | milestones 是静态展示，不是真实控制面状态 | payload 标记 `computed: false` 和 `source: static-roadmap` |
+| Medium | HTML phase sync 检查太弱 | 已要求 first rendered phase 必须等于 Markdown first phase |
 
 ## Skill 规范自检
 
@@ -335,10 +319,11 @@ Review 观察：
 - 覆盖系统上下文、模块架构、核心流程、时序、状态机、ER、数据流、部署图。
 - 报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。
 - 单文件 500 行硬限制由 `npm run check` 执行。
+- 按 `skill-creator` 要求保持 skill 本身精简；本轮未修改 skill。
 
 ## 下一阶段建议
 
-1. Phase 0.9：Feishu outbound facade，text/card/thread result normalization。
-2. Replay guard 持久化。
-3. Dashboard 字段级 diff detail drawer 和 approval queue。
-4. Gateway scoped token 和 mutation audit。
+1. Phase 1 前置：controller/route adapter。
+2. Gateway scoped token、run redaction、mutation idempotency。
+3. Dashboard approval queue 和字段级 migration diff drawer。
+4. Feishu app-token outbound client 与 access policy。

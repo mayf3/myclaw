@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.8 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、最新 run detail，以及 OpenClaw stage review summary。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.9 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、最新 run detail，以及 OpenClaw stage review summary。
 
 ## 参考项目观察
 
@@ -69,7 +69,13 @@ Phase 0.8 dashboard 新增：
 - stage snapshot review summary，显示 staged modules、missing expected、blocked 和 review-only 标记。
 - Feishu encrypted challenge readiness 通过 adapter readiness 和 tests 体现。
 
-Phase 0.9 应补：
+Phase 0.9 dashboard 新增：
+
+- Milestones 区块，展示 M0-M5 当前完成度。
+- `/api/status` 和 `/api/milestones` 返回同一套 milestone payload。
+- Feishu outbound facade 进度纳入 M2。
+
+Phase 1 前应补：
 
 - run detail drawer 或独立详情页。
 - stage snapshot 字段级 diff。

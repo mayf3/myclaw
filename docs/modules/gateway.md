@@ -36,6 +36,7 @@ HTTP
   GET  /api/health
   GET  /api/status
   GET  /api/runs/:runId
+  GET  /api/milestones
   POST /messages
   POST /feishu/events
   POST /api/openclaw-migration/stage
@@ -191,6 +192,12 @@ Phase 0.8：
 - 处理顺序固定为 signature -> parse envelope -> decrypt -> token/challenge/event。
 - `GET /api/runs/:runId` 读取单个 run 的 envelope 和 JSONL events。
 - `/api/status` 返回 `openclawStageSummary`，供 dashboard 显示 review-only stage 摘要。
+
+Phase 0.9：
+
+- `GET /api/milestones` 暴露当前 M0-M5 进度。
+- `/api/status` 内联 `milestones`，Dashboard 首屏可以看到阶段进展。
+- Feishu outbound payload/result 已进入 adapter facade；gateway 仍不直接加载 OpenClaw plugin。
 
 Phase 4：
 

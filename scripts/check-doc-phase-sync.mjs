@@ -19,6 +19,10 @@ for (const [markdownPath, htmlPath] of pairs) {
   if (!html.includes(phase)) {
     failures.push(`${htmlPath}: does not include ${phase}; regenerate docs HTML`);
   }
+  const htmlPhase = html.match(/Phase\s+\d+\.\d+/)?.[0];
+  if (htmlPhase !== phase) {
+    failures.push(`${htmlPath}: first rendered phase is ${htmlPhase || "missing"}, expected ${phase}`);
+  }
 }
 
 if (failures.length) {

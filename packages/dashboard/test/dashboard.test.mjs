@@ -50,11 +50,13 @@ test("dashboard serves HTML and status API", async () => {
     assert.match(html, /assets\/dashboard\.js/);
     assert.match(css, /reference-row/);
     assert.match(js, /renderReferenceCompletion/);
+    assert.match(js, /renderMilestones/);
     assert.match(js, /renderRunDetail/);
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 1);
     assert.equal(status.channels.length, 4);
+    assert.equal(status.milestones.currentPhase, "0.9");
     assert.equal(reference.referenceCompletion.modules.length, 8);
     assert.equal(reference.referenceCompletion.modules[0].criteria.length, 3);
     assert.equal(feishu.feishuAdoption.directUse, false);

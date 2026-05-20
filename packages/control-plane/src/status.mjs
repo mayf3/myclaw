@@ -3,6 +3,7 @@ import { listRuns, readEvents, readRun } from "../../core/src/state.mjs";
 import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
+import { buildMilestonesPayload } from "./milestones.mjs";
 import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
 
 const MIGRATION_PLAN_CACHE_MS = 5000;
@@ -22,6 +23,7 @@ export async function buildStatusPayload(context) {
     at: new Date().toISOString(),
     stateDir: context.stateDir,
     channels: listChannels(),
+    milestones: buildMilestonesPayload(),
     runs,
     events,
     openclawMigration: migrationPlan,
@@ -79,6 +81,13 @@ export function buildReferenceCompletionStatusPayload() {
   return {
     ok: true,
     referenceCompletion: buildReferenceCompletionPayload(),
+  };
+}
+
+export function buildMilestonesStatusPayload() {
+  return {
+    ok: true,
+    milestones: buildMilestonesPayload(),
   };
 }
 

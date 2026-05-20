@@ -2,6 +2,7 @@ import { getDashboardAsset, renderDashboardHtml } from "../../../dashboard/src/i
 import {
   buildEventsPayload,
   buildFeishuAdoptionStatusPayload,
+  buildMilestonesStatusPayload,
   buildOpenClawMigrationPayload,
   buildReferenceCompletionStatusPayload,
   buildRunPayload,
@@ -47,6 +48,10 @@ export async function handleGetRequest(url, response, context) {
   }
   if (url.pathname === "/api/reference-completion") {
     sendJson(response, 200, buildReferenceCompletionStatusPayload());
+    return true;
+  }
+  if (url.pathname === "/api/milestones") {
+    sendJson(response, 200, buildMilestonesStatusPayload());
     return true;
   }
   if (url.pathname === "/api/feishu-adoption") {

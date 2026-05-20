@@ -29,6 +29,7 @@ async function loadStatus() {
       return;
     }
     renderOverview(payload);
+    renderMilestones(payload.milestones);
     renderReferenceCompletion(payload.referenceCompletion);
     renderFeishu(payload.feishuAdoption, payload.feishuAdapter);
     renderMigration(payload.openclawMigration, payload.openclawStage, payload.openclawStageSummary);
@@ -39,6 +40,28 @@ async function loadStatus() {
   } catch (error) {
     $("subtitle").textContent = error instanceof Error ? error.message : String(error);
   }
+}
+
+function renderMilestones(payload) {
+  if (!payload?.milestones?.length) {
+    $("milestoneStatus").className = "pill";
+    $("milestoneStatus").textContent = "未规划";
+    $("milestonePanel").outerHTML = '<div id="milestonePanel" class="empty">暂无 milestone</div>';
+    return;
+  }
+  $("milestoneStatus").className = "pill info";
+  $("milestoneStatus").textContent = "Phase " + esc(payload.currentPhase) + " · " + esc(payload.currentMilestone);
+  $("milestonePanel").outerHTML = '<div id="milestonePanel" class="milestone-list">' +
+    payload.milestones.map((item) => '<div class="milestone-row">' +
+      '<div><strong>' + esc(item.id) + ' · ' + esc(item.label) + '</strong><p>' + esc(item.evidence) + '</p></div>' +
+      '<div><span class="tag ' + milestoneTone(item.status) + '">' + esc(item.status) + '</span></div>' +
+      '<div><span class="score">' + esc(item.score) + '%</span><div class="bar ' + (item.score < 25 ? "bad" : item.score < 60 ? "weak" : "") + '"><span style="width:' + esc(item.score) + '%"></span></div></div>' +
+    '</div>').join("") +
+    '</div>';
+}
+
+function milestoneTone(status) {
+  return status === "done" ? "ok" : status === "partial" ? "warn" : "info";
 }
 
 async function fetchRunDetail(runId) {
