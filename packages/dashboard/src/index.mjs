@@ -1,16 +1,7 @@
 import http from "node:http";
 import { URL } from "node:url";
+import { resolveControlGetRoute } from "../../control-plane/src/http-routes.mjs";
 import { resolveStateDir } from "../../core/src/state.mjs";
-import {
-  buildEventsPayload,
-  buildFeishuAdoptionStatusPayload,
-  buildMilestonesStatusPayload,
-  buildOpenClawMigrationPayload,
-  buildReferenceCompletionStatusPayload,
-  buildRunPayload,
-  buildRunsPayload,
-  buildStatusPayload,
-} from "../../control-plane/src/status.mjs";
 import { getDashboardAsset } from "./assets.mjs";
 import { renderDashboardHtml } from "./view.mjs";
 
@@ -68,43 +59,9 @@ export async function handleDashboardRequest(request, response, context) {
     return;
   }
 
-  if (url.pathname === "/api/health") {
-    sendJson(response, 200, { ok: true, service: "myclaw-dashboard", at: new Date().toISOString() });
-    return;
-  }
-  if (url.pathname === "/api/status") {
-    sendJson(response, 200, await buildStatusPayload({ ...context, service: "myclaw-dashboard" }));
-    return;
-  }
-  if (url.pathname === "/api/runs") {
-    const limit = Number(url.searchParams.get("limit") || 50);
-    sendJson(response, 200, await buildRunsPayload(context, { limit }));
-    return;
-  }
-  if (url.pathname.startsWith("/api/runs/")) {
-    const payload = await buildRunPayload(context, { runId: decodeURIComponent(url.pathname.slice(10)) });
-    sendJson(response, runPayloadStatus(payload), payload);
-    return;
-  }
-  if (url.pathname === "/api/events") {
-    const limit = Number(url.searchParams.get("limit") || 100);
-    sendJson(response, 200, await buildEventsPayload(context, { limit }));
-    return;
-  }
-  if (url.pathname === "/api/openclaw-migration") {
-    sendJson(response, 200, await buildOpenClawMigrationPayload(context));
-    return;
-  }
-  if (url.pathname === "/api/reference-completion") {
-    sendJson(response, 200, buildReferenceCompletionStatusPayload());
-    return;
-  }
-  if (url.pathname === "/api/milestones") {
-    sendJson(response, 200, buildMilestonesStatusPayload());
-    return;
-  }
-  if (url.pathname === "/api/feishu-adoption") {
-    sendJson(response, 200, buildFeishuAdoptionStatusPayload());
+  const route = await resolveControlGetRoute(url, { ...context, service: "myclaw-dashboard" });
+  if (route.handled) {
+    sendJson(response, route.status, route.payload);
     return;
   }
 
@@ -113,13 +70,6 @@ export async function handleDashboardRequest(request, response, context) {
 
 function sendJson(response, status, payload) {
   sendText(response, status, "application/json; charset=utf-8", JSON.stringify(payload, null, 2));
-}
-
-function runPayloadStatus(payload) {
-  if (payload.ok) {
-    return 200;
-  }
-  return payload.error?.code === "invalid_run_id" ? 400 : 404;
 }
 
 function sendText(response, status, contentType, body, cacheControl = "no-store") {

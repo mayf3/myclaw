@@ -167,6 +167,16 @@ section{margin-bottom:16px}
   padding:10px 12px;
 }
 .milestone-row p{margin:4px 0 0}
+.experiment-list{display:grid;gap:10px}
+.experiment-card{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:12px;
+  background:#fff;
+}
+.experiment-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px}
+.experiment-card p{margin:6px 0}
+.mini-pre{max-height:none;margin:8px 0;font-size:12px}
 .small{font-size:12px;color:var(--muted)}
 .criteria{margin-top:6px}
 .criteria summary{cursor:pointer;color:#334155;font-size:12px;font-weight:800}

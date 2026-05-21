@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyClaw Phase 0.9 实现架构可视化评审 · MyClaw</title>
+    <title>MyClaw Phase 1.0 实现架构可视化评审 · MyClaw</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,16 +30,15 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>MyClaw Phase 0.9 实现架构可视化评审</h1>
+          <h1>MyClaw Phase 1.0 实现架构可视化评审</h1>
           <p>当前实现架构与阶段评审</p>
         </div>
         <a class="back" href="./index.html">← 返回全局索引</a>
         <nav aria-label="架构评审导航">
           <a href="#module-summary">总诊断</a>
           <a href="#总诊断">总诊断</a>
+<a href="#大规划图">大规划图</a>
 <a href="#当前-milestones">当前 Milestones</a>
-<a href="#feishu-lark-复用结论">Feishu/Lark 复用结论</a>
-<a href="#参考完成度矩阵">参考完成度矩阵</a>
 <a href="#系统上下文图">系统上下文图</a>
 <a href="#模块架构图">模块架构图</a>
 <a href="#核心业务流程图">核心业务流程图</a>
@@ -48,6 +47,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a href="#数据模型-er-图">数据模型 / ER 图</a>
 <a href="#数据流图">数据流图</a>
 <a href="#部署图">部署图</a>
+<a href="#human-experiments">Human Experiments</a>
 <a href="#概念解释">概念解释</a>
 <a href="#相似技术比较">相似技术比较</a>
 <a href="#目录结构与文件行数">目录结构与文件行数</a>
@@ -60,174 +60,199 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 0.9 的 Feishu outbound facade、dashboard milestones 和当前架构审查。</p>
+          <p>MyClaw Phase 1.0 的人类实验路线、共享控制路由和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0.9</span>
+            <span class="tag phase">Phase 1.0</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
-        <article class="content"><p>更新时间：2026-05-20</p>
+        <article class="content"><p>更新时间：2026-05-21</p>
 <h2 id="总诊断">总诊断</h2>
-<p>Phase 0.9 把当前进度明确成 milestones，并把 Feishu outbound 从 channel 内部硬编码提升到 <code>packages/feishu-adapter</code> facade。结论：方向对，但仍只是 Feishu custom-bot webhook 的 text/card/result normalization，不是完整 OpenClaw Feishu app-token、WebSocket、policy 或 thread reply。</p>
-<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>M0-M5 里程碑和 Feishu outbound 边界更清楚</td></tr><tr><td>可扩展性</td><td>8/10</td><td>outbound 进入 adapter facade，channel 不再手写 Feishu payload</td></tr><tr><td>可靠性</td><td>6/10</td><td>测试覆盖 text/card/result，缺真实 Feishu app-token e2e</td></tr><tr><td>可维护性</td><td>8/10</td><td>所有文件低于 500 行，dashboard client 仍在增长</td></tr><tr><td>安全性</td><td>6/10</td><td>webhook signature/decrypt 已有，缺 scoped token/redaction/replay persistence</td></tr></tbody></table></div>
+<p>Phase 1.0 把路线从“agent 自评”改成“人可以亲自跑的实验”，并用 <code>control-plane/src/http-routes.mjs</code> 收敛 Dashboard 与 Gateway 的只读控制面 API。结论：方向正确，耦合下降明显；但 Human Experiments 仍是静态路线，不能冒充自动验收，下一步必须把实验结果和真实 test/check/Feishu smoke 绑定。</p>
+<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>M0-M5 与 E0-E6 形成大路线图，用户知道每阶段怎么测</td></tr><tr><td>可扩展性</td><td>8/10</td><td>共享 route adapter 降低 dashboard/gateway 漂移</td></tr><tr><td>可靠性</td><td>7/10</td><td>新增 adapter 直接测试，仍缺真实 Feishu e2e</td></tr><tr><td>可维护性</td><td>8/10</td><td>文件低于 500 行，dashboard client 仍需防止继续膨胀</td></tr><tr><td>安全性</td><td>6/10</td><td>mutation guard 和 Feishu signature 有基础，缺 scoped token/redaction</td></tr></tbody></table></div>
+<h2 id="大规划图">大规划图</h2>
+<p>这张图回答：用户从现在到完整 MyClaw 可以按哪些 milestone 亲自参与测试。</p>
+<div class="mermaid">flowchart LR
+  M0[M0 本地消息闭环] --&gt; E0[E0 CLI send/receive]
+  E0 --&gt; M1[M1 Gateway + Dashboard]
+  M1 --&gt; E1[E1 Dashboard 可读性]
+  E1 --&gt; M2[M2 Feishu/Lark 边界]
+  M2 --&gt; E2[E2 custom-bot outbound]
+  M2 --&gt; E3[E3 callback 本地校验]
+  E2 --&gt; M3[M3 OpenClaw 迁移]
+  E3 --&gt; M3
+  M3 --&gt; E4[E4 review-only stage]
+  E4 --&gt; M4[M4 审批与安全]
+  M4 --&gt; E5[E5 approval queue]
+  E5 --&gt; M5[M5 Agent + 记忆]
+  M5 --&gt; E6[E6 tool loop + memory]</div>
+<p>Review 观察：</p>
+<ul><li>优点：路线从功能列表变成用户可执行实验。</li><li>优点：E0/E1/E4 现在不依赖外部账号，可马上跑。</li><li>风险：E2/E3 仍依赖飞书配置和测试 fixture，不能算自动验收。</li><li>改进：后续把每个 E 实验映射到机器可读 gate。</li></ul>
 <h2 id="当前-milestones">当前 Milestones</h2>
-<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>状态</th><th>完成度</th><th>说明</th></tr></thead><tbody><tr><td>M0 本地消息闭环</td><td>done</td><td>100</td><td>CLI send/receive、state、channel registry</td></tr><tr><td>M1 Gateway 与 Dashboard</td><td>partial</td><td>70</td><td>HTTP 控制面、run detail、reference matrix</td></tr><tr><td>M2 Feishu/Lark 边界</td><td>partial</td><td>58</td><td>encrypted challenge、custom-bot outbound facade</td></tr><tr><td>M3 OpenClaw 迁移</td><td>partial</td><td>55</td><td>plan/stage/review summary</td></tr><tr><td>M4 Agent Runtime 与审批</td><td>planned</td><td>10</td><td>LLM loop、approval、scoped token</td></tr><tr><td>M5 记忆、搜索与插件</td><td>planned</td><td>8</td><td>SQLite/FTS、memory、plugin loader</td></tr></tbody></table></div>
-<h2 id="feishu-lark-复用结论">Feishu/Lark 复用结论</h2>
-<div class="table-wrap"><table><thead><tr><th>问题</th><th>结论</th><th>理由</th></tr></thead><tbody><tr><td>直接加载 OpenClaw Feishu？</td><td>仍不直接加载</td><td>OpenClaw plugin-sdk/runtime/secrets/approval 仍未进入 MyClaw</td></tr><tr><td>当前已 port 什么？</td><td>webhook 安全和 outbound 子集</td><td>signature、AES decrypt、text/card payload、send result normalization</td></tr><tr><td>下一步</td><td>app-token/policy</td><td>先接 app-token outbound，再做 access policy 和持久 replay</td></tr></tbody></table></div>
-<h2 id="参考完成度矩阵">参考完成度矩阵</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>60</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>58</td><td>92</td><td>42</td><td>35</td><td>有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token</td></tr><tr><td>Dashboard / 观测</td><td>60</td><td>78</td><td>55</td><td>90</td><td>有 milestones/run detail/stage summary，缺 approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>55</td><td>0</td><td>82</td><td>35</td><td>有 plan/stage/review summary，缺 apply/rollback/字段级 diff</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn、tool loop、subagent</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>仅 JSON/JSONL state</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>仅 channel registry</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>状态</th><th>完成度</th><th>用户实验</th></tr></thead><tbody><tr><td>M0 本地消息闭环</td><td>done</td><td>100</td><td>E0</td></tr><tr><td>M1 Gateway 与 Dashboard</td><td>partial</td><td>78</td><td>E1</td></tr><tr><td>M2 Feishu/Lark 边界</td><td>partial</td><td>60</td><td>E2/E3</td></tr><tr><td>M3 OpenClaw 迁移</td><td>partial</td><td>58</td><td>E4</td></tr><tr><td>M4 Agent Runtime 与审批</td><td>planned</td><td>10</td><td>E5</td></tr><tr><td>M5 记忆、搜索与插件</td><td>planned</td><td>8</td><td>E6</td></tr></tbody></table></div>
 <h2 id="系统上下文图">系统上下文图</h2>
-<p>这张图回答：MyClaw Phase 0.9 和用户、Feishu、OpenClaw、HTML Center 的边界。</p>
+<p>这张图回答：MyClaw Phase 1.0 和用户、Feishu、OpenClaw、HTML Center 的边界。</p>
 <div class="mermaid">flowchart LR
   User[本地用户] --&gt; CLI[CLI]
   User --&gt; Browser[Dashboard]
-  Feishu[Feishu/Lark Cloud] --&gt;|signed encrypted callback| Gateway[Gateway]
+  User --&gt; Experiments[Human Experiments E0-E6]
+  Feishu[Feishu/Lark Cloud] --&gt;|callback/webhook| Gateway[Gateway]
   Gateway --&gt;|custom bot outbound| Feishu
-  OpenClaw[OpenClaw extensions/feishu] --&gt;|reference only| Adapter[Feishu Adapter]
+  OpenClaw[OpenClaw repo] --&gt;|reference + stage source| Migration[Migration planner]
   Reports[Design Review HTML] --&gt; HtmlCenter[HTML Center]
 
   subgraph Local[MyClaw 本机]
     CLI --&gt; Runtime[Message Runtime]
     Gateway --&gt; Runtime
-    Runtime --&gt; Channels[Channel Registry]
-    Channels --&gt; Adapter
-    Runtime --&gt; State[(runs/events)]
     Browser --&gt; Dashboard[Dashboard server]
-    Dashboard --&gt; Control[Control Plane]
-    Control --&gt; Milestones[Milestones Payload]
-    Control --&gt; StageSummary[OpenClaw Stage Summary]
+    Dashboard --&gt; RouteAdapter[Control GET route adapter]
+    Gateway --&gt; RouteAdapter
+    RouteAdapter --&gt; Control[Control Plane]
+    Control --&gt; Roadmap[Milestones + Experiments]
+    Runtime --&gt; State[(runs/events/stages)]
+    Migration --&gt; State
   end</div>
 <p>Review 观察：</p>
-<ul><li>优点：OpenClaw 仍是 reference，不进入运行时依赖。</li><li>优点：Feishu outbound payload/result 进入 adapter facade。</li><li>风险：Gateway 和 Dashboard route 仍各自维护 if 链。</li><li>改进：Phase 1 前先做 controller/route adapter。</li></ul>
+<ul><li>优点：OpenClaw 仍是 reference/stage source，不进入运行时依赖。</li><li>优点：用户实验是控制面数据，不只是文档表格。</li><li>风险：Dashboard raw JSON 未来可能暴露敏感信息。</li><li>改进：加入 redaction policy 和 scoped token。</li></ul>
 <h2 id="模块架构图">模块架构图</h2>
-<p>这张图回答：Phase 0.9 新增模块如何依赖，是否降低耦合。</p>
+<p>这张图回答：当前系统被拆成哪些模块，依赖是否合理。</p>
 <div class="mermaid">flowchart TB
-  Channels[packages/channels] --&gt; FeishuChannel[channels/src/feishu.mjs]
-  FeishuChannel --&gt; Outbound[feishu-adapter/outbound.mjs]
-  GatewayRoute[routes/feishu.mjs] --&gt; Security[feishu-adapter/security.mjs]
-  GatewayRoute --&gt; Normalize[feishu-adapter/normalize.mjs]
-  DashboardClient[dashboard/client.mjs] --&gt; Milestones[/api/status milestones]
-  ControlPlane[control-plane/status.mjs] --&gt; MilestoneBuilder[control-plane/milestones.mjs]
-  ControlPlane --&gt; StageSummary[buildOpenClawStageSummary]
-  Runtime[runtime/messages.mjs] --&gt; Channels
-  Runtime --&gt; State[core/state.mjs]</div>
+  Dashboard[packages/dashboard] --&gt; Assets[view/client/styles]
+  Dashboard --&gt; RouteAdapter[control-plane/http-routes.mjs]
+  Gateway[packages/gateway/routes/control.mjs] --&gt; RouteAdapter
+  RouteAdapter --&gt; Status[control-plane/status.mjs]
+  Status --&gt; Milestones[milestones.mjs]
+  Status --&gt; Experiments[experiments.mjs]
+  Status --&gt; Reference[reference-completion.mjs]
+  Status --&gt; State[core/state.mjs]
+  Gateway --&gt; FeishuRoutes[routes/feishu.mjs]
+  FeishuRoutes --&gt; FeishuAdapter[feishu-adapter]
+  Runtime[runtime/messages.mjs] --&gt; Channels[channels]
+  Channels --&gt; FeishuOutbound[channels/feishu.mjs]
+  FeishuOutbound --&gt; FeishuAdapter</div>
 <p>Review 观察：</p>
-<ul><li>优点：Feishu text/card 构造不再散落在通用 channel registry 中。</li><li>优点：milestones 是 API payload，不只是文档表格。</li><li>风险：Dashboard client 261 行，后续 approval 前需要拆 renderer。</li><li>改进：把 milestone/reference/migration renderer 分文件。</li></ul>
+<ul><li>优点：route adapter 返回 <code>{handled,status,payload}</code>，没有泄漏 Node response。</li><li>优点：experiments 和 milestones 都在 control-plane，Dashboard 只渲染。</li><li>风险：<code>dashboard/src/client.mjs</code> 已到 305 行，approval/diff 前应拆 renderer。</li><li>改进：为每个 dashboard section 做独立 renderer 或轻量 registry。</li></ul>
 <h2 id="核心业务流程图">核心业务流程图</h2>
-<p>这张图回答：一次 Feishu outbound send 如何经过 facade。</p>
+<p>这张图回答：用户如何从路线图进入一次可验证实验。</p>
 <div class="mermaid">flowchart TD
-  Start[myclaw send --channel feishu-webhook] --&gt; Runtime[sendMessage]
-  Runtime --&gt; Resolve[resolveChannel feishu-webhook]
-  Resolve --&gt; Payload[buildFeishuOutboundPayload]
-  Payload --&gt;|text| Text[msg_type text]
-  Payload --&gt;|card| Card[msg_type interactive]
-  Text --&gt; Fetch[POST custom bot webhook]
-  Card --&gt; Fetch
-  Fetch --&gt; Result[normalizeFeishuSendResult]
-  Result --&gt;|ok| Persist[record run/events]
-  Result --&gt;|code != 0| Failed[send_failed envelope]
-  Persist --&gt; Dashboard[run detail visible]</div>
+  Start[用户打开 Dashboard] --&gt; Fetch[GET /api/status + /api/experiments]
+  Fetch --&gt; RouteAdapter[resolveControlGetRoute]
+  RouteAdapter --&gt; Payload[buildHumanExperimentsPayload]
+  Payload --&gt; Render[renderExperiments]
+  Render --&gt; Pick[用户选择 E0/E1/E4]
+  Pick --&gt; Run[运行命令]
+  Run --&gt; State[(runs/events/stages)]
+  State --&gt; Refresh[刷新 Dashboard]
+  Refresh --&gt; Pass{成功信号满足?}
+  Pass --&gt;|yes| Next[进入下一实验]
+  Pass --&gt;|no| Diagnose[看 run detail/raw JSON]</div>
 <p>Review 观察：</p>
-<ul><li>优点：HTTP 200 但 Feishu code 非 0 会被视为失败。</li><li>优点：card payload 有契约，但不假装 app-token API 已完成。</li><li>风险：thread 只是 metadata，不能当真实 thread reply。</li><li>改进：app-token client 前先明确 credential 和 policy schema。</li></ul>
+<ul><li>优点：实验有命令、角色、成功信号和解锁关系。</li><li>风险：ready 状态目前仍是人工语义，不是 test result。</li><li>改进：增加 <code>experiment.statusSource</code> 或 <code>lastVerifiedAt</code>。</li><li>改进：Dashboard 里显示“静态路线，不代表已通过”。</li></ul>
 <h2 id="关键时序图">关键时序图</h2>
-<p>这张图回答：Dashboard 如何展示 milestones。</p>
+<p>这张图回答：Dashboard 和 Gateway 如何复用同一个只读 API route。</p>
 <div class="mermaid">sequenceDiagram
-  participant B as Browser
-  participant D as Dashboard/Gateway
+  participant B as Browser/curl
+  participant D as Dashboard or Gateway
+  participant R as resolveControlGetRoute
   participant C as Control Plane
-  participant M as Milestones
   participant S as State
 
-  B-&gt;&gt;D: GET /api/status
-  D-&gt;&gt;C: buildStatusPayload()
-  C-&gt;&gt;M: buildMilestonesPayload()
-  C-&gt;&gt;S: listRuns/readEvents
-  C--&gt;&gt;D: status + milestones
-  D--&gt;&gt;B: payload
-  B-&gt;&gt;B: renderMilestones()</div>
+  B-&gt;&gt;D: GET /api/experiments
+  D-&gt;&gt;R: resolveControlGetRoute(url, context)
+  R-&gt;&gt;C: buildHumanExperimentsStatusPayload()
+  C--&gt;&gt;R: experiments payload
+  R--&gt;&gt;D: {handled,status,payload}
+  D--&gt;&gt;B: JSON
+  B-&gt;&gt;D: GET /api/runs/:id
+  D-&gt;&gt;R: shared route
+  R-&gt;&gt;S: readRun()
+  S--&gt;&gt;R: run or invalid_run_id
+  R--&gt;&gt;D: 200/400/404</div>
 <p>Review 观察：</p>
-<ul><li>优点：milestone 进入运行状态面，用户能看到当前处在哪个阶段。</li><li>风险：milestone 目前是静态 payload，后续要从验收项计算。</li><li>改进：Phase 1 将 milestone score 绑定 tests/reference criteria。</li></ul>
+<ul><li>优点：Dashboard/Gateway 不再各自维护同一批 GET if 链。</li><li>优点：invalid run id 状态在 adapter 层统一。</li><li>风险：route adapter 仍是路径 if 链，后续多 API 时要 registry 化。</li><li>改进：下一步加 route schema、permission 和 redaction。</li></ul>
 <h2 id="状态机图">状态机图</h2>
-<p>这张图回答：Feishu outbound run 的成功、失败、重试边界。</p>
+<p>这张图回答：一次用户实验的生命周期如何包含失败、重试、人工判断。</p>
 <div class="mermaid">stateDiagram-v2
-  [*] --&gt; Requested
-  Requested --&gt; PayloadInvalid: missing text/card
-  Requested --&gt; PayloadBuilt
-  PayloadBuilt --&gt; HttpFailed: non-2xx
-  PayloadBuilt --&gt; FeishuCodeFailed: code != 0
-  PayloadBuilt --&gt; Sent
-  Sent --&gt; Recorded
-  PayloadInvalid --&gt; RecordedFailed
-  HttpFailed --&gt; RecordedFailed
-  FeishuCodeFailed --&gt; RecordedFailed
-  Recorded --&gt; [*]
-  RecordedFailed --&gt; [*]</div>
+  [*] --&gt; Planned
+  Planned --&gt; Ready: no external config needed
+  Planned --&gt; NeedsConfig: Feishu/token required
+  Ready --&gt; Running: user runs command
+  NeedsConfig --&gt; Running: config provided
+  Running --&gt; Passed: success signals observed
+  Running --&gt; Failed: command or signal fails
+  Failed --&gt; Diagnosing: inspect run detail/logs
+  Diagnosing --&gt; Running: retry
+  Passed --&gt; UnlockedNext
+  UnlockedNext --&gt; [*]</div>
 <p>Review 观察：</p>
-<ul><li>优点：失败进入 envelope/state，不吞掉错误。</li><li>风险：没有 idempotency key，重试可能重复发消息。</li><li>改进：outbound 前加 mutation idempotency 和 audit。</li></ul>
+<ul><li>优点：把人工判断作为正式状态，而不是隐藏在文档后面。</li><li>风险：当前没有持久化 experiment result。</li><li>改进：后续把实验结果写入 state，支持 <code>lastRunId</code> 和 <code>evidence</code>。</li></ul>
 <h2 id="数据模型-er-图">数据模型 / ER 图</h2>
-<p>这张图回答：milestone、run、outbound result 的数据关系。</p>
+<p>这张图回答：run、event、milestone、experiment 和 reference completion 的关系。</p>
 <div class="mermaid">erDiagram
   RUN ||--o{ EVENT : emits
-  RUN ||--|| OUTBOUND_RESULT : stores
   MILESTONE_SET ||--o{ MILESTONE : contains
-  FEISHU_PAYLOAD ||--|| OUTBOUND_RESULT : produces
+  EXPERIMENT_SET ||--o{ EXPERIMENT : contains
+  MILESTONE ||--o{ EXPERIMENT : validates
+  REFERENCE_COMPLETION ||--o{ MODULE_SCORE : compares
 
   RUN { string runId boolean ok string status }
   EVENT { string type string at object data }
-  OUTBOUND_RESULT { string channel string messageId string target object details }
-  MILESTONE_SET { int schemaVersion string currentPhase string currentMilestone }
-  MILESTONE { string id string label string status int score }
-  FEISHU_PAYLOAD { string msg_type object content object card }</div>
+  MILESTONE { string id string status int score }
+  EXPERIMENT { string id string status string role string milestone }
+  MODULE_SCORE { string id int myclaw int openclaw int hermes int openhuman }</div>
 <p>Review 观察：</p>
-<ul><li>优点：milestones 不写状态，只作为控制面派生数据。</li><li>风险：outbound result 仍没有 provider-specific schema version。</li><li>改进：Feishu app-token client 加 <code>kind/schemaVersion</code>。</li></ul>
+<ul><li>优点：experiment 是 roadmap/control data，不污染 core state。</li><li>风险：没有 experiment run result 实体，无法自动聚合完成度。</li><li>改进：新增 <code>EXPERIMENT_RUN</code>，记录命令、runId、通过/失败、证据。</li></ul>
 <h2 id="数据流图">数据流图</h2>
-<p>这张图回答：消息、里程碑、报告如何流动。</p>
+<p>这张图回答：数据从输入、处理、状态写入到 Dashboard 展示如何流动。</p>
 <div class="mermaid">flowchart LR
-  UserInput[CLI/Gateway send] --&gt; Runtime
-  Runtime --&gt; ChannelRegistry
-  ChannelRegistry --&gt; FeishuOutbound[custom-bot outbound facade]
-  FeishuOutbound --&gt; FeishuWebhook[Feishu custom bot]
-  FeishuWebhook --&gt; SendResult[normalized result]
-  SendResult --&gt; RunState[(runs/events)]
-  Milestones[buildMilestonesPayload] --&gt; Status[/api/status]
-  RunState --&gt; Status
-  Status --&gt; Dashboard
-  Markdown[Review markdown] --&gt; Html[build-review-html]
-  Html --&gt; HtmlCenter</div>
+  Command[CLI/Gateway/Dashboard request] --&gt; Adapter[Control route adapter]
+  Adapter --&gt; Builders[status/milestones/experiments/reference]
+  Builders --&gt; State[(runs/events/migration stage)]
+  Builders --&gt; Payload[JSON payload]
+  Payload --&gt; Dashboard[Dashboard renderers]
+  Payload --&gt; Curl[curl/API consumer]
+  UserAction[用户执行 E0/E4 命令] --&gt; Runtime[Runtime or migration]
+  Runtime --&gt; State
+  State --&gt; Payload
+  Error[invalid run/source error] --&gt; Payload</div>
 <p>Review 观察：</p>
-<ul><li>优点：outbound 和 dashboard 状态都可测试。</li><li>风险：milestones 静态，不能自动反映 test 失败。</li><li>改进：CI 或 check 脚本输出 milestone gate。</li></ul>
+<ul><li>优点：route adapter 只读，side effect 仍留在 gateway mutation routes。</li><li>风险：status payload 会触发 OpenClaw plan cache，错误隔离仍需加强。</li><li>改进：为 migration plan 加显式 refresh 和 stale marker。</li></ul>
 <h2 id="部署图">部署图</h2>
-<p>这张图回答：Phase 0.9 本地运行拓扑。</p>
+<p>这张图回答：Phase 1.0 在本机如何运行，哪些是同步调用。</p>
 <div class="mermaid">flowchart TB
   subgraph Localhost[Developer machine]
-    Browser[Browser :4321] --&gt; Dashboard[myclaw dashboard]
-    Browser --&gt; Gateway[myclaw gateway :4322]
-    Gateway --&gt; Adapter[Feishu adapter]
-    Gateway --&gt; State[(.myclaw state)]
-    Dashboard --&gt; State
+    Browser[Browser :4321] --&gt;|sync GET| Dashboard[myclaw dashboard]
+    Curl[curl/tests] --&gt;|sync GET| Gateway[myclaw gateway :4322]
+    Dashboard --&gt; RouteAdapter[control GET adapter]
+    Gateway --&gt; RouteAdapter
+    Gateway --&gt;|mutation POST| Messages[messages/feishu/migration routes]
+    Messages --&gt; State[(local state)]
+    RouteAdapter --&gt; State
     CLI[myclaw CLI] --&gt; State
   end
-  Feishu[Feishu/Lark Cloud] &lt;--&gt;|webhook callback/custom bot| Gateway
-  OpenClawRepo[OpenClaw repo] --&gt;|read-only plan| CLI</div>
+  Gateway &lt;--&gt;|webhook| Feishu[Feishu/Lark Cloud]
+  CLI --&gt;|read-only plan| OpenClaw[OpenClaw repo]</div>
 <p>Review 观察：</p>
-<ul><li>优点：仍默认 loopback，本地调试安全。</li><li>风险：custom bot URL 是 secret-like 配置，日志和 raw JSON 后续要脱敏。</li><li>改进：scoped token + redaction policy。</li></ul>
+<ul><li>优点：默认 loopback，本地实验成本低。</li><li>风险：curl/open 命令假设服务已启动，E1 已补启动命令。</li><li>改进：Dashboard 顶部显示服务启动命令和当前 stateDir。</li></ul>
+<h2 id="human-experiments">Human Experiments</h2>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>npm run myclaw -- send --text &quot;hello from human&quot; --json</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>启动 dashboard 后打开 <code>http://127.0.0.1:4321</code></td><td>Phase 1.0 与实验路线可见</td></tr><tr><td>E2</td><td>needs_config</td><td>用 <code>MYCLAW_FEISHU_WEBHOOK_URL</code> 发送 custom-bot 消息</td><td>飞书群收到消息</td></tr><tr><td>E3</td><td>needs_config</td><td>gateway callback challenge + gateway test fixture</td><td>challenge 回显，签名/encrypted fixture 通过</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td><code>forReviewOnly=true</code></td></tr><tr><td>E5</td><td>planned</td><td>approval queue</td><td>危险动作暂停</td></tr><tr><td>E6</td><td>planned</td><td>agent run + memory search</td><td>step/tool/memory 可追踪</td></tr></tbody></table></div>
 <h2 id="概念解释">概念解释</h2>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>custom-bot outbound facade</td><td>MyClaw 自己的 Feishu webhook 发送契约</td><td>text/card payload + send result normalization</td></tr><tr><td>milestone</td><td>阶段交付物和完成度</td><td>当前静态 API payload</td></tr><tr><td>stage summary</td><td>stage 与 plan 的模块级审阅摘要</td><td><code>forReviewOnly: true</code>，非字段级 diff</td></tr><tr><td>custom bot webhook</td><td>Feishu 入站 webhook URL 发送</td><td>不等于 app-token rich card API</td></tr><tr><td>thread metadata</td><td>记录期望线程上下文</td><td>当前不保证真实 thread reply</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Human Experiment</td><td>用户可执行的阶段验收动作</td><td>静态路线，不等于自动通过</td></tr><tr><td>Control GET route adapter</td><td>Dashboard/Gateway 共用只读 API 分发器</td><td>不处理 mutation，不持有 Node response</td></tr><tr><td>Milestone</td><td>阶段能力目标</td><td>静态 score，后续应由实验和测试计算</td></tr><tr><td>review-only stage</td><td>OpenClaw 迁移快照</td><td>只审阅，不 apply</td></tr><tr><td>custom-bot outbound</td><td>飞书 webhook 发送子集</td><td>不是 app-token rich card/thread reply</td></tr></tbody></table></div>
 <h2 id="相似技术比较">相似技术比较</h2>
-<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 0.9</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>Feishu/Lark</td><td>encrypted challenge + custom-bot outbound facade</td><td>完整 Feishu plugin</td><td>平台 adapter 方向</td><td>非核心</td></tr><tr><td>Dashboard</td><td>milestones + run detail + stage summary</td><td>Control UI/schema</td><td>CLI/TUI/ops</td><td>UI-first</td></tr><tr><td>Gateway</td><td>routes/auth/http 拆分</td><td>成熟 gateway/channel 安全</td><td>多平台 gateway</td><td>JSON-RPC/SSE</td></tr><tr><td>迁移</td><td>plan/stage/review summary</td><td>被迁移源</td><td>有迁移经验</td><td>controller 思想</td></tr><tr><td>记忆</td><td>JSON/JSONL state</td><td>session/config</td><td>SQLite/FTS</td><td>memory tree</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.0</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>控制面</td><td>本机 Gateway/Dashboard + shared route adapter</td><td>成熟 gateway/control UI</td><td>多入口 agent ops</td><td>controller registry/RPC</td></tr><tr><td>人类验收</td><td>E0-E6 静态实验路线</td><td>文档和插件配置为主</td><td>CLI/TUI 操作反馈</td><td>UI-first 操作面</td></tr><tr><td>Feishu/Lark</td><td>custom-bot + callback 安全子集</td><td>完整 Feishu plugin</td><td>不是核心强项</td><td>非核心</td></tr><tr><td>迁移</td><td>plan/stage/review-only</td><td>被迁移源</td><td>有运行经验可借鉴</td><td>controller 思想可借鉴</td></tr><tr><td>记忆</td><td>尚未做</td><td>session/config</td><td>SQLite/FTS 强</td><td>memory tree 强</td></tr></tbody></table></div>
 <h2 id="目录结构与文件行数">目录结构与文件行数</h2>
-<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>packages/feishu-adapter/src/outbound.mjs</code></td><td>46</td><td>Feishu outbound payload/result facade</td><td>健康</td></tr><tr><td><code>packages/channels/src/index.mjs</code></td><td>203</td><td>generic channel registry + generic webhook</td><td>健康</td></tr><tr><td><code>packages/channels/src/feishu.mjs</code></td><td>64</td><td>Feishu webhook/event channel adapter</td><td>健康；不要再回填到 index</td></tr><tr><td><code>packages/control-plane/src/milestones.mjs</code></td><td>22</td><td>static milestone roadmap payload</td><td>健康；后续绑定检查结果</td></tr><tr><td><code>packages/control-plane/src/status.mjs</code></td><td>187</td><td>status/run/detail/summary/milestones</td><td>可接受</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>261</td><td>dashboard render logic</td><td>继续增长，approval 前必须拆</td></tr><tr><td><code>packages/dashboard/src/styles.mjs</code></td><td>208</td><td>dashboard styles</td><td>健康</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>408</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr></tbody></table></div>
-<p>没有手写文件超过 500 行。</p>
+<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>packages/control-plane/src/experiments.mjs</code></td><td>119</td><td>E0-E6 人类实验路线</td><td>健康；后续绑定结果</td></tr><tr><td><code>packages/control-plane/src/http-routes.mjs</code></td><td>62</td><td>共享只读 route adapter</td><td>健康；后续 registry 化</td></tr><tr><td><code>packages/control-plane/src/status.mjs</code></td><td>196</td><td>status/runs/events/migration 聚合</td><td>健康</td></tr><tr><td><code>packages/control-plane/src/reference-completion.mjs</code></td><td>174</td><td>参考项目完成度矩阵</td><td>健康</td></tr><tr><td><code>packages/control-plane/test/http-routes.test.mjs</code></td><td>49</td><td>adapter 直接测试</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>305</td><td>Dashboard 渲染逻辑</td><td>可接受；approval 前拆</td></tr><tr><td><code>packages/dashboard/src/view.mjs</code></td><td>163</td><td>Dashboard HTML shell</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/styles.mjs</code></td><td>218</td><td>Dashboard 样式</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/index.mjs</code></td><td>81</td><td>Dashboard HTTP server</td><td>健康，route 已收敛</td></tr><tr><td><code>packages/gateway/src/routes/control.mjs</code></td><td>21</td><td>Gateway dashboard/read API route</td><td>健康</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>408</td><td>Markdown 到 HTML 报告构建</td><td>接近 450，下一轮拆</td></tr></tbody></table></div>
+<p>没有手写文件超过 500 行；<code>docs/build-review-html.mjs</code> 是唯一需要提前拆分的接近项。</p>
 <h2 id="风险分级">风险分级</h2>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>High</td><td>custom-bot outbound facade 容易被误解为完整 Feishu outbound</td><td>误导迁移和接入预期</td><td>文档和 API 明确 custom-bot only</td></tr><tr><td>High</td><td>GET 只读接口未来可能暴露 prompt/tool output</td><td>安全边界不足</td><td>scoped token + redaction policy</td></tr><tr><td>Medium</td><td>milestones 目前是静态数据</td><td>完成度可能漂移</td><td>绑定 tests/reference criteria</td></tr><tr><td>Medium</td><td>dashboard client 继续增长</td><td>approval 加入后难维护</td><td>拆 renderer modules</td></tr><tr><td>Low</td><td>report builder 408 行</td><td>接近预警</td><td>拆 parser/template</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>High</td><td>Human Experiments 仍是静态路线</td><td>可能被误读成已自动验收</td><td>加 <code>lastVerifiedAt/statusSource/evidence</code></td></tr><tr><td>High</td><td>GET 状态未来可能暴露 prompt/tool/secret</td><td>Dashboard/Gateway 安全风险</td><td>scoped token + redaction policy</td></tr><tr><td>Medium</td><td>route adapter 仍是 if 链</td><td>API 增长后维护性下降</td><td>registry + schema + permission</td></tr><tr><td>Medium</td><td>Dashboard client 继续增长</td><td>approval/diff 加入后难维护</td><td>拆 renderer modules</td></tr><tr><td>Low</td><td>report builder 408 行</td><td>接近 450 预警</td><td>拆 parser/shell/index writer</td></tr></tbody></table></div>
 <h2 id="linus-视角严苛审查">Linus 视角严苛审查</h2>
-<p>独立 subagent 已按 30 年 Linux 内核维护者视角审查当前 diff，核心结论是“custom-bot outbound 可以接受，但别让通用 channel 继续塞 provider 分支，也别把静态 milestone 说成真实控制面状态”。</p>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td><code>channels/src/index.mjs</code> 被 Feishu 分支污染</td><td>已拆出 <code>channels/src/feishu.mjs</code>，通用 webhook 不再 import Feishu adapter</td></tr><tr><td>High</td><td>outbound 能力很窄，<code>threadId</code> 只是 metadata</td><td>报告和 stage status 改成 custom-bot outbound facade，不宣称 app-token/thread reply</td></tr><tr><td>High</td><td><code>/api/milestones</code> 又复制 route if 链</td><td>本轮记录为 Phase 1 前置；下一轮先做 controller/route adapter</td></tr><tr><td>Medium</td><td>milestones 是静态展示，不是真实控制面状态</td><td>payload 标记 <code>computed: false</code> 和 <code>source: static-roadmap</code></td></tr><tr><td>Medium</td><td>HTML phase sync 检查太弱</td><td>已要求 first rendered phase 必须等于 Markdown first phase</td></tr></tbody></table></div>
+<p>独立 subagent 已按 30 年 Linux 内核维护者式视角审查 Phase 1.0 diff。核心结论：route adapter 方向正确，没有把 Node response 泄漏进 control-plane；但“人类可测试路线”必须诚实，不能给一个冷启动会失败的命令，也不能把单测冒充人工实验。</p>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td>渲染 HTML 仍是旧 Phase 会导致 check 失败</td><td>本轮重新生成全部 HTML 后再提交</td></tr><tr><td>Medium</td><td>E1 缺 dashboard 启动命令</td><td>已补 <code>npm run myclaw -- dashboard --port 4321 ...</code></td></tr><tr><td>Medium</td><td>E3 文案把 signed/encrypted 与普通 curl 混在一起</td><td>已改成 callback smoke + gateway fixture test</td></tr><tr><td>Medium</td><td>route adapter 缺直接单测</td><td>已新增 <code>packages/control-plane/test/http-routes.test.mjs</code></td></tr><tr><td>Low</td><td>Dashboard client 305 行，趋势不好</td><td>记录为 approval/diff 前的拆分门槛</td></tr></tbody></table></div>
 <h2 id="skill-规范自检">Skill 规范自检</h2>
-<ul><li>使用 <code>web-design-review</code> 规则生成可视化 design review dashboard。</li><li>覆盖系统上下文、模块架构、核心流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行硬限制由 <code>npm run check</code> 执行。</li><li>按 <code>skill-creator</code> 要求保持 skill 本身精简；本轮未修改 skill。</li></ul>
+<ul><li>已按 <code>web-design-review</code> 输出可视化 HTML design review dashboard。</li><li>报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行硬限制由 <code>npm run check</code> 执行。</li><li>本轮未修改 skill；按 <code>skill-creator</code> 原则保持 skill 本身精简。</li></ul>
 <h2 id="下一阶段建议">下一阶段建议</h2>
-<ul><li>Phase 1 前置：controller/route adapter。</li><li>Gateway scoped token、run redaction、mutation idempotency。</li><li>Dashboard approval queue 和字段级 migration diff drawer。</li><li>Feishu app-token outbound client 与 access policy。</li></ul></article>
+<ul><li>把 E0-E6 变成可持久化 <code>experimentRuns</code>，记录运行时间、证据和失败原因。</li><li>Dashboard approval queue 和 OpenClaw 字段级 diff drawer。</li><li>Gateway scoped token、redaction、mutation idempotency。</li><li>Feishu app-token outbound client 与 access policy。</li></ul></article>
       </main>
     </div>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>

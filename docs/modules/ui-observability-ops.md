@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 0.9 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、最新 run detail，以及 OpenClaw stage review summary。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.0 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、最新 run detail，以及 OpenClaw stage review summary。
 
 ## 参考项目观察
 
@@ -75,12 +75,19 @@ Phase 0.9 dashboard 新增：
 - `/api/status` 和 `/api/milestones` 返回同一套 milestone payload。
 - Feishu outbound facade 进度纳入 M2。
 
+Phase 1.0 dashboard 新增：
+
+- Human Experiments 区块，展示 E0-E6 的测试目标、命令、成功信号和解锁关系。
+- `/api/status` 内联 `experiments`，`/api/experiments` 可单独读取同一套路线。
+- Dashboard 和 Gateway 的只读 API 走 `control-plane/src/http-routes.mjs`，减少状态接口漂移。
+
 Phase 1 前应补：
 
 - run detail drawer 或独立详情页。
 - stage snapshot 字段级 diff。
 - `apply --module feishu` 人工确认入口。
 - 事件 stream 或轮询刷新。
+- Human Experiments 和自动化 test/check 结果的映射。
 
 ## HTML/Control UI 信息架构
 
@@ -138,6 +145,7 @@ myclaw security audit
 - 任意 run 都能从 state 复原 timeline。
 - Dashboard 能通过 API 打开单个 run detail，而不是读取 raw JSON。
 - Dashboard 能把 OpenClaw staged modules 和缺失项展示出来。
+- Dashboard 能把每个阶段对应的人类实验展示出来，并说明成功信号。
 - pending approvals 有独立列表。
 - status/doctor 能定位 config、state、tool policy 常见问题。
 - UI 所需数据全部来自 gateway API，不读私有文件。
