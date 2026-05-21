@@ -11,13 +11,14 @@ export function renderDashboardHtml() {
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <p class="eyebrow">MyClaw Phase 0.9</p>
-          <h1>运行与参考完成度</h1>
-          <p>本地状态、OpenClaw 迁移、Feishu 复用决策、参考项目差距。</p>
+          <p class="eyebrow">MyClaw Phase 1.0</p>
+          <h1>运行、路线与人工实验</h1>
+          <p>本地状态、OpenClaw 迁移、Feishu 复用决策、参考项目差距和可亲测路线。</p>
         </div>
         <nav aria-label="Dashboard 导航">
           <a href="#overview">总览</a>
           <a href="#milestones">Milestones</a>
+          <a href="#experiments">Human Experiments</a>
           <a href="#references">参考完成度</a>
           <a href="#feishu">Feishu/Lark</a>
           <a href="#migration">OpenClaw 迁移</a>
@@ -54,6 +55,17 @@ export function renderDashboardHtml() {
             <span id="milestoneStatus" class="pill">未加载</span>
           </div>
           <div id="milestonePanel" class="empty">暂无 milestone</div>
+        </section>
+
+        <section id="experiments" class="panel">
+          <div class="section-head">
+            <div>
+              <h3>Human Experiments</h3>
+              <p>把每个阶段拆成你可以亲自运行、观察、判断是否达标的实验。</p>
+            </div>
+            <span id="experimentStatus" class="pill">未加载</span>
+          </div>
+          <div id="experimentPanel" class="empty">暂无实验路线</div>
         </section>
 
         <section id="references" class="panel">

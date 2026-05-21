@@ -109,7 +109,7 @@ Phase 0.2 不做：
 | Phase 0.6 | reference dashboard | dashboard 显示 reference matrix 和 Feishu adoption decision |
 | Phase 0.7 | Feishu adapter facade | MyClaw 有自己的 Feishu 目标契约 |
 | Phase 0.8 | staged review summary | dashboard 展示 stage summary |
-| Phase 0.9 | staged diff detail | dashboard 展示字段级 diff，并支持确认/拒绝 |
+| Phase 1.1 | staged diff detail | dashboard 展示字段级 diff，并支持确认/拒绝 |
 | Phase 1 | Feishu module apply | 只迁移 Feishu config 到 MyClaw Feishu adapter |
 | Phase 3 | providers/tools apply | provider 和 tool contracts 分批迁移 |
 | Phase 4 | memory/session migration | 明确 schema 后再迁移长期状态 |
@@ -121,7 +121,7 @@ Phase 0.2 不做：
 | OpenClaw 插件 runtime 过大 | 高 | manifest 先 inventory，runtime 后适配 |
 | secrets 泄露 | 高 | plan 中只保留 env ref、path ref、redacted marker |
 | 自动启用 channel 导致误发消息 | 高 | apply 默认 disabled，需要 dashboard 确认 |
-| stage summary 被误认为可执行 diff | 中 | Phase 0.9 加字段级 diff 和确认文案 |
+| stage summary 被误认为可执行 diff | 中 | Phase 1.1 加字段级 diff 和确认文案 |
 | JSON5 parse 不完整 | 中 | Phase 1 引入正式 parser 或调用 OpenClaw schema export |
 | MyClaw schema 未成型 | 中 | stage snapshot 保留 raw config，不强行丢字段 |
 

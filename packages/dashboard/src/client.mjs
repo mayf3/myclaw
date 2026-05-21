@@ -7,20 +7,23 @@ loadStatus();
 async function loadStatus() {
   $("subtitle").textContent = "正在读取 /api/status ...";
   try {
-    const [statusResponse, referenceResponse, feishuResponse] = await Promise.all([
+    const [statusResponse, referenceResponse, feishuResponse, experimentsResponse] = await Promise.all([
       fetch("/api/status"),
       fetch("/api/reference-completion"),
       fetch("/api/feishu-adoption"),
+      fetch("/api/experiments"),
     ]);
     const statusPayload = await statusResponse.json();
     const referencePayload = await referenceResponse.json();
     const feishuPayload = await feishuResponse.json();
+    const experimentsPayload = await experimentsResponse.json();
     const runDetail = statusPayload.runs?.[0]?.runId ? await fetchRunDetail(statusPayload.runs[0].runId) : null;
     const payload = {
       ...statusPayload,
       referenceCompletion: referencePayload.referenceCompletion,
       feishuAdoption: feishuPayload.feishuAdoption,
       feishuAdapter: feishuPayload.feishuAdapter,
+      experiments: experimentsPayload.experiments || statusPayload.experiments,
       runDetail,
     };
     $("rawJson").textContent = JSON.stringify(payload, null, 2);
@@ -30,6 +33,7 @@ async function loadStatus() {
     }
     renderOverview(payload);
     renderMilestones(payload.milestones);
+    renderExperiments(payload.experiments);
     renderReferenceCompletion(payload.referenceCompletion);
     renderFeishu(payload.feishuAdoption, payload.feishuAdapter);
     renderMigration(payload.openclawMigration, payload.openclawStage, payload.openclawStageSummary);
@@ -62,6 +66,46 @@ function renderMilestones(payload) {
 
 function milestoneTone(status) {
   return status === "done" ? "ok" : status === "partial" ? "warn" : "info";
+}
+
+function renderExperiments(payload) {
+  if (!payload?.experiments?.length) {
+    $("experimentStatus").className = "pill";
+    $("experimentStatus").textContent = "未规划";
+    $("experimentPanel").outerHTML = '<div id="experimentPanel" class="empty">暂无实验路线</div>';
+    return;
+  }
+  $("experimentStatus").className = "pill info";
+  $("experimentStatus").textContent = "Phase " + esc(payload.currentPhase) + " · " + esc(payload.experiments.length) + " experiments";
+  const map = (payload.planningMap || []).map((item) =>
+    '<span class="tag info">' + esc(item.milestone) + ' → ' + esc(item.experimentId) + '</span>',
+  ).join(" ");
+  $("experimentPanel").outerHTML = '<div id="experimentPanel" class="experiment-list">' +
+    '<div class="decision-card"><strong>' + esc(payload.title || "Human Experiment Roadmap") + '</strong><p>' + esc(payload.goal || "") + '</p><p>' + map + '</p></div>' +
+    payload.experiments.map((item) => '<article class="experiment-card">' +
+      '<div class="experiment-title"><strong>' + esc(item.id) + ' · ' + esc(item.title) + '</strong><span class="tag ' + experimentTone(item.status) + '">' + esc(item.status) + '</span></div>' +
+      '<p><span class="small">' + esc(item.milestone) + ' · ' + esc(item.role) + '</span></p>' +
+      '<p>' + esc(item.whatToTest) + '</p>' +
+      commandList(item.commands) +
+      signalList(item.successSignals) +
+      '<p><strong>解锁</strong><br><span class="small">' + esc(item.nextUnlock) + '</span></p>' +
+    '</article>').join("") +
+    '</div>';
+}
+
+function experimentTone(status) {
+  return status === "ready" ? "ok" : status === "needs_config" ? "warn" : "info";
+}
+
+function commandList(commands = []) {
+  if (!commands.length) {
+    return "";
+  }
+  return '<pre class="mini-pre">' + esc(commands.join("\\n")) + '</pre>';
+}
+
+function signalList(signals = []) {
+  return '<p><strong>成功信号</strong><br>' + signals.map((item) => '<span class="tag ok">' + esc(item) + '</span>').join(" ") + '</p>';
 }
 
 async function fetchRunDetail(runId) {
