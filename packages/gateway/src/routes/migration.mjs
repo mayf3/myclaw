@@ -1,4 +1,5 @@
 import { buildOpenClawStageSummary } from "../../../control-plane/src/status.mjs";
+import { buildOpenClawStageReview } from "../../../control-plane/src/openclaw-diff.mjs";
 import { stageOpenClawMigration } from "../../../migrate/src/stage.mjs";
 import { readJsonBody, sendJson } from "../http.mjs";
 
@@ -8,5 +9,12 @@ export async function handlePostOpenClawMigrationStage(request, response, contex
     source: body.source || context.openclawSource,
     stateDir: context.stateDir,
   });
-  sendJson(response, 200, { ok: true, stage, stageSummary: buildOpenClawStageSummary(stage.plan, stage) });
+  const review = buildOpenClawStageReview(stage.plan, stage);
+  sendJson(response, 200, {
+    ok: true,
+    stage,
+    stageSummary: buildOpenClawStageSummary(stage.plan, stage),
+    review,
+    diff: review,
+  });
 }

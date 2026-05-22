@@ -23,6 +23,31 @@ export function authorizeGatewayMutation(request, context) {
   };
 }
 
+export function authorizeGatewayToken(request, context, options = {}) {
+  const token = String(context.token || "");
+  if (!token) {
+    return {
+      ok: false,
+      status: 403,
+      payload: {
+        ok: false,
+        error: {
+          code: options.code || "gateway_token_required",
+          message: options.message || "Set MYCLAW_GATEWAY_TOKEN before this mutation.",
+        },
+      },
+    };
+  }
+  if (readRequestToken(request) === token) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    status: 401,
+    payload: { ok: false, error: { code: "unauthorized", message: "Invalid gateway token." } },
+  };
+}
+
 export function readRequestToken(request) {
   const authorization = request.headers.authorization || "";
   if (authorization.startsWith("Bearer ")) {

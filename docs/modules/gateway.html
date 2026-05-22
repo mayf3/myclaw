@@ -60,7 +60,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>Gateway 是 MyClaw 的控制平面。Phase 1.0 已把 gateway 主文件拆成 auth/http/routes，并把 dashboard/gateway 的只读控制面 GET route 收敛到 <code>packages/control-plane/src/http-routes.mjs</code>。Feishu callback route 仍只依赖 MyClaw 自己的 <code>packages/feishu-adapter</code> facade。Gateway 仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。</p>
+<p>Gateway 是 MyClaw 的控制平面。Phase 1.1 已把 gateway 主文件拆成 auth/http/routes，把 dashboard/gateway 的只读控制面 GET route 收敛到 <code>packages/control-plane/src/http-routes.mjs</code>，并新增 approval decision mutation。Feishu callback route 仍只依赖 MyClaw 自己的 <code>packages/feishu-adapter</code> facade。Gateway 仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw gateway 的核心设计值得借鉴：</p>
 <ul><li>单个长生命周期 gateway。</li><li>默认绑定 <code>127.0.0.1</code>。</li><li>WebSocket 使用 connect handshake。</li><li>request/response/event 三类消息。</li><li>side-effecting request 使用 idempotency key。</li><li>local trust 和 remote trust 分开。</li><li>gateway 负责 session、routing、channel、event、health。</li></ul>
@@ -77,9 +77,11 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   GET  /api/runs/:runId
   GET  /api/milestones
   GET  /api/experiments
+  GET  /api/approvals
   POST /messages
   POST /feishu/events
-  POST /api/openclaw-migration/stage</code></pre>
+  POST /api/openclaw-migration/stage
+  POST /api/approvals/:id/decision</code></pre>
 <p>它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。</p>
 <p>Feishu event 路径必须保持薄：</p>
 <pre class="code" data-lang="text"><code>POST /feishu/events
@@ -158,14 +160,16 @@ EventBus
 <ul><li><code>GET /api/milestones</code> 暴露当前 M0-M5 进度。</li><li><code>/api/status</code> 内联 <code>milestones</code>，Dashboard 首屏可以看到阶段进展。</li><li>Feishu outbound payload/result 已进入 adapter facade；gateway 仍不直接加载 OpenClaw plugin。</li></ul>
 <p>Phase 1.0：</p>
 <ul><li><code>GET /api/experiments</code> 暴露 E0-E6 人类实验路线。</li><li><code>/api/status</code> 内联 <code>experiments</code>，Dashboard 可以把阶段路线转成可亲测实验。</li><li>Gateway 与 Dashboard 共用 <code>resolveControlGetRoute</code>，只读控制面 API 不再复制 if 链。</li></ul>
+<p>Phase 1.1：</p>
+<ul><li><code>GET /api/approvals</code> 暴露审批队列。</li><li><code>POST /api/approvals/:id/decision</code> 记录 approved/rejected，仍受 mutation token guard 保护。</li><li>OpenClaw migration stage 自动生成 pending approval，但 decision 不触发 apply。</li></ul>
 <p>Phase 4：</p>
 <ul><li>HTTP + WS。</li><li>token auth。</li><li>run/resume/status。</li><li>event stream。</li><li>graceful shutdown。</li></ul>
 <p>先不做：</p>
 <ul><li>多账号 channel。</li><li>设备节点。</li><li>Control UI config editor。</li><li>public remote access。</li><li>launchd/systemd。</li><li>Feishu WebSocket mode。</li><li>Feishu outbound rich card。</li><li>持久 replay window。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>过早把 gateway 做成 OpenClaw 级别控制平面。</li><li>auth 作为后补，会导致 UI/channel 接入时重构。</li><li>event 没有 seq，前端断线后无法判断丢事件。</li><li>Feishu replay guard 目前是 adapter 内存 Map，服务重启后不保留 replay window。</li><li>encrypted challenge 已支持，但 encrypted message event 的类型覆盖仍很窄。</li><li>token 现在只是 shared secret，没有用户/角色/作用域。</li><li><code>/api/status</code> 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。</li><li>Human Experiments 当前是静态 payload，不能被当作自动验收结果。</li></ul>
+<ul><li>过早把 gateway 做成 OpenClaw 级别控制平面。</li><li>auth 作为后补，会导致 UI/channel 接入时重构。</li><li>event 没有 seq，前端断线后无法判断丢事件。</li><li>Feishu replay guard 目前是 adapter 内存 Map，服务重启后不保留 replay window。</li><li>encrypted challenge 已支持，但 encrypted message event 的类型覆盖仍很窄。</li><li>token 现在只是 shared secret，没有用户/角色/作用域。</li><li><code>/api/status</code> 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。</li><li>Human Experiments 当前是静态 payload，不能被当作自动验收结果。</li><li>approval decision 只是 audit record，不是 authorization framework，也没有 scoped token。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li><code>POST /messages</code> 返回与 CLI receive 一致的 envelope。</li><li><code>POST /feishu/events</code> 能回显 challenge，并把文本事件写入 <code>feishu-event</code> run。</li><li><code>POST /messages</code> 在配置 token 后拒绝无 token 请求。</li><li><code>POST /api/openclaw-migration/stage</code> 只写 snapshot，不修改 runtime config。</li><li><code>GET /api/status</code> 能显示最新 gateway message run。</li><li>配置 <code>feishuEncryptKey</code> 时，<code>POST /feishu/events</code> 必须校验 <code>x-lark-signature</code>。</li><li>配置 <code>feishuEncryptKey</code> 时，signed encrypted challenge 必须返回 challenge。</li><li><code>GET /api/runs/:runId</code> 能返回 envelope 和 events。</li><li><code>GET /api/experiments</code> 能返回 Phase 1.0 的 E0-E6 路线，并和 Dashboard 展示一致。</li><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
+<ul><li><code>POST /messages</code> 返回与 CLI receive 一致的 envelope。</li><li><code>POST /feishu/events</code> 能回显 challenge，并把文本事件写入 <code>feishu-event</code> run。</li><li><code>POST /messages</code> 在配置 token 后拒绝无 token 请求。</li><li><code>POST /api/openclaw-migration/stage</code> 只写 snapshot，不修改 runtime config。</li><li><code>GET /api/status</code> 能显示最新 gateway message run。</li><li>配置 <code>feishuEncryptKey</code> 时，<code>POST /feishu/events</code> 必须校验 <code>x-lark-signature</code>。</li><li>配置 <code>feishuEncryptKey</code> 时，signed encrypted challenge 必须返回 challenge。</li><li><code>GET /api/runs/:runId</code> 能返回 envelope 和 events。</li><li><code>GET /api/experiments</code> 能返回 Phase 1.1 的 E0-E6 路线，并和 Dashboard 展示一致。</li><li><code>POST /api/approvals/:id/decision</code> 配置 token 后可记录 rejected/approved。</li><li><code>POST /runs</code> 返回 runId，WS 能收到完整 run 事件。</li><li>token 错误时所有 mutation 请求被拒绝。</li><li>Gateway 重启后能从 state store 读历史 run。</li><li>CLI 可通过 gateway 执行同一 workflow。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>

@@ -1,266 +1,264 @@
-# MyClaw Phase 1.0 实现架构可视化评审
+# MyClaw Phase 1.1 实现架构可视化评审
 
-更新时间：2026-05-21
+更新时间：2026-05-22
 
 ## 总诊断
 
-Phase 1.0 把路线从“agent 自评”改成“人可以亲自跑的实验”，并用 `control-plane/src/http-routes.mjs` 收敛 Dashboard 与 Gateway 的只读控制面 API。结论：方向正确，耦合下降明显；但 Human Experiments 仍是静态路线，不能冒充自动验收，下一步必须把实验结果和真实 test/check/Feishu smoke 绑定。
+Phase 1.1 把“人能参与测试”推进到“人能记录决定”：OpenClaw stage 会生成 pending approval，Gateway 可以在强 token 下记录 approve/reject，Dashboard 显示审批队列和 review-only stage review。结论：这是正确的小步，但它还不是安全执行边界，也不是字段级 schema diff；当前只能承载 review record，不能承载真实 apply/execute。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
-| 设计清晰度 | 8/10 | M0-M5 与 E0-E6 形成大路线图，用户知道每阶段怎么测 |
-| 可扩展性 | 8/10 | 共享 route adapter 降低 dashboard/gateway 漂移 |
-| 可靠性 | 7/10 | 新增 adapter 直接测试，仍缺真实 Feishu e2e |
-| 可维护性 | 8/10 | 文件低于 500 行，dashboard client 仍需防止继续膨胀 |
-| 安全性 | 6/10 | mutation guard 和 Feishu signature 有基础，缺 scoped token/redaction |
+| 设计清晰度 | 8/10 | E5 已可亲测，approval/review-only/apply 边界写清楚 |
+| 可扩展性 | 8/10 | approval store 独立，Gateway mutation route 独立 |
+| 可靠性 | 7/10 | decision 有锁与并发测试，仍缺真正幂等请求 ID |
+| 可维护性 | 7/10 | 所有文件低于 500 行，Dashboard client 347 行开始变重 |
+| 安全性 | 7/10 | approval decision 强制 token，仍缺 scoped token、actor provenance |
 
 ## 大规划图
 
-这张图回答：用户从现在到完整 MyClaw 可以按哪些 milestone 亲自参与测试。
+这张图回答：用户从消息闭环到人工审批再到 agent runtime，在哪些节点可以亲自参与。
 
 ```mermaid
 flowchart LR
-  M0[M0 本地消息闭环] --> E0[E0 CLI send/receive]
-  E0 --> M1[M1 Gateway + Dashboard]
-  M1 --> E1[E1 Dashboard 可读性]
-  E1 --> M2[M2 Feishu/Lark 边界]
+  M0[M0 本地消息闭环] --> E0[E0 CLI send]
+  E0 --> M1[M1 Dashboard/Gateway]
+  M1 --> E1[E1 看路线与状态]
+  E1 --> M2[M2 Feishu/Lark]
   M2 --> E2[E2 custom-bot outbound]
-  M2 --> E3[E3 callback 本地校验]
+  M2 --> E3[E3 callback smoke]
   E2 --> M3[M3 OpenClaw 迁移]
   E3 --> M3
-  M3 --> E4[E4 review-only stage]
-  E4 --> M4[M4 审批与安全]
-  M4 --> E5[E5 approval queue]
-  E5 --> M5[M5 Agent + 记忆]
+  M3 --> E4[E4 stage review-only]
+  E4 --> M4[M4 审批队列]
+  M4 --> E5[E5 approve/reject record]
+  E5 --> M5[M5 Agent + Memory]
   M5 --> E6[E6 tool loop + memory]
 ```
 
 Review 观察：
 
-- 优点：路线从功能列表变成用户可执行实验。
-- 优点：E0/E1/E4 现在不依赖外部账号，可马上跑。
-- 风险：E2/E3 仍依赖飞书配置和测试 fixture，不能算自动验收。
-- 改进：后续把每个 E 实验映射到机器可读 gate。
+- 优点：E5 从 planned 变成 ready，可以用 Gateway token 亲自做 decision。
+- 优点：approval 只记录决定，不执行 apply，避免误操作。
+- 风险：approval 还不是 tool/workflow approval，只是 migration stage 的种子。
+- 改进：下一阶段接 tool action 和 scoped token。
 
 ## 当前 Milestones
 
 | Milestone | 状态 | 完成度 | 用户实验 |
 |---|---|---:|---|
 | M0 本地消息闭环 | done | 100 | E0 |
-| M1 Gateway 与 Dashboard | partial | 78 | E1 |
+| M1 Gateway 与 Dashboard | partial | 82 | E1 |
 | M2 Feishu/Lark 边界 | partial | 60 | E2/E3 |
-| M3 OpenClaw 迁移 | partial | 58 | E4 |
-| M4 Agent Runtime 与审批 | planned | 10 | E5 |
+| M3 OpenClaw 迁移 | partial | 65 | E4 |
+| M4 Agent Runtime 与审批 | partial | 25 | E5 |
 | M5 记忆、搜索与插件 | planned | 8 | E6 |
 
 ## 系统上下文图
 
-这张图回答：MyClaw Phase 1.0 和用户、Feishu、OpenClaw、HTML Center 的边界。
+这张图回答：Phase 1.1 的审批、迁移、Dashboard 和外部系统边界在哪里。
 
 ```mermaid
 flowchart LR
   User[本地用户] --> CLI[CLI]
   User --> Browser[Dashboard]
-  User --> Experiments[Human Experiments E0-E6]
-  Feishu[Feishu/Lark Cloud] -->|callback/webhook| Gateway[Gateway]
-  Gateway -->|custom bot outbound| Feishu
-  OpenClaw[OpenClaw repo] -->|reference + stage source| Migration[Migration planner]
-  Reports[Design Review HTML] --> HtmlCenter[HTML Center]
+  User --> Curl[curl with gateway token]
+  OpenClaw[OpenClaw repo] --> Migration[Migration planner/stage]
+  Feishu[Feishu/Lark Cloud] <-->|callback/custom bot| Gateway[Gateway]
+  Reports[Review HTML] --> HtmlCenter[HTML Center]
 
   subgraph Local[MyClaw 本机]
     CLI --> Runtime[Message Runtime]
-    Gateway --> Runtime
     Browser --> Dashboard[Dashboard server]
-    Dashboard --> RouteAdapter[Control GET route adapter]
-    Gateway --> RouteAdapter
-    RouteAdapter --> Control[Control Plane]
-    Control --> Roadmap[Milestones + Experiments]
-    Runtime --> State[(runs/events/stages)]
-    Migration --> State
+    Curl --> Gateway
+    Gateway --> ApprovalDecision[approval decision route]
+    Migration --> ApprovalStore[(approvals)]
+    ApprovalDecision --> ApprovalStore
+    Dashboard --> ControlRoutes[shared control GET routes]
+    Gateway --> ControlRoutes
+    ControlRoutes --> ControlPlane[Control Plane]
+    ControlPlane --> ApprovalStore
+    ControlPlane --> State[(runs/events/stages)]
   end
 ```
 
 Review 观察：
 
-- 优点：OpenClaw 仍是 reference/stage source，不进入运行时依赖。
-- 优点：用户实验是控制面数据，不只是文档表格。
-- 风险：Dashboard raw JSON 未来可能暴露敏感信息。
-- 改进：加入 redaction policy 和 scoped token。
+- 优点：approval decision mutation 在 Gateway，Dashboard 仍只读。
+- 优点：approval 写入独立 state 和 events timeline。
+- 风险：actor 目前只是 body 字段，缺强身份来源。
+- 改进：引入 scoped token 和 actor provenance。
 
 ## 模块架构图
 
-这张图回答：当前系统被拆成哪些模块，依赖是否合理。
+这张图回答：新增 approval/review 模块如何接入，是否有抽象泄漏。
 
 ```mermaid
 flowchart TB
-  Dashboard[packages/dashboard] --> Assets[view/client/styles]
-  Dashboard --> RouteAdapter[control-plane/http-routes.mjs]
-  Gateway[packages/gateway/routes/control.mjs] --> RouteAdapter
-  RouteAdapter --> Status[control-plane/status.mjs]
-  Status --> Milestones[milestones.mjs]
-  Status --> Experiments[experiments.mjs]
-  Status --> Reference[reference-completion.mjs]
-  Status --> State[core/state.mjs]
-  Gateway --> FeishuRoutes[routes/feishu.mjs]
-  FeishuRoutes --> FeishuAdapter[feishu-adapter]
-  Runtime[runtime/messages.mjs] --> Channels[channels]
-  Channels --> FeishuOutbound[channels/feishu.mjs]
-  FeishuOutbound --> FeishuAdapter
+  Stage[migrate/stage.mjs] --> ApprovalCore[core/approvals.mjs]
+  Stage --> ReviewBuilder[control-plane/openclaw-diff.mjs]
+  ApprovalCore --> ApprovalFiles[(state/approvals/*.json)]
+  ApprovalCore --> Audit[(approvals.jsonl/events.jsonl)]
+  Status[control-plane/status.mjs] --> ApprovalCore
+  Status --> ReviewBuilder
+  HttpRoutes[control-plane/http-routes.mjs] --> Status
+  Gateway[gateway/index.mjs] --> ApprovalRoute[gateway/routes/approvals.mjs]
+  ApprovalRoute --> ApprovalCore
+  Dashboard[dashboard/client.mjs] --> HttpRoutes
 ```
 
 Review 观察：
 
-- 优点：route adapter 返回 `{handled,status,payload}`，没有泄漏 Node response。
-- 优点：experiments 和 milestones 都在 control-plane，Dashboard 只渲染。
-- 风险：`dashboard/src/client.mjs` 已到 305 行，approval/diff 前应拆 renderer。
-- 改进：为每个 dashboard section 做独立 renderer 或轻量 registry。
+- 优点：approval core 不依赖 HTTP 或 Dashboard。
+- 优点：decision route 没有漏 Node response 到 control-plane。
+- 风险：stage 自动创建 approval，迁移与 policy 仍有轻耦合。
+- 改进：后续把 approval request 创建移到 workflow/control-plane policy 层。
 
 ## 核心业务流程图
 
-这张图回答：用户如何从路线图进入一次可验证实验。
+这张图回答：一次 OpenClaw stage 如何变成可人工确认的 record。
 
 ```mermaid
 flowchart TD
-  Start[用户打开 Dashboard] --> Fetch[GET /api/status + /api/experiments]
-  Fetch --> RouteAdapter[resolveControlGetRoute]
-  RouteAdapter --> Payload[buildHumanExperimentsPayload]
-  Payload --> Render[renderExperiments]
-  Render --> Pick[用户选择 E0/E1/E4]
-  Pick --> Run[运行命令]
-  Run --> State[(runs/events/stages)]
-  State --> Refresh[刷新 Dashboard]
-  Refresh --> Pass{成功信号满足?}
-  Pass -->|yes| Next[进入下一实验]
-  Pass -->|no| Diagnose[看 run detail/raw JSON]
+  Start[POST /api/openclaw-migration/stage] --> Auth[mutation token guard]
+  Auth --> Plan[planOpenClawMigration]
+  Plan --> Snapshot[write stage snapshot]
+  Snapshot --> Approval[create or reuse pending approval]
+  Approval --> Review[build stage review summary]
+  Review --> Response[stage + approval + review JSON]
+  Response --> Dashboard[Dashboard Approvals]
+  Dashboard --> Human[human reads evidence]
+  Human --> Decide[POST /api/approvals/:id/decision]
+  Decide --> StrictToken[approval token required]
+  StrictToken --> Lock[approval file lock]
+  Lock --> Record[write approved/rejected + audit event]
 ```
 
 Review 观察：
 
-- 优点：实验有命令、角色、成功信号和解锁关系。
-- 风险：ready 状态目前仍是人工语义，不是 test result。
-- 改进：增加 `experiment.statusSource` 或 `lastVerifiedAt`。
-- 改进：Dashboard 里显示“静态路线，不代表已通过”。
+- 优点：decision 使用强 token，不再继承 loopback 免 token。
+- 优点：decision 使用 lock 降低并发 last-writer-wins。
+- 风险：lock 是本地文件锁，适合单机，不适合多节点。
+- 改进：后续 SQLite/CAS 或 append-only event reducer。
 
 ## 关键时序图
 
-这张图回答：Dashboard 和 Gateway 如何复用同一个只读 API route。
+这张图回答：前端、Gateway、control-plane、state 如何协作。
 
 ```mermaid
 sequenceDiagram
-  participant B as Browser/curl
-  participant D as Dashboard or Gateway
-  participant R as resolveControlGetRoute
+  participant U as User
+  participant G as Gateway
+  participant M as Migration
+  participant A as Approval Store
   participant C as Control Plane
-  participant S as State
+  participant D as Dashboard
 
-  B->>D: GET /api/experiments
-  D->>R: resolveControlGetRoute(url, context)
-  R->>C: buildHumanExperimentsStatusPayload()
-  C-->>R: experiments payload
-  R-->>D: {handled,status,payload}
-  D-->>B: JSON
-  B->>D: GET /api/runs/:id
-  D->>R: shared route
-  R->>S: readRun()
-  S-->>R: run or invalid_run_id
-  R-->>D: 200/400/404
+  U->>G: POST /api/openclaw-migration/stage + token
+  G->>M: stageOpenClawMigration()
+  M->>A: createApprovalRequest()
+  M-->>G: stage + approval
+  G-->>U: review-only payload
+  D->>C: GET /api/status
+  C->>A: listApprovals()
+  C-->>D: approvals + stage review
+  U->>G: POST /api/approvals/:id/decision + token
+  G->>A: decideApproval()
+  A-->>G: approved/rejected
 ```
 
 Review 观察：
 
-- 优点：Dashboard/Gateway 不再各自维护同一批 GET if 链。
-- 优点：invalid run id 状态在 adapter 层统一。
-- 风险：route adapter 仍是路径 if 链，后续多 API 时要 registry 化。
-- 改进：下一步加 route schema、permission 和 redaction。
+- 优点：读面和写面分离清楚。
+- 优点：Dashboard 可以展示审批，但不能绕过 Gateway token 修改。
+- 风险：当前没有 request id，重试 decision 只能靠状态机阻止。
+- 改进：加入 `Idempotency-Key`。
 
 ## 状态机图
 
-这张图回答：一次用户实验的生命周期如何包含失败、重试、人工判断。
+这张图回答：approval 的生命周期如何处理失败、重复、并发和人工介入。
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Planned
-  Planned --> Ready: no external config needed
-  Planned --> NeedsConfig: Feishu/token required
-  Ready --> Running: user runs command
-  NeedsConfig --> Running: config provided
-  Running --> Passed: success signals observed
-  Running --> Failed: command or signal fails
-  Failed --> Diagnosing: inspect run detail/logs
-  Diagnosing --> Running: retry
-  Passed --> UnlockedNext
-  UnlockedNext --> [*]
+  [*] --> Pending: created
+  Pending --> Approved: decision approved
+  Pending --> Rejected: decision rejected
+  Pending --> Pending: invalid decision rejected
+  Approved --> Conflict: duplicate decision
+  Rejected --> Conflict: duplicate decision
+  Conflict --> [*]
+  Approved --> [*]
+  Rejected --> [*]
 ```
 
 Review 观察：
 
-- 优点：把人工判断作为正式状态，而不是隐藏在文档后面。
-- 风险：当前没有持久化 experiment result。
-- 改进：后续把实验结果写入 state，支持 `lastRunId` 和 `evidence`。
+- 优点：sequential duplicate 会返回 `already_decided`。
+- 优点：concurrent conflicting decision 有 lock 测试。
+- 风险：没有 expiry/cancelled 状态。
+- 改进：加 transition table 和 expiry policy。
 
 ## 数据模型 / ER 图
 
-这张图回答：run、event、milestone、experiment 和 reference completion 的关系。
+这张图回答：stage、approval、event、review item 之间如何关联。
 
 ```mermaid
 erDiagram
+  STAGE ||--|| APPROVAL : requests
+  APPROVAL ||--o{ APPROVAL_EVENT : emits
+  STAGE ||--o{ REVIEW_ITEM : summarizes
   RUN ||--o{ EVENT : emits
-  MILESTONE_SET ||--o{ MILESTONE : contains
-  EXPERIMENT_SET ||--o{ EXPERIMENT : contains
-  MILESTONE ||--o{ EXPERIMENT : validates
-  REFERENCE_COMPLETION ||--o{ MODULE_SCORE : compares
 
-  RUN { string runId boolean ok string status }
-  EVENT { string type string at object data }
-  MILESTONE { string id string status int score }
-  EXPERIMENT { string id string status string role string milestone }
-  MODULE_SCORE { string id int myclaw int openclaw int hermes int openhuman }
+  STAGE { string stageId string checksum string status }
+  APPROVAL { string approvalId string status string severity object subject }
+  APPROVAL_EVENT { string type string at string approvalId string status }
+  REVIEW_ITEM { string id string moduleId string field string action }
+  RUN { string runId string status boolean ok }
 ```
 
 Review 观察：
 
-- 优点：experiment 是 roadmap/control data，不污染 core state。
-- 风险：没有 experiment run result 实体，无法自动聚合完成度。
-- 改进：新增 `EXPERIMENT_RUN`，记录命令、runId、通过/失败、证据。
+- 优点：approval 可以独立于 run 存在，适合未来 tool approval。
+- 风险：subject type 目前是自由对象，缺白名单。
+- 改进：为 `openclaw-migration-stage`、`tool-call` 定 schema。
 
 ## 数据流图
 
-这张图回答：数据从输入、处理、状态写入到 Dashboard 展示如何流动。
+这张图回答：数据从 OpenClaw source 到 Dashboard 审批展示如何流动。
 
 ```mermaid
 flowchart LR
-  Command[CLI/Gateway/Dashboard request] --> Adapter[Control route adapter]
-  Adapter --> Builders[status/milestones/experiments/reference]
-  Builders --> State[(runs/events/migration stage)]
-  Builders --> Payload[JSON payload]
-  Payload --> Dashboard[Dashboard renderers]
-  Payload --> Curl[curl/API consumer]
-  UserAction[用户执行 E0/E4 命令] --> Runtime[Runtime or migration]
-  Runtime --> State
-  State --> Payload
-  Error[invalid run/source error] --> Payload
+  Source[OpenClaw source] --> Plan[Migration plan]
+  Plan --> Stage[Stage snapshot]
+  Stage --> Approval[(approval record)]
+  Stage --> ReviewItems[review summary items]
+  Approval --> Status[/api/status]
+  ReviewItems --> Status
+  Status --> Dashboard[Approvals panel]
+  Decision[POST decision] --> Lock[file lock]
+  Lock --> Approval
+  Approval --> Events[(events.jsonl)]
 ```
 
 Review 观察：
 
-- 优点：route adapter 只读，side effect 仍留在 gateway mutation routes。
-- 风险：status payload 会触发 OpenClaw plan cache，错误隔离仍需加强。
-- 改进：为 migration plan 加显式 refresh 和 stale marker。
+- 优点：review summary 和 decision 都可从本地 state 复原。
+- 风险：review summary 不比较 MyClaw 目标 schema 字段。
+- 改进：下一步做真实 source/target field diff。
 
 ## 部署图
 
-这张图回答：Phase 1.0 在本机如何运行，哪些是同步调用。
+这张图回答：Phase 1.1 本地运行拓扑和同步/异步边界。
 
 ```mermaid
 flowchart TB
   subgraph Localhost[Developer machine]
     Browser[Browser :4321] -->|sync GET| Dashboard[myclaw dashboard]
-    Curl[curl/tests] -->|sync GET| Gateway[myclaw gateway :4322]
-    Dashboard --> RouteAdapter[control GET adapter]
-    Gateway --> RouteAdapter
-    Gateway -->|mutation POST| Messages[messages/feishu/migration routes]
-    Messages --> State[(local state)]
-    RouteAdapter --> State
+    Curl[curl :4322] -->|sync POST| Gateway[myclaw gateway]
+    Dashboard --> ControlRoutes[shared GET routes]
+    Gateway --> ControlRoutes
+    Gateway --> Mutations[messages/feishu/migration/approval routes]
+    Mutations --> State[(local JSON/JSONL state)]
+    ControlRoutes --> State
     CLI[myclaw CLI] --> State
   end
   Gateway <-->|webhook| Feishu[Feishu/Lark Cloud]
@@ -269,85 +267,86 @@ flowchart TB
 
 Review 观察：
 
-- 优点：默认 loopback，本地实验成本低。
-- 风险：curl/open 命令假设服务已启动，E1 已补启动命令。
-- 改进：Dashboard 顶部显示服务启动命令和当前 stateDir。
+- 优点：仍默认 loopback，本地验证快。
+- 风险：approval decision 必须配置 token；服务启动命令要带 `MYCLAW_GATEWAY_TOKEN`。
+- 改进：Dashboard 显示 decision curl 模板和 token 状态。
 
 ## Human Experiments
 
 | 实验 | 状态 | 用户动作 | 成功信号 |
 |---|---|---|---|
-| E0 | ready | `npm run myclaw -- send --text "hello from human" --json` | ok envelope，run 可见 |
-| E1 | ready | 启动 dashboard 后打开 `http://127.0.0.1:4321` | Phase 1.0 与实验路线可见 |
-| E2 | needs_config | 用 `MYCLAW_FEISHU_WEBHOOK_URL` 发送 custom-bot 消息 | 飞书群收到消息 |
-| E3 | needs_config | gateway callback challenge + gateway test fixture | challenge 回显，签名/encrypted fixture 通过 |
-| E4 | ready | `migrate openclaw --stage --json` | `forReviewOnly=true` |
-| E5 | planned | approval queue | 危险动作暂停 |
-| E6 | planned | agent run + memory search | step/tool/memory 可追踪 |
+| E0 | ready | `send --text` | ok envelope，run 可见 |
+| E1 | ready | 打开 Dashboard | Phase 1.1、Approvals 可见 |
+| E2 | needs_config | Feishu custom-bot send | 群里收到消息 |
+| E3 | needs_config | callback smoke + gateway tests | challenge/fixture 通过 |
+| E4 | ready | `migrate openclaw --stage --json` | stage 带 approval，review-only |
+| E5 | ready | GET approvals + POST decision | approval 变 approved/rejected，event 写入 |
+| E6 | planned | agent run + memory search | 后续开放 |
 
 ## 概念解释
 
 | 概念 | 含义 | 当前边界 |
 |---|---|---|
-| Human Experiment | 用户可执行的阶段验收动作 | 静态路线，不等于自动通过 |
-| Control GET route adapter | Dashboard/Gateway 共用只读 API 分发器 | 不处理 mutation，不持有 Node response |
-| Milestone | 阶段能力目标 | 静态 score，后续应由实验和测试计算 |
-| review-only stage | OpenClaw 迁移快照 | 只审阅，不 apply |
-| custom-bot outbound | 飞书 webhook 发送子集 | 不是 app-token rich card/thread reply |
+| Approval queue | 需要人确认的 review record | 目前只覆盖 migration stage |
+| Approval decision | approved/rejected 的审计决定 | 不触发 apply/execute |
+| Stage review summary | 从 stage 派生的 review items | 不是字段级 schema diff |
+| Strict token mutation | approval decision 必须有 token | 仍不是 scoped RBAC |
+| File lock | 本机文件锁防并发覆盖 | 不适合多节点 |
 
 ## 相似技术比较
 
-| 维度 | MyClaw Phase 1.0 | OpenClaw | Hermes-agent | OpenHuman |
+| 维度 | MyClaw Phase 1.1 | OpenClaw | Hermes-agent | OpenHuman |
 |---|---|---|---|---|
-| 控制面 | 本机 Gateway/Dashboard + shared route adapter | 成熟 gateway/control UI | 多入口 agent ops | controller registry/RPC |
-| 人类验收 | E0-E6 静态实验路线 | 文档和插件配置为主 | CLI/TUI 操作反馈 | UI-first 操作面 |
-| Feishu/Lark | custom-bot + callback 安全子集 | 完整 Feishu plugin | 不是核心强项 | 非核心 |
-| 迁移 | plan/stage/review-only | 被迁移源 | 有运行经验可借鉴 | controller 思想可借鉴 |
+| 审批 | migration approval record | 成熟 policy/approval | ops guard 方向 | risk/autonomy policy |
+| Gateway | local HTTP + token mutation | 完整 gateway/control UI | 多入口 agent ops | JSON-RPC/controller |
+| Review | stage review summary | config schema/UI | migration/ops 经验 | controller 边界 |
 | 记忆 | 尚未做 | session/config | SQLite/FTS 强 | memory tree 强 |
+| Agent | 尚未做 | Lobster/workflow 可借鉴 | agent loop 强 | harness/tool loop 强 |
 
 ## 目录结构与文件行数
 
 | 路径 | 行数 | 职责 | 评价 |
 |---|---:|---|---|
-| `packages/control-plane/src/experiments.mjs` | 119 | E0-E6 人类实验路线 | 健康；后续绑定结果 |
-| `packages/control-plane/src/http-routes.mjs` | 62 | 共享只读 route adapter | 健康；后续 registry 化 |
-| `packages/control-plane/src/status.mjs` | 196 | status/runs/events/migration 聚合 | 健康 |
-| `packages/control-plane/src/reference-completion.mjs` | 174 | 参考项目完成度矩阵 | 健康 |
-| `packages/control-plane/test/http-routes.test.mjs` | 49 | adapter 直接测试 | 健康 |
-| `packages/dashboard/src/client.mjs` | 305 | Dashboard 渲染逻辑 | 可接受；approval 前拆 |
-| `packages/dashboard/src/view.mjs` | 163 | Dashboard HTML shell | 健康 |
-| `packages/dashboard/src/styles.mjs` | 218 | Dashboard 样式 | 健康 |
-| `packages/dashboard/src/index.mjs` | 81 | Dashboard HTTP server | 健康，route 已收敛 |
-| `packages/gateway/src/routes/control.mjs` | 21 | Gateway dashboard/read API route | 健康 |
-| `docs/build-review-html.mjs` | 408 | Markdown 到 HTML 报告构建 | 接近 450，下一轮拆 |
+| `packages/core/src/approvals.mjs` | 198 | approval create/list/read/decide + lock | 健康；后续拆 transition policy |
+| `packages/control-plane/src/openclaw-diff.mjs` | 101 | stage review summary builder | 文件名历史包袱，语义已降级为 review |
+| `packages/control-plane/src/status.mjs` | 226 | status 聚合 approvals/review | 健康 |
+| `packages/control-plane/src/http-routes.mjs` | 79 | 共享只读 route adapter | 健康 |
+| `packages/dashboard/src/client.mjs` | 347 | Dashboard 渲染逻辑 | 继续增长，下一轮必须拆 section renderer |
+| `packages/dashboard/src/styles.mjs` | 229 | Dashboard 样式 | 健康 |
+| `packages/dashboard/src/view.mjs` | 176 | Dashboard HTML shell | 健康 |
+| `packages/gateway/src/index.mjs` | 111 | Gateway route 分发 | 健康 |
+| `packages/gateway/src/auth.mjs` | 61 | mutation/token auth | 健康 |
+| `packages/gateway/src/routes/approvals.mjs` | 45 | approval decision mutation | 健康 |
+| `packages/migrate/src/stage.mjs` | 155 | stage snapshot + approval seed | 可接受；后续解耦 policy |
+| `docs/build-review-html.mjs` | 408 | HTML report builder | 接近 450，下一轮拆 |
 
-没有手写文件超过 500 行；`docs/build-review-html.mjs` 是唯一需要提前拆分的接近项。
+没有手写文件超过 500 行；`docs/build-review-html.mjs` 是唯一接近预警项。
 
 ## 风险分级
 
 | 等级 | 问题 | 影响 | 建议 |
 |---|---|---|---|
-| High | Human Experiments 仍是静态路线 | 可能被误读成已自动验收 | 加 `lastVerifiedAt/statusSource/evidence` |
-| High | GET 状态未来可能暴露 prompt/tool/secret | Dashboard/Gateway 安全风险 | scoped token + redaction policy |
-| Medium | route adapter 仍是 if 链 | API 增长后维护性下降 | registry + schema + permission |
-| Medium | Dashboard client 继续增长 | approval/diff 加入后难维护 | 拆 renderer modules |
-| Low | report builder 408 行 | 接近 450 预警 | 拆 parser/shell/index writer |
+| High | approval 仍不是安全执行边界 | 误以为 approve 会安全 apply | 文档和 UI 保持 review-only；接 scoped token |
+| High | review summary 不是字段级 diff | 用户可能误判迁移精度 | UI 使用 review summary 命名，后续做真实 schema diff |
+| Medium | stage 自动创建 approval | migration 与 policy 有耦合 | 后续移到 control-plane/workflow policy |
+| Medium | Dashboard client 347 行 | 后续 review/schema diff drawer 会变维护坑 | 下一阶段拆 renderer registry |
+| Low | checksum 仍是弱 trace marker | 不能当完整完整性证明 | 后续 content-address full snapshot |
 
 ## Linus 视角严苛审查
 
-独立 subagent 已按 30 年 Linux 内核维护者式视角审查 Phase 1.0 diff。核心结论：route adapter 方向正确，没有把 Node response 泄漏进 control-plane；但“人类可测试路线”必须诚实，不能给一个冷启动会失败的命令，也不能把单测冒充人工实验。
+独立 subagent 已按 30 年 Linux 内核维护者式视角审查 Phase 1.1 diff。核心结论：approval queue 可以作为 review record，但不能被吹成安全边界；decision mutation 必须强认证，状态迁移必须原子，所谓 diff 必须降级成 review summary。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
-| High | 渲染 HTML 仍是旧 Phase 会导致 check 失败 | 本轮重新生成全部 HTML 后再提交 |
-| Medium | E1 缺 dashboard 启动命令 | 已补 `npm run myclaw -- dashboard --port 4321 ...` |
-| Medium | E3 文案把 signed/encrypted 与普通 curl 混在一起 | 已改成 callback smoke + gateway fixture test |
-| Medium | route adapter 缺直接单测 | 已新增 `packages/control-plane/test/http-routes.test.mjs` |
-| Low | Dashboard client 305 行，趋势不好 | 记录为 approval/diff 前的拆分门槛 |
+| High | approval decision 沿用 loopback 免 token太弱 | 已改为 `authorizeGatewayToken`，无 token 配置时返回 `approval_token_required` |
+| High | read-modify-write 可能并发覆盖 | 已加本地 lock，并补并发 conflicting decision 测试 |
+| Medium | stage 默认创建 approval 会产生队列噪音 | 已用 checksum 派生稳定 approval id，重复相同 stage 不新增 approval；后续仍要解耦 |
+| Medium | “diff”名不副实 | API 增加 `openclawStageReview/review`，UI 改为 stage review |
+| Low | Dashboard client 继续增长 | 记录为下一阶段拆分门槛 |
 
 ## Skill 规范自检
 
-- 已按 `web-design-review` 输出可视化 HTML design review dashboard。
+- 已按 `web-design-review` 输出可视化 design review dashboard。
 - 报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。
 - 报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。
 - 单文件 500 行硬限制由 `npm run check` 执行。
@@ -355,7 +354,7 @@ Review 观察：
 
 ## 下一阶段建议
 
-1. 把 E0-E6 变成可持久化 `experimentRuns`，记录运行时间、证据和失败原因。
-2. Dashboard approval queue 和 OpenClaw 字段级 diff drawer。
-3. Gateway scoped token、redaction、mutation idempotency。
-4. Feishu app-token outbound client 与 access policy。
+1. 把 approval queue 接到真实 tool action，加入 scoped token 和 actor provenance。
+2. 拆 `dashboard/src/client.mjs` 为 section renderer registry。
+3. 做真实 OpenClaw source/target schema diff drawer。
+4. Agent runtime 最小 run/resume/tool loop。

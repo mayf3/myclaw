@@ -76,7 +76,7 @@ button{
 }
 button:focus{outline:3px solid var(--accent-soft);outline-offset:2px}
 section{margin-bottom:16px}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
 .stat{
   min-height:96px;
   border:1px solid var(--line);
@@ -177,6 +177,17 @@ section{margin-bottom:16px}
 .experiment-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px}
 .experiment-card p{margin:6px 0}
 .mini-pre{max-height:none;margin:8px 0;font-size:12px}
+.approval-list,.diff-list{display:grid;gap:8px}
+.approval-row,.diff-row{
+  display:grid;
+  grid-template-columns:150px minmax(0,1fr) 120px;
+  gap:12px;
+  align-items:start;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px 12px;
+}
+.approval-row p,.diff-row p{margin:4px 0 0}
 .small{font-size:12px;color:var(--muted)}
 .criteria{margin-top:6px}
 .criteria summary{cursor:pointer;color:#334155;font-size:12px;font-weight:800}
@@ -211,7 +222,7 @@ pre{
   main{padding:18px}
   .topbar{display:block}
   .topbar button{margin-top:12px}
-  .stats,.two-col,.decision-grid{grid-template-columns:1fr}
+  .stats,.two-col,.decision-grid,.approval-row,.diff-row{grid-template-columns:1fr}
   .milestone-row{grid-template-columns:1fr}
   .reference-row{grid-template-columns:180px 90px minmax(220px,1fr) 82px 82px 82px}
 }

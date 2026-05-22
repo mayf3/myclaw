@@ -11,14 +11,15 @@ export function renderDashboardHtml() {
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <p class="eyebrow">MyClaw Phase 1.0</p>
-          <h1>运行、路线与人工实验</h1>
-          <p>本地状态、OpenClaw 迁移、Feishu 复用决策、参考项目差距和可亲测路线。</p>
+          <p class="eyebrow">MyClaw Phase 1.1</p>
+          <h1>运行、路线与人工确认</h1>
+          <p>本地状态、OpenClaw 迁移、审批队列、Feishu 复用决策、参考项目差距和可亲测路线。</p>
         </div>
         <nav aria-label="Dashboard 导航">
           <a href="#overview">总览</a>
           <a href="#milestones">Milestones</a>
           <a href="#experiments">Human Experiments</a>
+          <a href="#approvals">Approvals</a>
           <a href="#references">参考完成度</a>
           <a href="#feishu">Feishu/Lark</a>
           <a href="#migration">OpenClaw 迁移</a>
@@ -43,6 +44,7 @@ export function renderDashboardHtml() {
           <div class="stat"><span>参考完成度</span><strong id="completionScore">-</strong></div>
           <div class="stat"><span>最近 Runs</span><strong id="runCount">-</strong></div>
           <div class="stat"><span>最近事件</span><strong id="eventCount">-</strong></div>
+          <div class="stat"><span>待审批</span><strong id="pendingApprovalCount">-</strong></div>
           <div class="stat"><span>迁移阻塞项</span><strong id="migrationRisk">-</strong></div>
         </section>
 
@@ -66,6 +68,17 @@ export function renderDashboardHtml() {
             <span id="experimentStatus" class="pill">未加载</span>
           </div>
           <div id="experimentPanel" class="empty">暂无实验路线</div>
+        </section>
+
+        <section id="approvals" class="panel">
+          <div class="section-head">
+            <div>
+              <h3>Approvals</h3>
+              <p>展示需要人确认的迁移或危险动作；当前只记录决定，不执行 apply。</p>
+            </div>
+            <span id="approvalStatus" class="pill">未加载</span>
+          </div>
+          <div id="approvalPanel" class="empty">暂无审批</div>
         </section>
 
         <section id="references" class="panel">

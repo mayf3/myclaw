@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.0 已把 gateway 主文件拆成 auth/http/routes，并把 dashboard/gateway 的只读控制面 GET route 收敛到 `packages/control-plane/src/http-routes.mjs`。Feishu callback route 仍只依赖 MyClaw 自己的 `packages/feishu-adapter` facade。Gateway 仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.1 已把 gateway 主文件拆成 auth/http/routes，把 dashboard/gateway 的只读控制面 GET route 收敛到 `packages/control-plane/src/http-routes.mjs`，并新增 approval decision mutation。Feishu callback route 仍只依赖 MyClaw 自己的 `packages/feishu-adapter` facade。Gateway 仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -38,9 +38,11 @@ HTTP
   GET  /api/runs/:runId
   GET  /api/milestones
   GET  /api/experiments
+  GET  /api/approvals
   POST /messages
   POST /feishu/events
   POST /api/openclaw-migration/stage
+  POST /api/approvals/:id/decision
 ```
 
 它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。
@@ -206,6 +208,12 @@ Phase 1.0：
 - `/api/status` 内联 `experiments`，Dashboard 可以把阶段路线转成可亲测实验。
 - Gateway 与 Dashboard 共用 `resolveControlGetRoute`，只读控制面 API 不再复制 if 链。
 
+Phase 1.1：
+
+- `GET /api/approvals` 暴露审批队列。
+- `POST /api/approvals/:id/decision` 记录 approved/rejected，仍受 mutation token guard 保护。
+- OpenClaw migration stage 自动生成 pending approval，但 decision 不触发 apply。
+
 Phase 4：
 
 - HTTP + WS。
@@ -235,6 +243,7 @@ Phase 4：
 - token 现在只是 shared secret，没有用户/角色/作用域。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 - Human Experiments 当前是静态 payload，不能被当作自动验收结果。
+- approval decision 只是 audit record，不是 authorization framework，也没有 scoped token。
 
 ## 验收标准
 
@@ -246,7 +255,8 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.0 的 E0-E6 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.1 的 E0-E6 路线，并和 Dashboard 展示一致。
+- `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
 - Gateway 重启后能从 state store 读历史 run。

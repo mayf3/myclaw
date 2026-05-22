@@ -1,23 +1,27 @@
 import { listChannels } from "../../channels/src/index.mjs";
+import { listApprovals, readApproval } from "../../core/src/approvals.mjs";
 import { listRuns, readEvents, readRun } from "../../core/src/state.mjs";
 import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
 import { buildHumanExperimentsPayload } from "./experiments.mjs";
 import { buildMilestonesPayload } from "./milestones.mjs";
+import { buildOpenClawStageReview } from "./openclaw-diff.mjs";
 import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
 
 const MIGRATION_PLAN_CACHE_MS = 5000;
 const migrationPlanCache = new Map();
 
 export async function buildStatusPayload(context) {
-  const [runs, events, migrationPlan, migrationStage] = await Promise.all([
+  const [runs, events, approvals, migrationPlan, migrationStage] = await Promise.all([
     listRuns(context.stateDir, { limit: 20 }),
     readEvents(context.stateDir, { limit: 50 }),
+    listApprovals(context.stateDir, { limit: 20 }),
     cachedOpenClawPlan(context.openclawSource),
     readLatestOpenClawStage(context.stateDir),
   ]);
   const stageSummary = buildOpenClawStageSummary(migrationPlan, migrationStage);
+  const stageReview = buildOpenClawStageReview(migrationPlan, migrationStage);
   return {
     ok: true,
     service: context.service || "myclaw-control-plane",
@@ -26,12 +30,14 @@ export async function buildStatusPayload(context) {
     channels: listChannels(),
     milestones: buildMilestonesPayload(),
     experiments: buildHumanExperimentsPayload(),
+    approvals,
     runs,
     events,
     openclawMigration: migrationPlan,
     openclawStage: migrationStage,
     openclawStageSummary: stageSummary,
-    openclawStageDiff: stageSummary,
+    openclawStageReview: stageReview,
+    openclawStageDiff: stageReview,
   };
 }
 
@@ -70,13 +76,37 @@ export async function buildOpenClawMigrationPayload(context, options = {}) {
     readLatestOpenClawStage(context.stateDir),
   ]);
   const stageSummary = buildOpenClawStageSummary(plan, stage);
+  const review = buildOpenClawStageReview(plan, stage);
   return {
     ok: true,
     plan,
     stage,
     stageSummary,
-    diff: stageSummary,
+    review,
+    diff: review,
   };
+}
+
+export async function buildApprovalsPayload(context, options = {}) {
+  return {
+    ok: true,
+    approvals: await listApprovals(context.stateDir, {
+      limit: options.limit || 50,
+      status: options.status,
+    }),
+  };
+}
+
+export async function buildApprovalPayload(context, options = {}) {
+  const payload = await readApproval(context.stateDir, options.approvalId);
+  if (!payload.ok) {
+    return {
+      ok: false,
+      error: { code: payload.status, message: "Approval not found or invalid" },
+      approval: payload.approval,
+    };
+  }
+  return { ok: true, approval: payload.approval };
 }
 
 export function buildReferenceCompletionStatusPayload() {

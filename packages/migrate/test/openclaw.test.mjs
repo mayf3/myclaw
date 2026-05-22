@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import { test } from "node:test";
+import { listApprovals } from "../../core/src/approvals.mjs";
 import { planOpenClawMigration } from "../src/openclaw.mjs";
 import { stageOpenClawMigration } from "../src/stage.mjs";
 
@@ -66,5 +67,11 @@ test("OpenClaw migration stage writes a reviewable snapshot", async () => {
   assert.equal(snapshot.rollback.supported, false);
   assert.equal(typeof snapshot.checksum, "string");
   assert.equal(snapshot.modules.some((module) => module.id === "feishu"), true);
+  assert.equal(snapshot.approval.status, "pending");
   assert.equal(latest.stageId, stage.stageId);
+  assert.equal(latest.approval.approvalId, snapshot.approval.approvalId);
+
+  await stageOpenClawMigration({ source: root, stateDir });
+  const approvals = await listApprovals(stateDir);
+  assert.equal(approvals.length, 1);
 });

@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { createApprovalRequest } from "../../core/src/approvals.mjs";
 import { buildFeishuWebhookSignature } from "../../feishu-adapter/src/index.mjs";
 import { startGateway } from "../src/index.mjs";
 
@@ -49,11 +50,11 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
 
     const milestones = await fetch(`${gateway.url}/api/milestones`).then((response) => response.json());
-    assert.equal(milestones.milestones.currentPhase, "1.0");
-    assert.equal(milestones.milestones.currentMilestone, "M1");
+    assert.equal(milestones.milestones.currentPhase, "1.1");
+    assert.equal(milestones.milestones.currentMilestone, "M4");
 
     const experiments = await fetch(`${gateway.url}/api/experiments`).then((response) => response.json());
-    assert.equal(experiments.experiments.currentPhase, "1.0");
+    assert.equal(experiments.experiments.currentPhase, "1.1");
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E4"), true);
 
     const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
@@ -144,6 +145,24 @@ test("gateway protects mutations with tokens when configured", async () => {
   }
 });
 
+test("gateway requires a configured token for approval decisions", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-approval-token-"));
+  const approval = await createApprovalRequest(stateDir, { title: "Needs strict token" });
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: stateDir });
+  try {
+    const denied = await fetch(`${gateway.url}/api/approvals/${approval.approvalId}/decision`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approved" }),
+    });
+    const payload = await denied.json();
+    assert.equal(denied.status, 403);
+    assert.equal(payload.error.code, "approval_token_required");
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
 test("gateway stages OpenClaw migration snapshots behind mutation auth", async () => {
   const source = await mkdtemp(path.join(tmpdir(), "myclaw-openclaw-gateway-"));
   const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-gateway-stage-"));
@@ -167,13 +186,26 @@ test("gateway stages OpenClaw migration snapshots behind mutation auth", async (
     assert.equal(payload.ok, true);
     assert.equal(payload.stage.status, "staged");
     assert.equal(payload.stage.modules.some((module) => module.id === "feishu"), true);
+    assert.equal(payload.stage.approval.status, "pending");
     assert.equal(payload.stageSummary.forReviewOnly, true);
+    assert.equal(payload.diff.items.some((item) => item.moduleId === "feishu"), true);
 
     const migration = await fetch(`${gateway.url}/api/openclaw-migration`).then((migrationResponse) =>
       migrationResponse.json(),
     );
     assert.equal(migration.stage.stageId, payload.stage.stageId);
     assert.equal(migration.stageSummary.stageId, payload.stage.stageId);
+    assert.equal(migration.diff.approval.approvalId, payload.stage.approval.approvalId);
+
+    const approvals = await fetch(`${gateway.url}/api/approvals`).then((approvalResponse) => approvalResponse.json());
+    assert.equal(approvals.approvals[0].approvalId, payload.stage.approval.approvalId);
+
+    const decision = await fetch(`${gateway.url}/api/approvals/${payload.stage.approval.approvalId}/decision`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer secret" },
+      body: JSON.stringify({ decision: "rejected", reason: "review smoke" }),
+    }).then((decisionResponse) => decisionResponse.json());
+    assert.equal(decision.approval.status, "rejected");
   } finally {
     await new Promise((resolve) => gateway.server.close(resolve));
   }

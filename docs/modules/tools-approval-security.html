@@ -86,6 +86,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   items: unknown[];
   expiresAt?: string;
 };</code></pre>
+<p>Phase 1.1 已落地的最小种子：</p>
+<ul><li><code>packages/core/src/approvals.mjs</code> 提供 approval create/list/read/decide。</li><li>OpenClaw migration stage 会生成 pending approval。</li><li>Gateway <code>POST /api/approvals/:id/decision</code> 必须配置 token，不能依赖 loopback 免 token。</li><li>decision 只记录 approved/rejected，不执行 tool、apply 或 runtime mutation。</li><li>当前还不是完整 tool approval，只是给后续危险动作审批铺 state/API/UI。</li></ul>
 <h2 id="第一批工具">第一批工具</h2>
 <p>Phase 2：</p>
 <ul><li><code>exec</code>：执行命令，默认需要 approval 或 allowlist。</li><li><code>read</code>：读取 workspace 内文件。</li><li><code>write</code>：写 workspace 内文件，默认需要 approval。</li><li><code>http.fetch</code>：网络请求，默认只允许 GET；POST 等后续。</li><li><code>llm.complete</code>：provider-backed 简单补全，后续给 agent 用。</li></ul>

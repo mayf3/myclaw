@@ -59,7 +59,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.0 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、最新 run detail，以及 OpenClaw stage review summary。</p>
+<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.1 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail，以及 OpenClaw stage review summary/diff。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>OpenClaw：</p>
 <ul><li>Control UI 通过 gateway schema 渲染 config 表单。</li><li>gateway health/status 是运维入口。</li><li>WS events 支撑实时 UI。</li><li>security audit 和 doctor 是用户自查入口。</li></ul>
@@ -84,8 +84,10 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>Milestones 区块，展示 M0-M5 当前完成度。</li><li><code>/api/status</code> 和 <code>/api/milestones</code> 返回同一套 milestone payload。</li><li>Feishu outbound facade 进度纳入 M2。</li></ul>
 <p>Phase 1.0 dashboard 新增：</p>
 <ul><li>Human Experiments 区块，展示 E0-E6 的测试目标、命令、成功信号和解锁关系。</li><li><code>/api/status</code> 内联 <code>experiments</code>，<code>/api/experiments</code> 可单独读取同一套路线。</li><li>Dashboard 和 Gateway 的只读 API 走 <code>control-plane/src/http-routes.mjs</code>，减少状态接口漂移。</li></ul>
-<p>Phase 1 前应补：</p>
-<ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 字段级 diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li><li>Human Experiments 和自动化 test/check 结果的映射。</li></ul>
+<p>Phase 1.1 dashboard 新增：</p>
+<ul><li>Approvals 区块，展示 pending/approved/rejected 与 OpenClaw stage approval。</li><li>OpenClaw stage review 摘要，明确 review-only，不执行 apply。</li><li><code>/api/status</code> 内联 <code>approvals</code>、<code>openclawStageReview</code> 和兼容字段 <code>openclawStageDiff</code>。</li></ul>
+<p>下一步应补：</p>
+<ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 可操作 review drawer 和后续真实 schema diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li><li>Human Experiments 和自动化 test/check 结果的映射。</li></ul>
 <h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>
 <p>第一版 UI 不做营销页，直接是工具界面：</p>
 <pre class="code" data-lang="text"><code>Runs
