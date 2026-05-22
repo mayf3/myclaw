@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createApprovalRequest } from "../../core/src/approvals.mjs";
 import { readJson, resolveStateDir } from "../../core/src/state.mjs";
 import { planOpenClawMigration } from "./openclaw.mjs";
 
@@ -13,12 +14,22 @@ export async function stageOpenClawMigration(options = {}) {
     ? path.resolve(options.outputPath)
     : path.join(stateDir, "migrations", "openclaw", `${snapshot.stageId}.json`);
   await writeJsonAtomic(outputPath, snapshot);
+  if (options.createApproval !== false) {
+    const approval = await createApprovalRequest(stateDir, buildStageApprovalInput(snapshot, outputPath));
+    snapshot.approval = {
+      approvalId: approval.approvalId,
+      status: approval.status,
+      title: approval.title,
+    };
+    await writeJsonAtomic(outputPath, snapshot);
+  }
   await writeJsonAtomic(path.join(stateDir, "migrations", "openclaw", "latest.json"), {
     stageId: snapshot.stageId,
     path: outputPath,
     generatedAt: snapshot.generatedAt,
     source: snapshot.source,
     status: snapshot.status,
+    approval: snapshot.approval || null,
   });
   return { ...snapshot, path: outputPath };
 }
@@ -108,6 +119,28 @@ function buildModules(plan) {
   return modules;
 }
 
+function buildStageApprovalInput(snapshot, outputPath) {
+  const blocked = snapshot.blocked?.length || 0;
+  return {
+    approvalId: `approval_openclaw_${snapshot.checksum.slice(0, 16)}`,
+    requestedBy: "openclaw-migration",
+    title: "Review OpenClaw migration stage",
+    summary: `Review ${snapshot.modules.length} staged modules before any apply. Blocked items: ${blocked}.`,
+    severity: blocked ? "high" : "medium",
+    subject: {
+      type: "openclaw-migration-stage",
+      stageId: snapshot.stageId,
+      checksum: snapshot.checksum,
+      path: outputPath,
+    },
+    evidence: snapshot.modules.map((module) => ({
+      moduleId: module.id,
+      status: module.status,
+      nextAction: module.nextAction,
+    })),
+  };
+}
+
 async function writeJsonAtomic(filePath, value) {
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.${process.pid}.${randomUUID().slice(0, 8)}.tmp`;
@@ -117,6 +150,6 @@ async function writeJsonAtomic(filePath, value) {
 
 function createSnapshotChecksum(plan, modules) {
   return createHash("sha256")
-    .update(JSON.stringify({ source: plan.source, generatedAt: plan.generatedAt, modules, unsupported: plan.unsupported }))
+    .update(JSON.stringify({ source: plan.source, config: plan.config, inventory: plan.inventory, modules, unsupported: plan.unsupported }))
     .digest("hex");
 }

@@ -37,7 +37,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
-<a href="#phase-1-0-完成度矩阵">Phase 1.0 完成度矩阵</a>
+<a href="#phase-1-1-完成度矩阵">Phase 1.1 完成度矩阵</a>
 <a href="#hermes-agent-观察">Hermes Agent 观察</a>
 <a href="#openclaw-观察">OpenClaw 观察</a>
 <a href="#openclaw-feishu-lark-观察">OpenClaw Feishu/Lark 观察</a>
@@ -62,9 +62,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <article class="content">
           <h2 id="诊断">诊断</h2>
 <p>Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw <code>extensions/lobster</code> 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。</p>
-<p>Phase 1.0 在 Feishu adapter facade 和 milestones 之后，新增 Human Experiments 路线图，并把 dashboard/gateway 的只读控制面 API 收敛到共享 route adapter。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。</p>
-<h2 id="phase-1-0-完成度矩阵">Phase 1.0 完成度矩阵</h2>
-<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>66</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth 和共享 read route adapter，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>60</td><td>92</td><td>42</td><td>35</td><td>有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token</td></tr><tr><td>Dashboard / 观测</td><td>66</td><td>78</td><td>55</td><td>90</td><td>有 milestones/run detail/stage summary/human experiments，缺 approval queue、实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>58</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage/review summary，缺 apply/rollback/字段级 diff UI</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn、tool loop、subagent、context budget</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory</td></tr><tr><td>Tools / Security</td><td>22</td><td>88</td><td>74</td><td>84</td><td>缺 tool schema、approval queue、policy snapshot、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>仅 channel registry，没有 plugin manifest/skill loader</td></tr></tbody></table></div>
+<p>Phase 1.1 在 Human Experiments 和共享 route adapter 之后，新增 migration approval queue 与 review-only stage review summary。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。</p>
+<h2 id="phase-1-1-完成度矩阵">Phase 1.1 完成度矩阵</h2>
+<div class="table-wrap"><table><thead><tr><th>模块</th><th>MyClaw</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th><th>当前差距</th></tr></thead><tbody><tr><td>Gateway / 控制面</td><td>65</td><td>90</td><td>78</td><td>86</td><td>已拆 routes/auth、共享 read route adapter 和 approval decision mutation，仍缺 WS/SSE、scoped token</td></tr><tr><td>Feishu/Lark 接入</td><td>60</td><td>92</td><td>42</td><td>35</td><td>有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token</td></tr><tr><td>Dashboard / 观测</td><td>73</td><td>78</td><td>55</td><td>90</td><td>有 milestones/run detail/stage review/approval queue/human experiments，缺实时事件</td></tr><tr><td>OpenClaw 迁移</td><td>63</td><td>0</td><td>82</td><td>35</td><td>已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff</td></tr><tr><td>Agent Runtime</td><td>8</td><td>76</td><td>92</td><td>90</td><td>还没有 agent turn、tool loop、subagent、context budget</td></tr><tr><td>Memory / Search</td><td>10</td><td>52</td><td>94</td><td>96</td><td>仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory</td></tr><tr><td>Tools / Security</td><td>32</td><td>88</td><td>74</td><td>84</td><td>有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox</td></tr><tr><td>Plugins / Skills</td><td>18</td><td>92</td><td>88</td><td>78</td><td>仅 channel registry，没有 plugin manifest/skill loader</td></tr></tbody></table></div>
 <h2 id="hermes-agent-观察">Hermes Agent 观察</h2>
 <p>可借鉴：</p>
 <ul><li>一个 agent loop 服务 CLI、gateway、ACP、cron、batch 多入口。</li><li>SQLite + FTS5 存 session，适合长期检索和跨会话召回。</li><li>memory + skills 形成使用后的学习闭环。</li><li>tool registry 将工具 schema、handler、availability check 放在统一位置。</li><li>prompt stability 明确，避免系统 prompt 中途频繁变化。</li></ul>
@@ -85,6 +85,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>仍然只参考，不直接加载。</li><li><code>packages/feishu-adapter</code> 已承接 config readiness、x-lark signature、AES-256-CBC decrypt、verification token、replay guard、event normalize 和 outbound text/card facade。</li><li>encrypted challenge 已可通过 gateway；encrypted message event 仍只是有解密入口，事件语义覆盖还很窄。</li><li>outbound 当前仍是 custom-bot webhook 契约，不是 app-token rich card API；下一阶段要补 policy、app token client 和持久 replay。</li></ul>
 <p>Phase 1.0 MyClaw 结论：</p>
 <ul><li>OpenClaw Feishu/Lark 仍只参考，不直接加载。</li><li>迁移实验 E4 明确要求 <code>forReviewOnly=true</code>，避免把 dry-run stage 误当 apply。</li><li>Dashboard 上的 E0-E6 是人类验收路线，不是自动化完成度计算；后续需要把这些实验和 test/check 结果绑定。</li></ul>
+<p>Phase 1.1 MyClaw 结论：</p>
+<ul><li>approval queue 已进入 state/API/Dashboard，但只适合作为 review record。</li><li>approval decision 需要配置 gateway token，不能靠 loopback 免 token。</li><li>OpenClaw stage review summary 不等于字段级 schema diff；下一阶段再做真实 source/target diff。</li></ul>
 <h2 id="openclaw-lobster-观察">OpenClaw Lobster 观察</h2>
 <p>可直接吸收的核心：</p>
 <ul><li><code>run</code> / <code>resume</code> 双动作。</li><li>typed JSON envelope。</li><li><code>needs_approval</code> 状态。</li><li><code>resumeToken</code> / <code>approvalId</code> 恢复。</li><li>cwd 必须留在 gateway 工作目录内。</li><li>timeout 和 stdout/stderr cap。</li><li>workflow file 与 pipeline string 两种入口。</li></ul>

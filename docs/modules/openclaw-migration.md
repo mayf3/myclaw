@@ -4,7 +4,7 @@
 
 “一键迁移 OpenClaw”必须被设计成可审计、可分阶段启用、可回滚的迁移流程，而不是复制目录后直接运行。OpenClaw 的 config、channels、plugins、secrets、tools、memory、browser 自动化和 gateway runtime 耦合面很大；MyClaw 当前只具备 channel boundary、state、dashboard 和 dry-run inventory。
 
-推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan`，Phase 0.5 已实现 `stage snapshot`，Phase 0.6 已把 stage 状态接入 dashboard，Phase 0.7 已建立 Feishu adapter facade，Phase 0.8 已在 status/dashboard 暴露 stage review summary，但还没有任何 runtime apply。
+推荐把一键迁移定义为三段：`plan`、`stage`、`apply`。Phase 0.2 已实现 `plan`，Phase 0.5 已实现 `stage snapshot`，Phase 0.6 已把 stage 状态接入 dashboard，Phase 0.7 已建立 Feishu adapter facade，Phase 0.8 已在 status/dashboard 暴露 stage review summary，Phase 1.1 已给 stage 加 pending approval 和 review-only summary，但还没有任何 runtime apply。
 
 ## 参考项目观察
 
@@ -92,6 +92,13 @@ Phase 0.8 已完成：
 - Dashboard migration panel 显示 stage summary，不再只显示 raw stage 指针。
 - summary 仍是模块级审阅摘要，不是字段级 config diff，也不能作为 apply 输入。
 
+Phase 1.1 已完成：
+
+- `stageOpenClawMigration` 会为同一内容生成稳定 approval id，避免重复 stage 制造多个相同审批。
+- `/api/approvals` 可查看 pending approval。
+- `/api/approvals/:id/decision` 可记录 approved/rejected，但不执行 apply。
+- Dashboard 展示 stage review summary，明确不是字段级 schema diff。
+
 Phase 0.2 不做：
 
 - 不读取 secrets 的真实值。
@@ -109,7 +116,8 @@ Phase 0.2 不做：
 | Phase 0.6 | reference dashboard | dashboard 显示 reference matrix 和 Feishu adoption decision |
 | Phase 0.7 | Feishu adapter facade | MyClaw 有自己的 Feishu 目标契约 |
 | Phase 0.8 | staged review summary | dashboard 展示 stage summary |
-| Phase 1.1 | staged diff detail | dashboard 展示字段级 diff，并支持确认/拒绝 |
+| Phase 1.1 | approval review summary | dashboard 展示 review summary，并支持确认/拒绝 record |
+| Phase 1.2 | staged diff detail | dashboard 展示真实字段级 diff，并支持确认/拒绝 |
 | Phase 1 | Feishu module apply | 只迁移 Feishu config 到 MyClaw Feishu adapter |
 | Phase 3 | providers/tools apply | provider 和 tool contracts 分批迁移 |
 | Phase 4 | memory/session migration | 明确 schema 后再迁移长期状态 |
@@ -121,7 +129,7 @@ Phase 0.2 不做：
 | OpenClaw 插件 runtime 过大 | 高 | manifest 先 inventory，runtime 后适配 |
 | secrets 泄露 | 高 | plan 中只保留 env ref、path ref、redacted marker |
 | 自动启用 channel 导致误发消息 | 高 | apply 默认 disabled，需要 dashboard 确认 |
-| stage summary 被误认为可执行 diff | 中 | Phase 1.1 加字段级 diff 和确认文案 |
+| stage review 被误认为可执行 diff | 中 | Phase 1.1 降级命名为 review summary；Phase 1.2 再做真实字段级 diff |
 | JSON5 parse 不完整 | 中 | Phase 1 引入正式 parser 或调用 OpenClaw schema export |
 | MyClaw schema 未成型 | 中 | stage snapshot 保留 raw config，不强行丢字段 |
 
@@ -133,5 +141,6 @@ Phase 0.2 不做：
 - `migrate openclaw --stage --json` 能写入 snapshot。
 - `POST /api/openclaw-migration/stage` 只写 snapshot，不修改 runtime config。
 - `/api/status` 和 `POST /api/openclaw-migration/stage` 都能返回模块级 review summary。
+- staged snapshot 会生成 pending approval，并且 approval decision 不会执行 apply。
 - dry-run 不修改 OpenClaw 目录、不修改 MyClaw state。
 - docs 中明确 plan/stage/apply 顺序。

@@ -4,19 +4,19 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.0 在 Feishu adapter facade 和 milestones 之后，新增 Human Experiments 路线图，并把 dashboard/gateway 的只读控制面 API 收敛到共享 route adapter。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.1 在 Human Experiments 和共享 route adapter 之后，新增 migration approval queue 与 review-only stage review summary。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.0 完成度矩阵
+## Phase 1.1 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
-| Gateway / 控制面 | 66 | 90 | 78 | 86 | 已拆 routes/auth 和共享 read route adapter，仍缺 WS/SSE、scoped token |
+| Gateway / 控制面 | 65 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter 和 approval decision mutation，仍缺 WS/SSE、scoped token |
 | Feishu/Lark 接入 | 60 | 92 | 42 | 35 | 有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token |
-| Dashboard / 观测 | 66 | 78 | 55 | 90 | 有 milestones/run detail/stage summary/human experiments，缺 approval queue、实时事件 |
-| OpenClaw 迁移 | 58 | 0 | 82 | 35 | 已有 plan/stage/review summary，缺 apply/rollback/字段级 diff UI |
+| Dashboard / 观测 | 73 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments，缺实时事件 |
+| OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
-| Tools / Security | 22 | 88 | 74 | 84 | 缺 tool schema、approval queue、policy snapshot、sandbox |
+| Tools / Security | 32 | 88 | 74 | 84 | 有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox |
 | Plugins / Skills | 18 | 92 | 88 | 78 | 仅 channel registry，没有 plugin manifest/skill loader |
 
 ## Hermes Agent 观察
@@ -82,6 +82,12 @@ Phase 1.0 MyClaw 结论：
 - OpenClaw Feishu/Lark 仍只参考，不直接加载。
 - 迁移实验 E4 明确要求 `forReviewOnly=true`，避免把 dry-run stage 误当 apply。
 - Dashboard 上的 E0-E6 是人类验收路线，不是自动化完成度计算；后续需要把这些实验和 test/check 结果绑定。
+
+Phase 1.1 MyClaw 结论：
+
+- approval queue 已进入 state/API/Dashboard，但只适合作为 review record。
+- approval decision 需要配置 gateway token，不能靠 loopback 免 token。
+- OpenClaw stage review summary 不等于字段级 schema diff；下一阶段再做真实 source/target diff。
 
 ## OpenClaw Lobster 观察
 

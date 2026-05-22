@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.0 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、最新 run detail，以及 OpenClaw stage review summary。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.1 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail，以及 OpenClaw stage review summary/diff。
 
 ## 参考项目观察
 
@@ -81,10 +81,16 @@ Phase 1.0 dashboard 新增：
 - `/api/status` 内联 `experiments`，`/api/experiments` 可单独读取同一套路线。
 - Dashboard 和 Gateway 的只读 API 走 `control-plane/src/http-routes.mjs`，减少状态接口漂移。
 
-Phase 1 前应补：
+Phase 1.1 dashboard 新增：
+
+- Approvals 区块，展示 pending/approved/rejected 与 OpenClaw stage approval。
+- OpenClaw stage review 摘要，明确 review-only，不执行 apply。
+- `/api/status` 内联 `approvals`、`openclawStageReview` 和兼容字段 `openclawStageDiff`。
+
+下一步应补：
 
 - run detail drawer 或独立详情页。
-- stage snapshot 字段级 diff。
+- stage snapshot 可操作 review drawer 和后续真实 schema diff。
 - `apply --module feishu` 人工确认入口。
 - 事件 stream 或轮询刷新。
 - Human Experiments 和自动化 test/check 结果的映射。

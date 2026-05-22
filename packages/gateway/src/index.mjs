@@ -1,8 +1,9 @@
 import http from "node:http";
 import { URL } from "node:url";
 import { resolveStateDir } from "../../core/src/state.mjs";
-import { authorizeGatewayMutation } from "./auth.mjs";
+import { authorizeGatewayMutation, authorizeGatewayToken } from "./auth.mjs";
 import { sendJson } from "./http.mjs";
+import { handlePostApprovalDecision, parseApprovalDecisionPath } from "./routes/approvals.mjs";
 import { handleGetRequest } from "./routes/control.mjs";
 import { handlePostFeishuEvent } from "./routes/feishu.mjs";
 import { handlePostOpenClawMigrationStage } from "./routes/migration.mjs";
@@ -51,6 +52,7 @@ export async function startGateway(options = {}) {
 
 export async function handleGatewayRequest(request, response, context) {
   const url = new URL(request.url || "/", "http://127.0.0.1");
+  const approvalDecisionId = parseApprovalDecisionPath(url.pathname);
   if (request.method === "POST" && (url.pathname === "/feishu/events" || url.pathname === "/api/feishu/events")) {
     await handlePostFeishuEvent(request, response, context);
     return;
@@ -69,6 +71,13 @@ export async function handleGatewayRequest(request, response, context) {
     await handlePostOpenClawMigrationStage(request, response, context);
     return;
   }
+  if (request.method === "POST" && approvalDecisionId) {
+    if (!authorizeApprovalDecision(request, response, context)) {
+      return;
+    }
+    await handlePostApprovalDecision(request, response, context, approvalDecisionId);
+    return;
+  }
 
   if (request.method === "GET" && (await handleGetRequest(url, response, context))) {
     return;
@@ -82,6 +91,18 @@ export async function handleGatewayRequest(request, response, context) {
 
 function authorizeMutation(request, response, context) {
   const auth = authorizeGatewayMutation(request, context);
+  if (!auth.ok) {
+    sendJson(response, auth.status, auth.payload);
+    return false;
+  }
+  return true;
+}
+
+function authorizeApprovalDecision(request, response, context) {
+  const auth = authorizeGatewayToken(request, context, {
+    code: "approval_token_required",
+    message: "Set MYCLAW_GATEWAY_TOKEN before recording approval decisions.",
+  });
   if (!auth.ok) {
     sendJson(response, auth.status, auth.payload);
     return false;

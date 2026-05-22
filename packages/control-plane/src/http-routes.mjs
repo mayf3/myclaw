@@ -1,4 +1,6 @@
 import {
+  buildApprovalPayload,
+  buildApprovalsPayload,
   buildEventsPayload,
   buildFeishuAdoptionStatusPayload,
   buildHumanExperimentsStatusPayload,
@@ -26,6 +28,14 @@ export async function resolveControlGetRoute(url, context = {}) {
   }
   if (url.pathname === "/api/events") {
     return route(200, await buildEventsPayload(context, { limit: numberParam(url, "limit", 100) }));
+  }
+  if (url.pathname === "/api/approvals") {
+    return route(200, await buildApprovalsPayload(context, { limit: numberParam(url, "limit", 50), status: url.searchParams.get("status") || "" }));
+  }
+  if (url.pathname.startsWith("/api/approvals/")) {
+    const approvalId = decodeURIComponent(url.pathname.slice(15));
+    const payload = await buildApprovalPayload(context, { approvalId });
+    return route(approvalPayloadStatus(payload), payload);
   }
   if (url.pathname === "/api/openclaw-migration") {
     return route(200, await buildOpenClawMigrationPayload(context));
@@ -59,4 +69,11 @@ function runPayloadStatus(payload) {
     return 200;
   }
   return payload.error?.code === "invalid_run_id" ? 400 : 404;
+}
+
+function approvalPayloadStatus(payload) {
+  if (payload.ok) {
+    return 200;
+  }
+  return payload.error?.code === "invalid_approval_id" ? 400 : 404;
 }

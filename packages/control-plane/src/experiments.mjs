@@ -3,7 +3,7 @@ export function buildHumanExperimentsPayload() {
     schemaVersion: 1,
     computed: false,
     source: "static-human-roadmap",
-    currentPhase: "1.0",
+    currentPhase: "1.1",
     title: "Human Experiment Roadmap",
     goal: "把每个阶段改成用户可亲自验证的实验，而不是只看 agent 自评。",
     planningMap: [
@@ -11,7 +11,7 @@ export function buildHumanExperimentsPayload() {
       step("M1", "Gateway 与 Dashboard", "E1", "立即可测"),
       step("M2", "Feishu/Lark 边界", "E2/E3", "配置后可测"),
       step("M3", "OpenClaw 迁移", "E4", "立即可测"),
-      step("M4", "审批与安全", "E5", "下一阶段开放"),
+      step("M4", "审批与安全", "E5", "立即可测"),
       step("M5", "Agent Runtime 与记忆", "E6", "后续开放"),
     ],
     experiments: [
@@ -87,12 +87,17 @@ export function buildHumanExperimentsPayload() {
       experiment({
         id: "E5",
         milestone: "M4",
-        title: "审批队列与危险动作确认",
-        status: "planned",
+        title: "审批队列与迁移确认",
+        status: "ready",
         role: "安全审阅者",
-        whatToTest: "未来验证 tool/action 进入 pending approval 后，用户能在 CLI 或 Dashboard 明确批准或拒绝。",
-        commands: ["后续开放：myclaw approvals list", "后续开放：myclaw approvals approve <approvalId>"],
-        successSignals: ["危险动作默认暂停", "审批写入 audit event", "拒绝后 run 可解释失败原因"],
+        whatToTest: "验证 OpenClaw stage 会生成 pending approval，并且用户能用 gateway token 明确 approve/reject。",
+        commands: [
+          "MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw",
+          'curl -s http://127.0.0.1:4322/api/openclaw-migration/stage -H "content-type: application/json" -H "x-myclaw-token: dev-token" -d "{}"',
+          "curl -s http://127.0.0.1:4322/api/approvals",
+          'curl -s http://127.0.0.1:4322/api/approvals/<approvalId>/decision -H "content-type: application/json" -H "x-myclaw-token: dev-token" -d \'{"decision":"rejected","reason":"human smoke"}\'',
+        ],
+        successSignals: ["pending approval 出现在 Dashboard", "decision 写入 approval record", "events timeline 出现 approval.decided"],
         nextUnlock: "E6 agent tool loop",
       }),
       experiment({

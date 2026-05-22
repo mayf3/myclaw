@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { createEvent, okEnvelope } from "../../core/src/envelope.mjs";
+import { createApprovalRequest } from "../../core/src/approvals.mjs";
 import { recordRun } from "../../core/src/state.mjs";
 import { resolveControlGetRoute } from "../src/http-routes.mjs";
 
@@ -18,6 +19,10 @@ test("control get route adapter resolves shared read routes", async () => {
       events: [createEvent("route.test")],
     }),
   );
+  const approval = await createApprovalRequest(stateDir, {
+    title: "Route approval",
+    subject: { type: "test" },
+  });
   const context = { stateDir, openclawSource: stateDir, service: "route-test" };
 
   const health = await resolveControlGetRoute(url("/api/health"), context);
@@ -38,7 +43,15 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.0");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.1");
+
+  const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
+  assert.equal(approvals.status, 200);
+  assert.equal(approvals.payload.approvals[0].approvalId, approval.approvalId);
+
+  const approvalDetail = await resolveControlGetRoute(url(`/api/approvals/${approval.approvalId}`), context);
+  assert.equal(approvalDetail.status, 200);
+  assert.equal(approvalDetail.payload.approval.title, "Route approval");
 
   const missing = await resolveControlGetRoute(url("/nope"), context);
   assert.equal(missing.handled, false);

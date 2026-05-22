@@ -30,5 +30,6 @@ test("migrate openclaw --stage writes a snapshot", async () => {
 
   assert.equal(payload.ok, true);
   assert.equal(payload.stage.status, "staged");
+  assert.equal(payload.stage.approval.status, "pending");
   assert.equal(snapshot.modules.some((module) => module.id === "feishu"), true);
 });

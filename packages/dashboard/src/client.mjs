@@ -34,9 +34,10 @@ async function loadStatus() {
     renderOverview(payload);
     renderMilestones(payload.milestones);
     renderExperiments(payload.experiments);
+    renderApprovals(payload.approvals || [], payload.openclawStageReview || payload.openclawStageDiff);
     renderReferenceCompletion(payload.referenceCompletion);
     renderFeishu(payload.feishuAdoption, payload.feishuAdapter);
-    renderMigration(payload.openclawMigration, payload.openclawStage, payload.openclawStageSummary);
+    renderMigration(payload.openclawMigration, payload.openclawStage, payload.openclawStageSummary, payload.openclawStageReview || payload.openclawStageDiff);
     renderRunDetail(payload.runDetail);
     renderRuns(payload.runs || []);
     renderEvents(payload.events || []);
@@ -108,6 +109,41 @@ function signalList(signals = []) {
   return '<p><strong>成功信号</strong><br>' + signals.map((item) => '<span class="tag ok">' + esc(item) + '</span>').join(" ") + '</p>';
 }
 
+function renderApprovals(approvals, diff) {
+  const pending = approvals.filter((item) => item.status === "pending").length;
+  $("approvalStatus").className = "pill " + (pending ? "warn" : "ok");
+  $("approvalStatus").textContent = pending + " pending";
+  if (!approvals.length && !diff?.items?.length) {
+    $("approvalPanel").outerHTML = '<div id="approvalPanel" class="empty">暂无审批</div>';
+    return;
+  }
+  $("approvalPanel").outerHTML = '<div id="approvalPanel" class="approval-list">' +
+    approvals.map((item) => '<div class="approval-row">' +
+      '<div><span class="tag ' + approvalTone(item.status) + '">' + esc(item.status) + '</span><p class="mono small">' + esc(item.approvalId) + '</p></div>' +
+      '<div><strong>' + esc(item.title) + '</strong><p>' + esc(item.summary) + '</p><p><span class="small">' + esc(item.subject?.type || "-") + ' · ' + esc(item.subject?.stageId || "-") + '</span></p></div>' +
+      '<div><span class="tag ' + (item.severity === "high" ? "warn" : "info") + '">' + esc(item.severity) + '</span><p class="small">' + esc(item.updatedAt || "-") + '</p></div>' +
+    '</div>').join("") +
+    renderStageReview(diff) +
+    '</div>';
+}
+
+function renderStageReview(diff) {
+  if (!diff?.items?.length) {
+    return "";
+  }
+  return '<details class="criteria" open><summary>OpenClaw stage review · ' + esc(diff.items.length) + ' items</summary><div class="diff-list">' +
+    diff.items.map((item) => '<div class="diff-row">' +
+      '<div><span class="tag info">' + esc(item.moduleId) + '</span><p class="small mono">' + esc(item.field) + '</p></div>' +
+      '<div><strong>' + esc(item.action) + '</strong><p>' + esc(item.source) + ' → ' + esc(item.target) + '</p><p><span class="small">' + esc(item.impact) + '</span></p></div>' +
+      '<div><span class="tag warn">review only</span><p class="small">' + esc(item.approvalId || "-") + '</p></div>' +
+    '</div>').join("") +
+    '</div></details>';
+}
+
+function approvalTone(status) {
+  return status === "approved" ? "ok" : status === "rejected" ? "fail" : status === "pending" ? "warn" : "info";
+}
+
 async function fetchRunDetail(runId) {
   const response = await fetch("/api/runs/" + encodeURIComponent(runId));
   if (!response.ok) {
@@ -122,6 +158,7 @@ function renderOverview(payload) {
   $("completionScore").textContent = (payload.referenceCompletion?.average ?? "-") + "%";
   $("runCount").textContent = (payload.runs || []).length;
   $("eventCount").textContent = (payload.events || []).length;
+  $("pendingApprovalCount").textContent = (payload.approvals || []).filter((item) => item.status === "pending").length;
   $("migrationRisk").textContent = payload.openclawMigration?.unsupported?.length ?? "-";
 }
 
@@ -209,7 +246,7 @@ function decisionList(title, items, tone) {
     '</div>';
 }
 
-function renderMigration(plan, stage, summary) {
+function renderMigration(plan, stage, summary, diff) {
   if (!plan) {
     $("migrationPanel").outerHTML = '<div id="migrationPanel" class="empty">暂无迁移计划</div>';
     return;
@@ -226,6 +263,8 @@ function renderMigration(plan, stage, summary) {
     '<p><strong>插件清单</strong><br>' + plugins + ' 个 entries/manifests</p>' +
     '<p><strong>Latest stage</strong><br>' + (stage ? '<span class="mono">' + esc(stage.stageId || stage.status) + '</span>' : "尚未 stage") + '</p>' +
     stageSummaryText(summary) +
+    '<p><strong>Stage review</strong><br><span class="tag info">' + esc(diff?.counts?.items ?? 0) + ' items</span> ' +
+    '<span class="tag warn">review only</span></p>' +
     '<p>' + (unsupported.length ? '<span class="tag warn">' + unsupported.length + ' 个阻塞项</span>' : '<span class="tag ok">可继续拆解</span>') + '</p>' +
     '</div>';
 }

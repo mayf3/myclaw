@@ -2,11 +2,11 @@ const moduleDefinitions = [
   {
     id: "gateway",
     label: "Gateway / 控制面",
-    phase: "1.0",
+    phase: "1.1",
     openclaw: 90,
     hermes: 78,
     openhuman: 86,
-    gap: "已拆 routes/auth 并共享 read route adapter，仍缺 WS/event stream、scoped token、route schema",
+    gap: "已拆 routes/auth、共享 read route adapter，并有 approval decision mutation，仍缺 WS/event stream、scoped token、route schema",
     next: "增加 mutation audit 和 scoped token",
     criteria: [
       c("gateway-http", "HTTP health/status/messages/runs/stage routes", "done", 100, "packages/gateway/src/routes"),
@@ -18,7 +18,7 @@ const moduleDefinitions = [
   {
     id: "feishu",
     label: "Feishu/Lark 接入",
-    phase: "1.0",
+    phase: "1.1",
     openclaw: 92,
     hermes: 42,
     openhuman: 35,
@@ -37,12 +37,12 @@ const moduleDefinitions = [
     openclaw: 78,
     hermes: 55,
     openhuman: 90,
-    gap: "已有 run detail/stage summary/milestones/human experiments，缺 approval queue、实时事件、字段级 diff",
+    gap: "已有 run detail/stage summary/stage review/approval queue/human experiments，缺实时事件和完整 review drawer",
     next: "把 approval queue 和 event stream 做成一等操作面",
     criteria: [
-      c("dashboard-status", "state/runs/events/channels/milestones/experiments view", "done", 78, "packages/dashboard/src/client.mjs"),
+      c("dashboard-status", "state/runs/events/channels/milestones/experiments/approvals view", "done", 84, "packages/dashboard/src/client.mjs"),
       c("dashboard-reference", "reference matrix, Feishu adoption and adapter readiness", "partial", 65, "packages/dashboard/src/client.mjs"),
-      c("dashboard-actions", "run detail and stage review summary", "partial", 60, "packages/dashboard/src/client.mjs"),
+      c("dashboard-actions", "run detail, approval queue and stage review summary", "partial", 70, "packages/dashboard/src/client.mjs"),
     ],
   },
   {
@@ -52,12 +52,12 @@ const moduleDefinitions = [
     openclaw: 0,
     hermes: 82,
     openhuman: 35,
-    gap: "已有 plan/stage/review summary，缺 apply/rollback 和字段级 diff UI",
+    gap: "已有 plan/stage/review summary/stage review/approval seed，缺 apply/rollback 和字段级 diff UI",
     next: "只允许从 staged snapshot apply --module feishu",
     criteria: [
       c("migration-plan", "dry-run config and manifest inventory", "done", 75, "packages/migrate/src/openclaw.mjs"),
-      c("migration-stage", "reviewable stage snapshot with checksum and summary", "partial", 70, "packages/migrate/src/stage.mjs"),
-      c("migration-apply", "field diff, apply, rollback UI", "missing", 30, "docs/modules/openclaw-migration.md"),
+      c("migration-stage", "reviewable stage snapshot with checksum, diff and approval", "partial", 80, "packages/migrate/src/stage.mjs"),
+      c("migration-apply", "field diff UI, apply, rollback", "missing", 35, "docs/modules/openclaw-migration.md"),
     ],
   },
   {
@@ -97,11 +97,11 @@ const moduleDefinitions = [
     openclaw: 88,
     hermes: 74,
     openhuman: 84,
-    gap: "缺 tool schema、approval queue、policy snapshot、sandbox",
+    gap: "已有 migration approval queue，缺 tool schema、tool approval、policy snapshot、sandbox",
     next: "把 approval 从 message reply 提升成独立 state",
     criteria: [
       c("mutation-guard", "gateway mutation token guard", "partial", 40, "packages/gateway/src/index.mjs"),
-      c("approval-state", "approval as first-class state", "partial", 25, "docs/modules/tools-approval-security.md"),
+      c("approval-state", "approval as first-class state", "partial", 45, "packages/core/src/approvals.mjs"),
       c("tool-policy", "tool schema/policy/sandbox", "missing", 0, "OpenClaw/OpenHuman reference"),
     ],
   },

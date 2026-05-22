@@ -58,6 +58,14 @@ type ApprovalRequest = {
 };
 ```
 
+Phase 1.1 已落地的最小种子：
+
+- `packages/core/src/approvals.mjs` 提供 approval create/list/read/decide。
+- OpenClaw migration stage 会生成 pending approval。
+- Gateway `POST /api/approvals/:id/decision` 必须配置 token，不能依赖 loopback 免 token。
+- decision 只记录 approved/rejected，不执行 tool、apply 或 runtime mutation。
+- 当前还不是完整 tool approval，只是给后续危险动作审批铺 state/API/UI。
+
 ## 第一批工具
 
 Phase 2：
