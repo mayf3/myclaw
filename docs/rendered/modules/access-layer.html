@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>参考项目对比 · MyClaw 模块评审</title>
+    <title>接入层 · MyClaw 模块评审</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,18 +30,18 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>参考项目对比</h1>
+          <h1>接入层</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
-<a href="#hermes-agent-观察">Hermes Agent 观察</a>
-<a href="#openclaw-观察">OpenClaw 观察</a>
-<a href="#openclaw-lobster-观察">OpenClaw Lobster 观察</a>
-<a href="#openhuman-观察">OpenHuman 观察</a>
-<a href="#myclaw-取舍">MyClaw 取舍</a>
+<a href="#参考项目观察">参考项目观察</a>
+<a href="#推荐设计">推荐设计</a>
+<a href="#接入协议">接入协议</a>
+<a href="#mvp-边界">MVP 边界</a>
+<a href="#不建议第一阶段做">不建议第一阶段做</a>
 <a href="#关键风险">关键风险</a>
 <a href="#验收标准">验收标准</a>
           <a href="#related-modules">相关模块</a>
@@ -49,50 +49,65 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       </aside>
       <main>
         <section id="module-summary" class="hero">
-          <h2>参考项目对比</h2>
-          <p>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</p>
+          <h2>接入层</h2>
+          <p>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</p>
           <div class="meta">
-            <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0</span>
-            <span class="tag">战略判断</span>
+            <span class="tag p1">P1</span>
+            <span class="tag phase">Phase 0-4</span>
+            <span class="tag">接口边界</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw <code>extensions/lobster</code> 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。</p>
-<h2 id="hermes-agent-观察">Hermes Agent 观察</h2>
-<p>可借鉴：</p>
-<ul><li>一个 agent loop 服务 CLI、gateway、ACP、cron、batch 多入口。</li><li>SQLite + FTS5 存 session，适合长期检索和跨会话召回。</li><li>memory + skills 形成使用后的学习闭环。</li><li>tool registry 将工具 schema、handler、availability check 放在统一位置。</li><li>prompt stability 明确，避免系统 prompt 中途频繁变化。</li></ul>
-<p>不建议照搬：</p>
-<ul><li>核心 <code>AIAgent</code> 和 CLI 文件过大，早期项目会很快变成难拆的大泥球。</li><li>Python 插件和工具生态与用户要求的 Node.js 不一致。</li><li>终端后端、RL、trajectory、Batch runner 对 MyClaw v0 是噪声。</li><li>多渠道 gateway 在未验证核心体验前会拉高维护成本。</li></ul>
-<h2 id="openclaw-观察">OpenClaw 观察</h2>
-<p>可借鉴：</p>
-<ul><li>Node.js/TypeScript、ESM、pnpm workspace 方向与 MyClaw 技术要求一致。</li><li>本地优先 gateway，默认 loopback，外部访问需要明确 auth/pairing。</li><li>plugin manifest 先做 metadata/schema validation，再加载 runtime。</li><li>tool policy 明确：工具是否暴露给模型由配置、provider、sandbox、channel 权限共同决定。</li><li>session key 和路由模型区分 direct、group、cron、agent，后续多入口时很有价值。</li></ul>
-<p>不建议照搬：</p>
-<ul><li>127 个 extensions、完整 channel SDK、移动节点、Control UI、daemon 都不适合第一阶段。</li><li>插件 SDK 已经承担外部兼容，MyClaw 初期不应背这个承诺。</li><li>OpenClaw 的安全文档非常成熟，但实现面很厚，MyClaw 应先做小而强的边界。</li></ul>
-<h2 id="openclaw-lobster-观察">OpenClaw Lobster 观察</h2>
-<p>可直接吸收的核心：</p>
-<ul><li><code>run</code> / <code>resume</code> 双动作。</li><li>typed JSON envelope。</li><li><code>needs_approval</code> 状态。</li><li><code>resumeToken</code> / <code>approvalId</code> 恢复。</li><li>cwd 必须留在 gateway 工作目录内。</li><li>timeout 和 stdout/stderr cap。</li><li>workflow file 与 pipeline string 两种入口。</li></ul>
-<p>需要重新设计的地方：</p>
-<ul><li>不要一开始依赖 OpenClaw plugin runtime。</li><li>不要把 Lobster 当外部黑盒；MyClaw 应把 workflow core 变成自己的主内核。</li><li>approval 不应只是工具返回值，还要进入 state store，方便 CLI/gateway/UI 查询。</li></ul>
-<h2 id="openhuman-观察">OpenHuman 观察</h2>
-<p>可借鉴：</p>
-<ul><li><code>src/core/all.rs</code> 的 controller registry：业务 controller 和 transport 分离，后续 CLI、HTTP、UI 可以复用同一套 handler。</li><li><code>src/core/event_bus/</code> 的 DomainEvent：agent、memory、channel、cron、tool、skill 都通过统一事件面通信。</li><li><code>src/openhuman/tools/traits.rs</code> 的工具协议：ToolSpec、permission、scope、category、结果预算都在工具定义里。</li><li><code>src/openhuman/agent/</code> 的 agent harness：agent turn、tool loop、subagent runner、memory loader 分层清楚。</li><li><code>src/openhuman/skills/</code> 的 <code>SKILL.md</code> 发现和注入：skill 可以先作为 prompt workflow，不急着执行代码。</li><li><code>src/openhuman/memory/</code> 的分层：conversation JSONL、UnifiedMemory、memory tree 清楚区分轻重层。</li></ul>
-<p>不建议照搬：</p>
-<ul><li>Rust/Tauri 桌面壳、CEF、screen intelligence、accessibility、voice、Meet、subconscious 都太重。</li><li>118+ OAuth 集成和 Composio 周期同步不适合 MyClaw 初期。</li><li>memory tree、topic/global digest、entity graph 在还没有稳定 workflow/agent 前是过早复杂化。</li><li>OpenHuman 产品范围已经是个人 AI super assistant，MyClaw 初期应更窄：本地工作流与安全 agent 内核。</li></ul>
-<h2 id="myclaw-取舍">MyClaw 取舍</h2>
-<p>第一阶段吸收顺序：</p>
-<ul><li>Lobster 的 envelope 和 approval/resume。</li><li>OpenHuman 的 controller registry 和 event bus。</li><li>OpenClaw/OpenHuman 的工具权限、安全和 gateway 边界。</li><li>Hermes 的 session search、memory、skills。</li><li>OpenClaw/OpenHuman 的插件、Control UI、长期记忆。</li></ul>
+<p>MyClaw 的接入层要分三层演进：CLI 是第一入口，Gateway 是本地服务入口，外部渠道是最后一层。不要一开始做 Telegram/WhatsApp/Discord。</p>
+<h2 id="参考项目观察">参考项目观察</h2>
+<p>Hermes 有 CLI、gateway、ACP、batch 等多个入口，但核心 agent 统一。这个方向值得借鉴。</p>
+<p>OpenClaw 的接入层更完整：CLI、WebSocket gateway、WebChat、macOS/iOS/Android nodes、多渠道插件。但对 MyClaw 初期太重。</p>
+<h2 id="推荐设计">推荐设计</h2>
+<p>接入层分层：</p>
+<pre class="code" data-lang="text"><code>CLI
+  -&gt; Core API
+
+Gateway HTTP/WS
+  -&gt; Core API
+  -&gt; Agent API
+
+Channel Adapters
+  -&gt; Gateway API</code></pre>
+<p>第一阶段 CLI 命令：</p>
+<pre class="code" data-lang="bash"><code>myclaw init
+myclaw doctor
+myclaw run &quot;exec echo hello&quot;
+myclaw run workflow.json --json
+myclaw status &lt;runId&gt;
+myclaw resume &lt;approvalId&gt; --approve
+myclaw resume &lt;approvalId&gt; --deny</code></pre>
+<p>CLI 不能含业务逻辑，只负责：</p>
+<ul><li>参数解析。</li><li>调 core API。</li><li>格式化输出。</li><li>exit code。</li></ul>
+<h2 id="接入协议">接入协议</h2>
+<p>所有接入层都应该使用同一组领域操作：</p>
+<pre class="code" data-lang="ts"><code>runWorkflow(input, options): Promise&lt;RunResult&gt;
+resumeApproval(input): Promise&lt;RunResult&gt;
+getRun(runId): Promise&lt;RunRecord | null&gt;
+listRuns(filter): Promise&lt;RunSummary[]&gt;</code></pre>
+<p>CLI 和 Gateway 只是在这层外面套不同 transport。</p>
+<h2 id="mvp-边界">MVP 边界</h2>
+<p>Phase 0/1：</p>
+<ul><li>只实现 CLI。</li><li>CLI 直接调用 core，不走 HTTP。</li><li><code>--json</code> 输出完整 envelope。</li><li>默认输出面向人读，但不隐藏 runId/approvalId。</li></ul>
+<p>Phase 4：</p>
+<ul><li>CLI 增加 <code>--gateway</code> 模式。</li><li>Gateway 提供 HTTP/WS。</li><li>CLI 可以本地 direct 或 remote gateway 两种执行。</li></ul>
+<h2 id="不建议第一阶段做">不建议第一阶段做</h2>
+<ul><li>OAuth。</li><li>DM pairing。</li><li>Slack/Telegram/WhatsApp。</li><li>browser Control UI。</li><li>daemon/service install。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>一开始做成“大平台”，会拖慢核心闭环。</li><li>一开始只做“命令执行器”，后续 agent 接入会重构成本高。</li><li>没有统一 envelope，CLI、gateway、agent、UI 会各自发明结果格式。</li></ul>
+<ul><li>CLI 里写业务逻辑，后续 gateway 会复制一遍。</li><li>文本输出不稳定，会破坏脚本调用。</li><li>错误只打印字符串，不保留结构化 error。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li>所有模块都以统一 envelope 为核心通信格式。</li><li>第一阶段不依赖参考项目代码。</li><li>每个后续能力都能回答：它接入哪个 core API、写入哪个 state、暴露给哪个 access layer。</li></ul>
+<ul><li>CLI 每个命令都有 JSON 输出模式。</li><li>CLI exit code 与 envelope 状态一致。</li><li>同一 workflow 通过 CLI direct 和未来 gateway 模式能得到同形结果。</li><li><code>doctor</code> 能检查 Node 版本、state 目录、config schema、workspace path。</li></ul>
           <h2 id="related-modules">相关模块</h2>
-          <div class="module-grid"><a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
 <a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
 <a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
 <a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
-<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
 <a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
 <a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
 <a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>

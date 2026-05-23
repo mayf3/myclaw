@@ -50,11 +50,11 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
 
     const milestones = await fetch(`${gateway.url}/api/milestones`).then((response) => response.json());
-    assert.equal(milestones.milestones.currentPhase, "1.1");
-    assert.equal(milestones.milestones.currentMilestone, "M4");
+    assert.equal(milestones.milestones.currentPhase, "1.2");
+    assert.equal(milestones.milestones.currentMilestone, "M6");
 
     const experiments = await fetch(`${gateway.url}/api/experiments`).then((response) => response.json());
-    assert.equal(experiments.experiments.currentPhase, "1.1");
+    assert.equal(experiments.experiments.currentPhase, "1.2");
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E4"), true);
 
     const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
