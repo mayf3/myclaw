@@ -84,12 +84,14 @@ async function runReceive(args) {
 
 async function runDoctor(args) {
   const stateDir = resolveStateDir(args.stateDir);
+  const htmlCenter = await checkHtmlCenter(args.htmlCenterUrl);
   const payload = {
     version: VERSION,
     node: process.version,
     cwd: process.cwd(),
     stateDir,
     channels: listChannels(),
+    htmlCenter,
   };
   if (args.json) {
     console.log(JSON.stringify(payload, null, 2));
@@ -98,6 +100,7 @@ async function runDoctor(args) {
     console.log(`Node: ${payload.node}`);
     console.log(`CWD: ${payload.cwd}`);
     console.log(`State: ${payload.stateDir}`);
+    console.log(`HTML Center: ${htmlCenter.ok ? "ready" : "unreachable"} (${htmlCenter.url})`);
     console.log("Channels:");
     for (const channel of payload.channels) {
       const mark = channel.configured ? "ready" : "needs config";
@@ -105,6 +108,35 @@ async function runDoctor(args) {
     }
   }
   return 0;
+}
+
+async function checkHtmlCenter(url = process.env.HTML_CENTER_URL || "http://127.0.0.1:4177") {
+  const healthUrl = `${url.replace(/\/$/, "")}/api/health`;
+  try {
+    const response = await fetchWithTimeout(healthUrl, 800);
+    return {
+      ok: response.ok,
+      url,
+      status: response.status,
+      service: response.ok ? (await response.json()).service : "unknown",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function runChannels(args) {
@@ -269,7 +301,7 @@ function printHelp() {
   console.log(`MyClaw ${VERSION}
 
 Usage:
-  myclaw doctor [--json] [--state-dir <path>]
+  myclaw doctor [--json] [--state-dir <path>] [--html-center-url <url>]
   myclaw channels [--json]
   myclaw send --text <message> [--channel console|webhook|feishu-webhook] [--target <id>] [--webhook-url <url>] [--json]
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]

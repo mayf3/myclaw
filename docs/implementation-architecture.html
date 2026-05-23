@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyClaw Phase 1.1 实现架构可视化评审 · MyClaw</title>
+    <title>MyClaw Phase 1.2 实现架构可视化评审 · MyClaw</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,7 +30,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>MyClaw Phase 1.1 实现架构可视化评审</h1>
+          <h1>MyClaw Phase 1.2 实现架构可视化评审</h1>
           <p>当前实现架构与阶段评审</p>
         </div>
         <a class="back" href="./index.html">← 返回全局索引</a>
@@ -38,7 +38,6 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <a href="#module-summary">总诊断</a>
           <a href="#总诊断">总诊断</a>
 <a href="#大规划图">大规划图</a>
-<a href="#当前-milestones">当前 Milestones</a>
 <a href="#系统上下文图">系统上下文图</a>
 <a href="#模块架构图">模块架构图</a>
 <a href="#核心业务流程图">核心业务流程图</a>
@@ -60,196 +59,184 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 1.1 的审批队列、OpenClaw stage review、人类实验路线和当前架构审查。</p>
+          <p>MyClaw Phase 1.2 的结构约束、HTML Center 修复、文档目录拆分和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.1</span>
+            <span class="tag phase">Phase 1.2</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
-        <article class="content"><p>更新时间：2026-05-22</p>
+        <article class="content"><p>更新时间：2026-05-23</p>
 <h2 id="总诊断">总诊断</h2>
-<p>Phase 1.1 把“人能参与测试”推进到“人能记录决定”：OpenClaw stage 会生成 pending approval，Gateway 可以在强 token 下记录 approve/reject，Dashboard 显示审批队列和 review-only stage review。结论：这是正确的小步，但它还不是安全执行边界，也不是字段级 schema diff；当前只能承载 review record，不能承载真实 apply/execute。</p>
-<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>E5 已可亲测，approval/review-only/apply 边界写清楚</td></tr><tr><td>可扩展性</td><td>8/10</td><td>approval store 独立，Gateway mutation route 独立</td></tr><tr><td>可靠性</td><td>7/10</td><td>decision 有锁与并发测试，仍缺真正幂等请求 ID</td></tr><tr><td>可维护性</td><td>7/10</td><td>所有文件低于 500 行，Dashboard client 347 行开始变重</td></tr><tr><td>安全性</td><td>7/10</td><td>approval decision 强制 token，仍缺 scoped token、actor provenance</td></tr></tbody></table></div>
+<p>Phase 1.2 先处理两个会让后续研发变脏的问题：HTML Center 链接不可访问，以及生成文档和源文档混在同一目录导致结构膨胀。独立 Linus 视角审查指出最初修复仍有 3 个 High：HTML Center 不可复现、行数检查可绕过、生成 HTML 可能 stale。本轮已补成硬约束：<code>npm run check</code> 现在会重建并校验 HTML 生成物、检查所有文本文件的 500 行上限、检查 20 文件/目录和 4 层目录深度。</p>
+<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>结构红线变成机器检查，E7 可由用户亲自跑</td></tr><tr><td>可扩展性</td><td>8/10</td><td>源文档与生成 HTML 拆开，后续模块页不再挤爆目录</td></tr><tr><td>可靠性</td><td>8/10</td><td>HTML Center 有仓库命令和 doctor health，仍缺自动告警</td></tr><tr><td>可维护性</td><td>8/10</td><td>结构债务和生成物 stale 进入 <code>npm run check</code>，Dashboard client 仍要拆</td></tr><tr><td>安全性</td><td>7/10</td><td>本轮未扩大 mutation 面，沿用 Phase 1.1 token 审批边界</td></tr></tbody></table></div>
 <h2 id="大规划图">大规划图</h2>
-<p>这张图回答：用户从消息闭环到人工审批再到 agent runtime，在哪些节点可以亲自参与。</p>
+<p>这张图回答：当前哪些能力已经可由用户亲手测试，哪些还在后续阶段。</p>
 <div class="mermaid">flowchart LR
-  M0[M0 本地消息闭环] --&gt; E0[E0 CLI send]
-  E0 --&gt; M1[M1 Dashboard/Gateway]
-  M1 --&gt; E1[E1 看路线与状态]
-  E1 --&gt; M2[M2 Feishu/Lark]
-  M2 --&gt; E2[E2 custom-bot outbound]
-  M2 --&gt; E3[E3 callback smoke]
-  E2 --&gt; M3[M3 OpenClaw 迁移]
-  E3 --&gt; M3
-  M3 --&gt; E4[E4 stage review-only]
-  E4 --&gt; M4[M4 审批队列]
-  M4 --&gt; E5[E5 approve/reject record]
-  E5 --&gt; M5[M5 Agent + Memory]
-  M5 --&gt; E6[E6 tool loop + memory]</div>
+  E0[E0 本地消息] --&gt; E1[E1 Dashboard]
+  E1 --&gt; E4[E4 OpenClaw stage]
+  E4 --&gt; E5[E5 Approval decision]
+  E5 --&gt; E7[E7 工程约束]
+  E7 --&gt; Next1[拆 Dashboard renderer]
+  Next1 --&gt; Next2[Tool approval]
+  Next2 --&gt; E6[E6 Agent + Memory]
+  E2[E2 Feishu outbound] -.配置后.-&gt; E3[E3 callback smoke]</div>
 <p>Review 观察：</p>
-<ul><li>优点：E5 从 planned 变成 ready，可以用 Gateway token 亲自做 decision。</li><li>优点：approval 只记录决定，不执行 apply，避免误操作。</li><li>风险：approval 还不是 tool/workflow approval，只是 migration stage 的种子。</li><li>改进：下一阶段接 tool action 和 scoped token。</li></ul>
-<h2 id="当前-milestones">当前 Milestones</h2>
-<div class="table-wrap"><table><thead><tr><th>Milestone</th><th>状态</th><th>完成度</th><th>用户实验</th></tr></thead><tbody><tr><td>M0 本地消息闭环</td><td>done</td><td>100</td><td>E0</td></tr><tr><td>M1 Gateway 与 Dashboard</td><td>partial</td><td>82</td><td>E1</td></tr><tr><td>M2 Feishu/Lark 边界</td><td>partial</td><td>60</td><td>E2/E3</td></tr><tr><td>M3 OpenClaw 迁移</td><td>partial</td><td>65</td><td>E4</td></tr><tr><td>M4 Agent Runtime 与审批</td><td>partial</td><td>25</td><td>E5</td></tr><tr><td>M5 记忆、搜索与插件</td><td>planned</td><td>8</td><td>E6</td></tr></tbody></table></div>
+<ul><li>优点：E7 把技术债约束变成可执行实验。</li><li>优点：当前可测入口已经覆盖消息、Dashboard、迁移、审批、结构约束。</li><li>风险：E6 仍未实现，不能测试 agent runtime 和记忆。</li><li>改进：下一阶段把审批接到真实 tool action。</li></ul>
 <h2 id="系统上下文图">系统上下文图</h2>
-<p>这张图回答：Phase 1.1 的审批、迁移、Dashboard 和外部系统边界在哪里。</p>
+<p>这张图回答：HTML Center、文档生成、Dashboard 和本地用户之间的边界。</p>
 <div class="mermaid">flowchart LR
-  User[本地用户] --&gt; CLI[CLI]
-  User --&gt; Browser[Dashboard]
-  User --&gt; Curl[curl with gateway token]
-  OpenClaw[OpenClaw repo] --&gt; Migration[Migration planner/stage]
-  Feishu[Feishu/Lark Cloud] &lt;--&gt;|callback/custom bot| Gateway[Gateway]
-  Reports[Review HTML] --&gt; HtmlCenter[HTML Center]
-
-  subgraph Local[MyClaw 本机]
-    CLI --&gt; Runtime[Message Runtime]
-    Browser --&gt; Dashboard[Dashboard server]
-    Curl --&gt; Gateway
-    Gateway --&gt; ApprovalDecision[approval decision route]
-    Migration --&gt; ApprovalStore[(approvals)]
-    ApprovalDecision --&gt; ApprovalStore
-    Dashboard --&gt; ControlRoutes[shared control GET routes]
-    Gateway --&gt; ControlRoutes
-    ControlRoutes --&gt; ControlPlane[Control Plane]
-    ControlPlane --&gt; ApprovalStore
-    ControlPlane --&gt; State[(runs/events/stages)]
-  end</div>
+  User[本地用户] --&gt; Browser[Browser]
+  Browser --&gt; Dashboard[MyClaw Dashboard :4321]
+  Browser --&gt; HtmlCenter[HTML Center :4177]
+  User --&gt; Check[npm run check]
+  Check --&gt; Structure[structure guardrails]
+  Check --&gt; Generated[generated docs freshness]
+  User --&gt; Doctor[myclaw doctor]
+  Doctor --&gt; HtmlCenter
+  Docs[docs/*.md] --&gt; Builder[docs/build-review-html.mjs]
+  Modules[docs/modules/*.md] --&gt; Builder
+  Builder --&gt; Rendered[docs/rendered/modules/*.html]
+  Builder --&gt; Index[docs/index.html]
+  Index --&gt; HtmlCenter</div>
 <p>Review 观察：</p>
-<ul><li>优点：approval decision mutation 在 Gateway，Dashboard 仍只读。</li><li>优点：approval 写入独立 state 和 events timeline。</li><li>风险：actor 目前只是 body 字段，缺强身份来源。</li><li>改进：引入 scoped token 和 actor provenance。</li></ul>
+<ul><li>优点：旧链接打不开的根因是服务未运行，已用 <code>ensure_html_center.py</code> 恢复。</li><li>优点：HTML 生成物移动后，<code>docs/modules</code> 只放源文档。</li><li>风险：HTML Center 仍依赖 tmux 常驻，没有自动告警。</li><li>改进：后续把 doctor 结果显示到 Dashboard 顶部 health strip。</li></ul>
 <h2 id="模块架构图">模块架构图</h2>
-<p>这张图回答：新增 approval/review 模块如何接入，是否有抽象泄漏。</p>
+<p>这张图回答：结构约束如何进入开发闭环。</p>
 <div class="mermaid">flowchart TB
-  Stage[migrate/stage.mjs] --&gt; ApprovalCore[core/approvals.mjs]
-  Stage --&gt; ReviewBuilder[control-plane/openclaw-diff.mjs]
-  ApprovalCore --&gt; ApprovalFiles[(state/approvals/*.json)]
-  ApprovalCore --&gt; Audit[(approvals.jsonl/events.jsonl)]
-  Status[control-plane/status.mjs] --&gt; ApprovalCore
-  Status --&gt; ReviewBuilder
-  HttpRoutes[control-plane/http-routes.mjs] --&gt; Status
-  Gateway[gateway/index.mjs] --&gt; ApprovalRoute[gateway/routes/approvals.mjs]
-  ApprovalRoute --&gt; ApprovalCore
-  Dashboard[dashboard/client.mjs] --&gt; HttpRoutes</div>
+  Package[package.json] --&gt; CheckScript[npm run check]
+  CheckScript --&gt; Syntax[node --check]
+  CheckScript --&gt; Generated[scripts/check-generated-docs.mjs]
+  CheckScript --&gt; Structure[scripts/check-file-lines.mjs]
+  CheckScript --&gt; PhaseSync[scripts/check-doc-phase-sync.mjs]
+  Generated --&gt; Builder[docs/build-review-html.mjs]
+  Generated --&gt; Fresh[fail on generated diff]
+  Structure --&gt; LineLimit[500 lines/file]
+  Structure --&gt; FileLimit[20 files/directory]
+  Structure --&gt; DepthLimit[4 directory levels]
+  Structure --&gt; TextDetect[all text files]
+  BuildDocs[docs/build-review-html.mjs] --&gt; Rendered[docs/rendered/modules]
+  BuildDocs --&gt; DocsRoot[docs/*.html]</div>
 <p>Review 观察：</p>
-<ul><li>优点：approval core 不依赖 HTTP 或 Dashboard。</li><li>优点：decision route 没有漏 Node response 到 control-plane。</li><li>风险：stage 自动创建 approval，迁移与 policy 仍有轻耦合。</li><li>改进：后续把 approval request 创建移到 workflow/control-plane policy 层。</li></ul>
+<ul><li>优点：约束是硬失败，不是 README 建议。</li><li>优点：目录文件数按直接文件计算，能防止一个目录变抽屉。</li><li>风险：<code>docs/build-review-html.mjs</code> 414 行，仍接近 450 预警。</li><li>改进：拆 Markdown parser、shell template、index rewrite。</li></ul>
 <h2 id="核心业务流程图">核心业务流程图</h2>
-<p>这张图回答：一次 OpenClaw stage 如何变成可人工确认的 record。</p>
+<p>这张图回答：一次文档构建和结构检查如何流动。</p>
 <div class="mermaid">flowchart TD
-  Start[POST /api/openclaw-migration/stage] --&gt; Auth[mutation token guard]
-  Auth --&gt; Plan[planOpenClawMigration]
-  Plan --&gt; Snapshot[write stage snapshot]
-  Snapshot --&gt; Approval[create or reuse pending approval]
-  Approval --&gt; Review[build stage review summary]
-  Review --&gt; Response[stage + approval + review JSON]
-  Response --&gt; Dashboard[Dashboard Approvals]
-  Dashboard --&gt; Human[human reads evidence]
-  Human --&gt; Decide[POST /api/approvals/:id/decision]
-  Decide --&gt; StrictToken[approval token required]
-  StrictToken --&gt; Lock[approval file lock]
-  Lock --&gt; Record[write approved/rejected + audit event]</div>
+  Start[编辑源码/文档] --&gt; Build[node docs/build-review-html.mjs]
+  Build --&gt; ReadMd[读取 docs/modules/*.md]
+  ReadMd --&gt; WriteHtml[写入 docs/rendered/modules/*.html]
+  WriteHtml --&gt; Rewrite[重写 docs/index.html 链接]
+  Rewrite --&gt; Check[npm run check]
+  Check --&gt; Lines{文件 &lt;= 500 行?}
+  Lines --&gt; Files{目录 &lt;= 20 文件?}
+  Files --&gt; Depth{目录深度 &lt;= 4?}
+  Depth --&gt; Phase{HTML phase 同步?}
+  Phase --&gt; Fresh{生成 HTML 无 diff?}
+  Fresh --&gt; Pass[可提交/发布]</div>
 <p>Review 观察：</p>
-<ul><li>优点：decision 使用强 token，不再继承 loopback 免 token。</li><li>优点：decision 使用 lock 降低并发 last-writer-wins。</li><li>风险：lock 是本地文件锁，适合单机，不适合多节点。</li><li>改进：后续 SQLite/CAS 或 append-only event reducer。</li></ul>
+<ul><li>优点：生成物目录也接受结构检查。</li><li>优点：<code>check-generated-docs</code> 会在 HTML 生成物过期时失败。</li><li>风险：index 仍是手写 HTML，后续也应从数据生成。</li><li>改进：下一步把 index metadata 抽到结构化数据。</li></ul>
 <h2 id="关键时序图">关键时序图</h2>
-<p>这张图回答：前端、Gateway、control-plane、state 如何协作。</p>
+<p>这张图回答：旧 HTML Center 链接如何恢复。</p>
 <div class="mermaid">sequenceDiagram
   participant U as User
-  participant G as Gateway
-  participant M as Migration
-  participant A as Approval Store
-  participant C as Control Plane
-  participant D as Dashboard
+  participant C as Codex
+  participant H as HTML Center
+  participant T as tmux
 
-  U-&gt;&gt;G: POST /api/openclaw-migration/stage + token
-  G-&gt;&gt;M: stageOpenClawMigration()
-  M-&gt;&gt;A: createApprovalRequest()
-  M--&gt;&gt;G: stage + approval
-  G--&gt;&gt;U: review-only payload
-  D-&gt;&gt;C: GET /api/status
-  C-&gt;&gt;A: listApprovals()
-  C--&gt;&gt;D: approvals + stage review
-  U-&gt;&gt;G: POST /api/approvals/:id/decision + token
-  G-&gt;&gt;A: decideApproval()
-  A--&gt;&gt;G: approved/rejected</div>
+  U-&gt;&gt;C: 打不开 4177 链接
+  C-&gt;&gt;H: GET /view/.../index.html
+  H--xC: connection refused
+  C-&gt;&gt;T: node scripts/html-center.mjs start
+  T--&gt;&gt;C: started html-center
+  C-&gt;&gt;H: GET /api/health
+  H--&gt;&gt;C: ok
+  C-&gt;&gt;H: GET old report URL
+  H--&gt;&gt;C: 200 OK</div>
 <p>Review 观察：</p>
-<ul><li>优点：读面和写面分离清楚。</li><li>优点：Dashboard 可以展示审批，但不能绕过 Gateway token 修改。</li><li>风险：当前没有 request id，重试 decision 只能靠状态机阻止。</li><li>改进：加入 <code>Idempotency-Key</code>。</li></ul>
+<ul><li>优点：旧链接无需重新上传即可恢复。</li><li>风险：如果 tmux session 再掉，链接仍会失败。</li><li>改进：doctor 已能报 health；下一步把 health 结果放进 Dashboard。</li></ul>
 <h2 id="状态机图">状态机图</h2>
-<p>这张图回答：approval 的生命周期如何处理失败、重复、并发和人工介入。</p>
+<p>这张图回答：结构检查从通过到失败的状态如何流转。</p>
 <div class="mermaid">stateDiagram-v2
-  [*] --&gt; Pending: created
-  Pending --&gt; Approved: decision approved
-  Pending --&gt; Rejected: decision rejected
-  Pending --&gt; Pending: invalid decision rejected
-  Approved --&gt; Conflict: duplicate decision
-  Rejected --&gt; Conflict: duplicate decision
-  Conflict --&gt; [*]
-  Approved --&gt; [*]
-  Rejected --&gt; [*]</div>
+  [*] --&gt; Clean
+  Clean --&gt; CrowdedDirectory: &gt;20 direct files
+  Clean --&gt; DeepDirectory: depth &gt;4
+  Clean --&gt; LongFile: &gt;500 lines
+  Clean --&gt; GeneratedDrift: rendered HTML stale
+  Clean --&gt; PhaseDrift: rendered phase stale
+  CrowdedDirectory --&gt; Clean: split directory
+  DeepDirectory --&gt; Clean: flatten structure
+  LongFile --&gt; Clean: split file
+  GeneratedDrift --&gt; Clean: rebuild and commit HTML
+  PhaseDrift --&gt; Clean: rebuild HTML
+  Clean --&gt; [*]</div>
 <p>Review 观察：</p>
-<ul><li>优点：sequential duplicate 会返回 <code>already_decided</code>。</li><li>优点：concurrent conflicting decision 有 lock 测试。</li><li>风险：没有 expiry/cancelled 状态。</li><li>改进：加 transition table 和 expiry policy。</li></ul>
+<ul><li>优点：四类技术债都有明确失败原因。</li><li>风险：20 文件/目录会迫使生成物规划更谨慎。</li><li>改进：失败时输出修复建议和当前 top offenders。</li></ul>
 <h2 id="数据模型-er-图">数据模型 / ER 图</h2>
-<p>这张图回答：stage、approval、event、review item 之间如何关联。</p>
+<p>这张图回答：文档源文件、生成文件和结构规则的关系。</p>
 <div class="mermaid">erDiagram
-  STAGE ||--|| APPROVAL : requests
-  APPROVAL ||--o{ APPROVAL_EVENT : emits
-  STAGE ||--o{ REVIEW_ITEM : summarizes
-  RUN ||--o{ EVENT : emits
+  SOURCE_DOC ||--|| RENDERED_DOC : generates
+  DIRECTORY ||--o{ FILE : contains
+  STRUCTURE_RULE ||--o{ VIOLATION : detects
 
-  STAGE { string stageId string checksum string status }
-  APPROVAL { string approvalId string status string severity object subject }
-  APPROVAL_EVENT { string type string at string approvalId string status }
-  REVIEW_ITEM { string id string moduleId string field string action }
-  RUN { string runId string status boolean ok }</div>
+  SOURCE_DOC { string path string kind }
+  RENDERED_DOC { string path string entry }
+  DIRECTORY { string path int depth int directFiles }
+  FILE { string path int lines }
+  STRUCTURE_RULE { string name int limit }
+  VIOLATION { string path string reason }</div>
 <p>Review 观察：</p>
-<ul><li>优点：approval 可以独立于 run 存在，适合未来 tool approval。</li><li>风险：subject type 目前是自由对象，缺白名单。</li><li>改进：为 <code>openclaw-migration-stage</code>、<code>tool-call</code> 定 schema。</li></ul>
+<ul><li>优点：源文档和生成文档现在有不同目录职责。</li><li>风险：生成文件仍入仓，体积会增长。</li><li>改进：后续可考虑只发布生成物，不长期跟踪全部 HTML。</li></ul>
 <h2 id="数据流图">数据流图</h2>
-<p>这张图回答：数据从 OpenClaw source 到 Dashboard 审批展示如何流动。</p>
+<p>这张图回答：检查数据从文件系统如何变成失败/通过。</p>
 <div class="mermaid">flowchart LR
-  Source[OpenClaw source] --&gt; Plan[Migration plan]
-  Plan --&gt; Stage[Stage snapshot]
-  Stage --&gt; Approval[(approval record)]
-  Stage --&gt; ReviewItems[review summary items]
-  Approval --&gt; Status[/api/status]
-  ReviewItems --&gt; Status
-  Status --&gt; Dashboard[Approvals panel]
-  Decision[POST decision] --&gt; Lock[file lock]
-  Lock --&gt; Approval
-  Approval --&gt; Events[(events.jsonl)]</div>
+  FS[repo filesystem] --&gt; Walk[walk excluding .git/.myclaw/node_modules]
+  Walk --&gt; Files[checkable files]
+  Walk --&gt; Directories[directory records]
+  Files --&gt; TextDetect[text/binary detection]
+  TextDetect --&gt; LineCounts[line counts]
+  Directories --&gt; FileCounts[direct file counts]
+  Directories --&gt; Depths[relative depths]
+  LineCounts --&gt; Report[check result]
+  FileCounts --&gt; Report
+  Depths --&gt; Report</div>
 <p>Review 观察：</p>
-<ul><li>优点：review summary 和 decision 都可从本地 state 复原。</li><li>风险：review summary 不比较 MyClaw 目标 schema 字段。</li><li>改进：下一步做真实 source/target field diff。</li></ul>
+<ul><li>优点：检查逻辑很小，容易理解。</li><li>风险：二进制会跳过行数，但会计入目录文件数；文本文件默认进入行数检查。</li><li>改进：加白名单配置前先保持硬规则简单。</li></ul>
 <h2 id="部署图">部署图</h2>
-<p>这张图回答：Phase 1.1 本地运行拓扑和同步/异步边界。</p>
+<p>这张图回答：本机服务现在如何运行。</p>
 <div class="mermaid">flowchart TB
-  subgraph Localhost[Developer machine]
-    Browser[Browser :4321] --&gt;|sync GET| Dashboard[myclaw dashboard]
-    Curl[curl :4322] --&gt;|sync POST| Gateway[myclaw gateway]
-    Dashboard --&gt; ControlRoutes[shared GET routes]
-    Gateway --&gt; ControlRoutes
-    Gateway --&gt; Mutations[messages/feishu/migration/approval routes]
-    Mutations --&gt; State[(local JSON/JSONL state)]
-    ControlRoutes --&gt; State
-    CLI[myclaw CLI] --&gt; State
+  subgraph Local[Developer machine]
+    Dashboard[myclaw-dashboard tmux :4321]
+    Gateway[myclaw-gateway tmux :4322]
+    HtmlCenter[html-center tmux :4177]
+    Repo[myclaw repo]
+    Repo --&gt; Dashboard
+    Repo --&gt; Gateway
+    Repo --&gt; Doctor[myclaw doctor]
+    Repo --&gt; Publish[scripts/html-center.mjs publish]
+    Repo --&gt; HtmlCenter
   end
-  Gateway &lt;--&gt;|webhook| Feishu[Feishu/Lark Cloud]
-  CLI --&gt;|read-only plan| OpenClaw[OpenClaw repo]</div>
+  Browser --&gt; Dashboard
+  Browser --&gt; HtmlCenter</div>
 <p>Review 观察：</p>
-<ul><li>优点：仍默认 loopback，本地验证快。</li><li>风险：approval decision 必须配置 token；服务启动命令要带 <code>MYCLAW_GATEWAY_TOKEN</code>。</li><li>改进：Dashboard 显示 decision curl 模板和 token 状态。</li></ul>
+<ul><li>优点：三个本地服务都回到 tmux 常驻。</li><li>风险：没有统一 supervisor。</li><li>改进：doctor 已有 HTML Center health；后续做统一 services status。</li></ul>
 <h2 id="human-experiments">Human Experiments</h2>
-<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.1、Approvals 可见</td></tr><tr><td>E2</td><td>needs_config</td><td>Feishu custom-bot send</td><td>群里收到消息</td></tr><tr><td>E3</td><td>needs_config</td><td>callback smoke + gateway tests</td><td>challenge/fixture 通过</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected，event 写入</td></tr><tr><td>E6</td><td>planned</td><td>agent run + memory search</td><td>后续开放</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.2、Approvals 可见</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected</td></tr><tr><td>E7</td><td>ready</td><td><code>npm run check</code></td><td>输出 500 行、20 文件/目录、depth 4</td></tr><tr><td>E2/E3</td><td>needs_config</td><td>Feishu webhook/callback</td><td>配置后可测</td></tr><tr><td>E6</td><td>planned</td><td>agent run + memory search</td><td>后续开放</td></tr></tbody></table></div>
 <h2 id="概念解释">概念解释</h2>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Approval queue</td><td>需要人确认的 review record</td><td>目前只覆盖 migration stage</td></tr><tr><td>Approval decision</td><td>approved/rejected 的审计决定</td><td>不触发 apply/execute</td></tr><tr><td>Stage review summary</td><td>从 stage 派生的 review items</td><td>不是字段级 schema diff</td></tr><tr><td>Strict token mutation</td><td>approval decision 必须有 token</td><td>仍不是 scoped RBAC</td></tr><tr><td>File lock</td><td>本机文件锁防并发覆盖</td><td>不适合多节点</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Structure guardrail</td><td>机器强制的技术债红线</td><td>500 行、20 文件、4 层深度</td></tr><tr><td>Direct file count</td><td>一个目录下直接文件数</td><td>不递归计入子目录</td></tr><tr><td>Rendered docs</td><td>从 Markdown 生成的 HTML</td><td>位于 <code>docs/rendered/modules</code></td></tr><tr><td>HTML Center</td><td>本机报告中心</td><td>依赖 4177 服务常驻</td></tr><tr><td>Phase sync</td><td>Markdown 与 HTML 阶段一致性</td><td>防止 stale report</td></tr><tr><td>Generated freshness</td><td>生成物新鲜度</td><td><code>check-generated-docs</code> 重建后检测 diff</td></tr></tbody></table></div>
 <h2 id="相似技术比较">相似技术比较</h2>
-<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.1</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>审批</td><td>migration approval record</td><td>成熟 policy/approval</td><td>ops guard 方向</td><td>risk/autonomy policy</td></tr><tr><td>Gateway</td><td>local HTTP + token mutation</td><td>完整 gateway/control UI</td><td>多入口 agent ops</td><td>JSON-RPC/controller</td></tr><tr><td>Review</td><td>stage review summary</td><td>config schema/UI</td><td>migration/ops 经验</td><td>controller 边界</td></tr><tr><td>记忆</td><td>尚未做</td><td>session/config</td><td>SQLite/FTS 强</td><td>memory tree 强</td></tr><tr><td>Agent</td><td>尚未做</td><td>Lobster/workflow 可借鉴</td><td>agent loop 强</td><td>harness/tool loop 强</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.2</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>结构约束</td><td>硬性 check 脚本</td><td>大 repo 模块化</td><td>成熟工程分层</td><td>Rust workspace 分层</td></tr><tr><td>文档发布</td><td>HTML Center + rendered docs</td><td>docs/control UI</td><td>README/ops docs</td><td>UI/docs 混合</td></tr><tr><td>审批</td><td>migration approval seed</td><td>成熟 policy/approval</td><td>ops guard</td><td>risk/autonomy policy</td></tr><tr><td>Dashboard</td><td>本地只读 console</td><td>control UI</td><td>TUI/ops</td><td>UI-first</td></tr></tbody></table></div>
 <h2 id="目录结构与文件行数">目录结构与文件行数</h2>
-<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198</td><td>approval create/list/read/decide + lock</td><td>健康；后续拆 transition policy</td></tr><tr><td><code>packages/control-plane/src/openclaw-diff.mjs</code></td><td>101</td><td>stage review summary builder</td><td>文件名历史包袱，语义已降级为 review</td></tr><tr><td><code>packages/control-plane/src/status.mjs</code></td><td>226</td><td>status 聚合 approvals/review</td><td>健康</td></tr><tr><td><code>packages/control-plane/src/http-routes.mjs</code></td><td>79</td><td>共享只读 route adapter</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>347</td><td>Dashboard 渲染逻辑</td><td>继续增长，下一轮必须拆 section renderer</td></tr><tr><td><code>packages/dashboard/src/styles.mjs</code></td><td>229</td><td>Dashboard 样式</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/view.mjs</code></td><td>176</td><td>Dashboard HTML shell</td><td>健康</td></tr><tr><td><code>packages/gateway/src/index.mjs</code></td><td>111</td><td>Gateway route 分发</td><td>健康</td></tr><tr><td><code>packages/gateway/src/auth.mjs</code></td><td>61</td><td>mutation/token auth</td><td>健康</td></tr><tr><td><code>packages/gateway/src/routes/approvals.mjs</code></td><td>45</td><td>approval decision mutation</td><td>健康</td></tr><tr><td><code>packages/migrate/src/stage.mjs</code></td><td>155</td><td>stage snapshot + approval seed</td><td>可接受；后续解耦 policy</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>408</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr></tbody></table></div>
-<p>没有手写文件超过 500 行；<code>docs/build-review-html.mjs</code> 是唯一接近预警项。</p>
+<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数/文件数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>scripts/check-file-lines.mjs</code></td><td>120 行</td><td>文本文件行数、目录文件数、深度检查</td><td>健康</td></tr><tr><td><code>scripts/check-generated-docs.mjs</code></td><td>63 行</td><td>重建 HTML 并检测 stale 生成物</td><td>健康</td></tr><tr><td><code>scripts/html-center.mjs</code></td><td>121 行</td><td>HTML Center status/start/publish/verify，发布前校验生成物</td><td>健康</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>414 行</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr><tr><td><code>docs/modules</code></td><td>15 文件</td><td>模块 Markdown 源文档</td><td>已低于 20</td></tr><tr><td><code>docs/rendered/modules</code></td><td>15 文件</td><td>生成 HTML 模块页</td><td>已低于 20</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>354 行</td><td>CLI 命令与 doctor</td><td>健康，但继续增长要拆命令</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>344 行</td><td>Dashboard client</td><td>仍需拆 renderer</td></tr><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198 行</td><td>approval state</td><td>健康</td></tr></tbody></table></div>
+<p>当前最大目录深度是 4，当前最大目录文件数是 15。</p>
 <h2 id="风险分级">风险分级</h2>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>High</td><td>approval 仍不是安全执行边界</td><td>误以为 approve 会安全 apply</td><td>文档和 UI 保持 review-only；接 scoped token</td></tr><tr><td>High</td><td>review summary 不是字段级 diff</td><td>用户可能误判迁移精度</td><td>UI 使用 review summary 命名，后续做真实 schema diff</td></tr><tr><td>Medium</td><td>stage 自动创建 approval</td><td>migration 与 policy 有耦合</td><td>后续移到 control-plane/workflow policy</td></tr><tr><td>Medium</td><td>Dashboard client 347 行</td><td>后续 review/schema diff drawer 会变维护坑</td><td>下一阶段拆 renderer registry</td></tr><tr><td>Low</td><td>checksum 仍是弱 trace marker</td><td>不能当完整完整性证明</td><td>后续 content-address full snapshot</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>Medium</td><td>HTML Center 依赖 tmux 常驻</td><td>服务掉了链接就打不开</td><td>doctor 已覆盖，后续纳入 Dashboard health</td></tr><tr><td>High</td><td>Dashboard client 仍在变大</td><td>下轮功能会推向 400+ 行</td><td>拆 section renderer registry</td></tr><tr><td>Medium</td><td>docs build script 414 行</td><td>接近拆分预警</td><td>拆 parser/template/rewrite</td></tr><tr><td>Medium</td><td>20 文件硬限制会影响生成物布局</td><td>以后新增模块需规划目录</td><td>保持 source/rendered 分离</td></tr><tr><td>Low</td><td>结构检查没有配置文件</td><td>规则变更需改脚本</td><td>先保持硬规则，避免早配置化</td></tr></tbody></table></div>
 <h2 id="linus-视角严苛审查">Linus 视角严苛审查</h2>
-<p>独立 subagent 已按 30 年 Linux 内核维护者式视角审查 Phase 1.1 diff。核心结论：approval queue 可以作为 review record，但不能被吹成安全边界；decision mutation 必须强认证，状态迁移必须原子，所谓 diff 必须降级成 review summary。</p>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td>approval decision 沿用 loopback 免 token太弱</td><td>已改为 <code>authorizeGatewayToken</code>，无 token 配置时返回 <code>approval_token_required</code></td></tr><tr><td>High</td><td>read-modify-write 可能并发覆盖</td><td>已加本地 lock，并补并发 conflicting decision 测试</td></tr><tr><td>Medium</td><td>stage 默认创建 approval 会产生队列噪音</td><td>已用 checksum 派生稳定 approval id，重复相同 stage 不新增 approval；后续仍要解耦</td></tr><tr><td>Medium</td><td>“diff”名不副实</td><td>API 增加 <code>openclawStageReview/review</code>，UI 改为 stage review</td></tr><tr><td>Low</td><td>Dashboard client 继续增长</td><td>记录为下一阶段拆分门槛</td></tr></tbody></table></div>
+<p>独立 subagent 结论：初版不建议直接进入下一阶段，必须先修 HTML Center 可复现、行数检查绕过、生成物 stale 这三个 High。处理后结论：可以进入下一阶段，但 Dashboard client 和 docs builder 已经接近需要拆分的边界，不允许继续堆功能。</p>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td>HTML Center 恢复只是手工补丁</td><td>已加 <code>scripts/html-center.mjs</code>、<code>npm run html-center</code>、<code>npm run publish:review</code> 和 <code>myclaw doctor</code> health</td></tr><tr><td>High</td><td>行数检查只看白名单扩展，可被 <code>.sh/.yaml/Dockerfile</code> 绕过</td><td>已改成默认检查所有文本文件，二进制检测排除</td></tr><tr><td>High</td><td>HTML 生成物可能 stale，旧 sync 只看 Phase 字符串</td><td>已加 <code>scripts/check-generated-docs.mjs</code>，<code>npm run check</code> 重建后 fail on diff</td></tr><tr><td>High</td><td><code>docs/rendered</code> 未跟踪会导致索引坏链</td><td>本轮跟踪生成 HTML，并由 generated docs check 校验缺失/多余</td></tr><tr><td>Medium</td><td><code>docs/build-review-html.mjs</code> 414 行接近阈值</td><td>记录为下一阶段拆分任务</td></tr><tr><td>Medium</td><td>Dashboard client 344 行继续增长</td><td>下一阶段拆 renderer registry</td></tr><tr><td>Low</td><td>硬规则会带来目录规划成本</td><td>保留，作为技术债刹车</td></tr></tbody></table></div>
 <h2 id="skill-规范自检">Skill 规范自检</h2>
-<ul><li>已按 <code>web-design-review</code> 输出可视化 design review dashboard。</li><li>报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行硬限制由 <code>npm run check</code> 执行。</li><li>本轮未修改 skill；按 <code>skill-creator</code> 原则保持 skill 本身精简。</li></ul>
+<ul><li>已按 <code>web-design-review</code> 输出可视化 design review dashboard。</li><li>报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行、每目录 20 文件、目录深度 4 层由 <code>npm run check</code> 执行。</li><li>本轮已更新 <code>web-design-review</code> skill 的 500 行、20 文件/目录、4 层深度约束；按 <code>skill-creator</code> 原则保持 <code>SKILL.md</code> 247 行，未增加额外过程文档。</li></ul>
 <h2 id="下一阶段建议">下一阶段建议</h2>
-<ul><li>把 approval queue 接到真实 tool action，加入 scoped token 和 actor provenance。</li><li>拆 <code>dashboard/src/client.mjs</code> 为 section renderer registry。</li><li>做真实 OpenClaw source/target schema diff drawer。</li><li>Agent runtime 最小 run/resume/tool loop。</li></ul></article>
+<ul><li>拆 <code>packages/dashboard/src/client.mjs</code> 为 section renderer registry。</li><li>拆 <code>docs/build-review-html.mjs</code> 为 parser/template/rewrite。</li><li>把 approval queue 接到真实 tool action。</li><li>做真实 OpenClaw source/target schema diff drawer。</li></ul></article>
       </main>
     </div>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>

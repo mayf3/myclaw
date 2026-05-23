@@ -1,8 +1,9 @@
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { moduleMeta, moduleOrder } from "./lib/module-meta.mjs";
 const ROOT = new URL(".", import.meta.url).pathname;
 const MODULES_DIR = path.join(ROOT, "modules");
+const RENDERED_MODULES_DIR = path.join(ROOT, "rendered", "modules");
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -199,7 +200,7 @@ function moduleShell({ slug, title, headings, body }) {
           <h1>${escapeHtml(title)}</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           ${navItems}
@@ -233,7 +234,7 @@ function buildModule(slug) {
   const source = readFileSync(mdPath, "utf8");
   const parsed = renderMarkdown(source);
   writeFileSync(
-    path.join(MODULES_DIR, `${slug}.html`),
+    path.join(RENDERED_MODULES_DIR, `${slug}.html`),
     moduleShell({ slug, title: parsed.title, headings: parsed.headings, body: parsed.html }),
   );
 }
@@ -313,10 +314,10 @@ function buildStageStatus() {
       <main>
         <section id="module-summary" class="hero">
           <h2>阶段状态</h2>
-          <p>MyClaw 当前 Phase 1.1 的可运行能力、用户实验、审批队列、验证记录、下一步和风险。</p>
+          <p>MyClaw 当前 Phase 1.2 的可运行能力、结构约束、用户实验、验证记录、下一步和风险。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.1</span>
+            <span class="tag phase">Phase 1.2</span>
             <span class="tag">状态文档</span>
           </div>
         </section>
@@ -359,10 +360,10 @@ function buildImplementationArchitecture() {
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 1.1 的审批队列、OpenClaw stage review、人类实验路线和当前架构审查。</p>
+          <p>MyClaw Phase 1.2 的结构约束、HTML Center 修复、文档目录拆分和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.1</span>
+            <span class="tag phase">Phase 1.2</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
@@ -382,12 +383,17 @@ function rewriteIndexLinks() {
     .replaceAll("./design-review.md", "./design-review.html")
     .replaceAll("./stage-status.md", "./stage-status.html")
     .replaceAll("./implementation-architecture.md", "./implementation-architecture.html")
-    .replaceAll("./modules/README.md", "./modules/README.html");
+    .replaceAll("./modules/README.md", "./rendered/modules/README.html")
+    .replaceAll("./modules/README.html", "./rendered/modules/README.html");
   for (const slug of moduleOrder) {
-    html = html.replaceAll(`./modules/${slug}.md`, `./modules/${slug}.html`);
+    html = html
+      .replaceAll(`./modules/${slug}.md`, `./rendered/modules/${slug}.html`)
+      .replaceAll(`./modules/${slug}.html`, `./rendered/modules/${slug}.html`);
   }
   writeFileSync(indexPath, html);
 }
+rmSync(RENDERED_MODULES_DIR, { recursive: true, force: true });
+mkdirSync(RENDERED_MODULES_DIR, { recursive: true });
 for (const slug of moduleOrder) {
   buildModule(slug);
 }
@@ -396,7 +402,7 @@ if (statSync(readmePath).isFile()) {
   const source = readFileSync(readmePath, "utf8");
   const parsed = renderMarkdown(source);
   writeFileSync(
-    path.join(MODULES_DIR, "README.html"),
+    path.join(RENDERED_MODULES_DIR, "README.html"),
     moduleShell({ slug: "roadmap-acceptance", title: parsed.title, headings: parsed.headings, body: parsed.html }),
   );
 }
@@ -404,5 +410,5 @@ buildDesignReview();
 buildStageStatus();
 buildImplementationArchitecture();
 rewriteIndexLinks();
-const htmlFiles = readdirSync(MODULES_DIR).filter((file) => file.endsWith(".html")).length + 4;
+const htmlFiles = readdirSync(RENDERED_MODULES_DIR).filter((file) => file.endsWith(".html")).length + 4;
 console.log(`Generated ${htmlFiles} HTML files`);

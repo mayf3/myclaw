@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>插件与 Skills · MyClaw 模块评审</title>
+    <title>配置、状态与存储 · MyClaw 模块评审</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,18 +30,18 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>插件与 Skills</h1>
+          <h1>配置、状态与存储</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
 <a href="#参考项目观察">参考项目观察</a>
 <a href="#推荐设计">推荐设计</a>
-<a href="#skills-设计">Skills 设计</a>
-<a href="#capability-边界">Capability 边界</a>
-<a href="#不建议第一阶段做">不建议第一阶段做</a>
+<a href="#config-schema">Config Schema</a>
+<a href="#state-store">State Store</a>
+<a href="#secrets">Secrets</a>
 <a href="#关键风险">关键风险</a>
 <a href="#验收标准">验收标准</a>
           <a href="#related-modules">相关模块</a>
@@ -49,65 +49,60 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       </aside>
       <main>
         <section id="module-summary" class="hero">
-          <h2>插件与 Skills</h2>
-          <p>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</p>
+          <h2>配置、状态与存储</h2>
+          <p>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</p>
           <div class="meta">
-            <span class="tag p2">P2</span>
-            <span class="tag phase">Phase 5</span>
-            <span class="tag">扩展机制</span>
+            <span class="tag p0">P0</span>
+            <span class="tag phase">Phase 0/1</span>
+            <span class="tag">可恢复基础</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>插件和 skills 都是扩展机制，但职责不同。插件给 MyClaw 增加 runtime capability；skills 给 agent 增加操作说明。MyClaw 初期必须把两者分开。</p>
+<p>配置和状态是 MyClaw 的可恢复基础。第一阶段不需要数据库，但必须把 config、state、workspace、transcript 的目录边界定清楚。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>Hermes：</p>
-<ul><li>skills 是过程性记忆，适合沉淀工作流。</li><li>plugin 可注册工具、hooks、CLI 命令。</li><li>memory provider 和 context engine 是可插拔的，但属于后期能力。</li></ul>
+<ul><li><code>~/.hermes/config.yaml</code> 和 <code>.env</code> 简单直接。</li><li>session 用 SQLite + WAL + FTS5，适合长期运行。</li><li>文件权限做了 owner-only。</li></ul>
 <p>OpenClaw：</p>
-<ul><li>native plugin manifest 非常完整，可做配置验证和 capability ownership。</li><li>plugin SDK 通过窄 subpath 暴露能力，避免大 barrel。</li><li>plugin runtime 与 metadata snapshot 分离。</li><li>bundled plugins 与外部插件兼容边界很清楚。</li></ul>
+<ul><li><code>~/.openclaw/openclaw.json</code> 使用 JSON5。</li><li>strict schema validation，未知 key 会拒绝启动。</li><li>last-known-good config、doctor repair、Control UI schema lookup 很成熟。</li><li>state/config/credentials 权限是安全审计重点。</li></ul>
 <h2 id="推荐设计">推荐设计</h2>
-<p>Phase 5 最小 plugin manifest：</p>
-<pre class="code" data-lang="json"><code>{
-  &quot;id&quot;: &quot;github&quot;,
-  &quot;name&quot;: &quot;GitHub&quot;,
-  &quot;version&quot;: &quot;0.1.0&quot;,
-  &quot;tools&quot;: [&quot;github.issue.list&quot;],
-  &quot;configSchema&quot;: {
-    &quot;type&quot;: &quot;object&quot;,
-    &quot;additionalProperties&quot;: false,
-    &quot;properties&quot;: {
-      &quot;token&quot;: { &quot;type&quot;: &quot;string&quot; }
-    }
-  }
-}</code></pre>
-<p>Runtime entry：</p>
-<pre class="code" data-lang="ts"><code>export function register(api: MyClawPluginApi) {
-  api.registerTool(...);
-}</code></pre>
-<p>最小 API：</p>
-<pre class="code" data-lang="ts"><code>type MyClawPluginApi = {
-  registerTool(tool: ToolDescriptor): void;
-  registerSkill?(skillRoot: string): void;
-  logger: Logger;
-};</code></pre>
-<h2 id="skills-设计">Skills 设计</h2>
-<p>Skill 是文件，不是 runtime code：</p>
-<pre class="code" data-lang="text"><code>skills/
-  gh-pr-review/
-    SKILL.md</code></pre>
-<p>加载顺序：</p>
-<ul><li>workspace skills。</li><li>user skills。</li><li>bundled skills。</li><li>plugin-provided skills。</li></ul>
-<p>Phase 3 只读 skills；Phase 6 再支持 skill create/update。</p>
-<h2 id="capability-边界">Capability 边界</h2>
-<p>插件可以注册：</p>
-<ul><li>tools。</li><li>providers。</li><li>skills。</li><li>hooks。</li><li>gateway routes。</li></ul>
-<p>但 MyClaw 初期只开放 tools + skills。providers 和 routes 后续再开放。</p>
-<h2 id="不建议第一阶段做">不建议第一阶段做</h2>
-<ul><li>插件市场。</li><li>外部兼容承诺。</li><li>插件 lifecycle hook 大全。</li><li>插件覆盖 core tool。</li><li>插件直接改 prompt builder 内部。</li></ul>
+<p>默认目录：</p>
+<pre class="code" data-lang="text"><code>~/.myclaw/
+  config.json5
+  secrets.json
+  state/
+  logs/
+  memory/
+  plugins/</code></pre>
+<p>Workspace：</p>
+<pre class="code" data-lang="text"><code>~/.myclaw/workspace</code></pre>
+<p>可以通过环境变量覆盖：</p>
+<pre class="code" data-lang="bash"><code>MYCLAW_HOME=/path/to/home
+MYCLAW_CONFIG_PATH=/path/to/config.json5</code></pre>
+<h2 id="config-schema">Config Schema</h2>
+<p>用 Zod 做 runtime schema：</p>
+<pre class="code" data-lang="ts"><code>const ConfigSchema = z.object({
+  workspace: z.string().default(&quot;~/.myclaw/workspace&quot;),
+  tools: ToolsConfigSchema.default({}),
+  gateway: GatewayConfigSchema.default({}),
+  models: ModelsConfigSchema.default({}),
+}).strict();</code></pre>
+<p>严格策略：</p>
+<ul><li>unknown root key 报错。</li><li>类型错误报错。</li><li>config 写入必须 atomic。</li><li>secrets 不写入普通 config。</li></ul>
+<h2 id="state-store">State Store</h2>
+<p>Phase 1：</p>
+<ul><li>JSON files + JSONL event log。</li><li>atomic write。</li><li>id 用 timestamp + random suffix。</li></ul>
+<p>Phase 6：</p>
+<ul><li>SQLite migration。</li><li>WAL。</li><li>FTS。</li><li>schema version。</li></ul>
+<h2 id="secrets">Secrets</h2>
+<p>先支持：</p>
+<ul><li>env var。</li><li><code>secrets.json</code>。</li></ul>
+<p>后续：</p>
+<ul><li>file ref。</li><li>exec ref。</li><li>OS keychain。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>插件和 skill 混用，导致文本说明里偷偷改变 runtime 行为。</li><li>插件 loader 无 schema validation，坏插件让 gateway 起不来。</li><li>插件能覆盖 core tool，造成安全绕过。</li></ul>
+<ul><li>config 非 strict，用户写错字段但系统悄悄忽略。</li><li>secrets 混进 logs/transcript。</li><li>state 只存在内存，approval 无法恢复。</li><li>后期数据库迁移没有 schema version。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li>plugin manifest 缺失或 schema 不合法时拒绝加载。</li><li>plugin tool name 不能与 core tool 冲突。</li><li>skill 只能影响 prompt，不直接执行代码。</li><li>plugin enable/disable 后 visible tools 变化可由 <code>doctor</code> 或 <code>status</code> 显示。</li></ul>
+<ul><li><code>myclaw doctor</code> 能显示 config 路径、state 路径、workspace 路径。</li><li>config parse 错误能定位字段。</li><li>state 文件写入是 atomic。</li><li>secrets 不出现在 <code>--json</code> 输出和 logs。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
@@ -119,7 +114,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
 <a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
 <a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
-<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
 <a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
 <a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
         </article>

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>记忆、Session 与搜索 · MyClaw 模块评审</title>
+    <title>Agent Runtime · MyClaw 模块评审</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,18 +30,18 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>记忆、Session 与搜索</h1>
+          <h1>Agent Runtime</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
 <a href="#参考项目观察">参考项目观察</a>
 <a href="#推荐设计">推荐设计</a>
-<a href="#memory-类型">Memory 类型</a>
-<a href="#session-search">Session Search</a>
+<a href="#tool-calling-关系">Tool Calling 关系</a>
 <a href="#mvp-边界">MVP 边界</a>
+<a href="#不建议照搬">不建议照搬</a>
 <a href="#关键风险">关键风险</a>
 <a href="#验收标准">验收标准</a>
           <a href="#related-modules">相关模块</a>
@@ -49,91 +49,78 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       </aside>
       <main>
         <section id="module-summary" class="hero">
-          <h2>记忆、Session 与搜索</h2>
-          <p>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</p>
+          <h2>Agent Runtime</h2>
+          <p>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</p>
           <div class="meta">
             <span class="tag p1">P1</span>
-            <span class="tag phase">Phase 3/6</span>
-            <span class="tag">长期价值</span>
+            <span class="tag phase">Phase 3</span>
+            <span class="tag">智能层</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>记忆不是第一阶段功能，但数据模型要从第一天为它留口。否则后面接入 agent 后，历史、记忆、workflow run、approval 会分散成多套不可检索日志。</p>
+<p>Agent Runtime 应该晚于 workflow core 和 tool registry。MyClaw 的 agent 不应直接变成“无边界 shell 代理”，而应该围绕 workflow、tool policy 和 approval 运行。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
-<p>Hermes 最值得借鉴：</p>
-<ul><li>SQLite state db。</li><li>messages 表 + sessions 表。</li><li>FTS5 全文搜索。</li><li>parent_session_id 记录压缩/派生 lineage。</li><li>session_search 工具将历史会话召回给 agent。</li><li>MEMORY.md / USER.md 保存持久事实。</li></ul>
-<p>OpenClaw 最值得借鉴：</p>
-<ul><li>JSONL transcript 直观、易调试。</li><li>session key 区分 main/direct/group/cron/agent。</li><li>session 生命周期有 daily/idle/manual reset。</li><li>workspace bootstrap files：AGENTS.md、SOUL.md、TOOLS.md、USER.md。</li></ul>
-<p>OpenHuman 最值得借鉴：</p>
-<ul><li><code>memory/conversations/</code> 把 conversation JSONL 和 searchable memory 分开。</li><li><code>memory/store/</code> 用 SQLite、FTS、vector、graph 做统一 store，但通过 <code>MemoryClient</code> 隔离调用者。</li><li><code>memory/tree/</code> 是重管线：canonicalize、chunk、content_store、score、tree_source/tree_topic/tree_global、retrieval、jobs。</li><li><code>memory/ingestion/</code> 有 singleton queue，避免本地 LLM 抽取并发重入。</li></ul>
-<p>对 MyClaw 的结论：先做 conversation/run/session search，不要初期上 memory tree。</p>
+<p>Hermes 的 agent loop 可借鉴点：</p>
+<ul><li>provider resolution 独立于 agent。</li><li>tool call schema 来自 registry。</li><li>tool call 结果回填对话历史。</li><li>compression 和 prompt caching 分层。</li><li>session persistence 在每 turn 后落盘。</li><li>fallback model 和 auxiliary model 可独立配置。</li></ul>
+<p>OpenClaw 的 agent runtime 可借鉴点：</p>
+<ul><li>workspace bootstrap files。</li><li>skills load order。</li><li>tools 由 policy 裁剪后再暴露给模型。</li><li>streaming、steering queue、block streaming 都是后期能力。</li></ul>
+<p>OpenHuman 的 agent runtime 可借鉴点：</p>
+<ul><li><code>Agent::turn</code> 明确按 prompt build、memory context、provider loop、tool dispatch、history、background extraction 组织。</li><li><code>AgentBuilder</code> 负责组装 provider、tools、memory、prompt builder、dispatcher，不把构造逻辑塞进 turn。</li><li><code>spawn_subagent</code> 是普通 tool，子代理也必须从 parent context 读取工具和 memory。</li><li>context pipeline 有 tool-result budget、microcompact、autocompaction、session memory。</li></ul>
+<p>对 MyClaw 的结论：Phase 3 只做单 agent，但文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch 拆好。</p>
 <h2 id="推荐设计">推荐设计</h2>
-<p>Phase 1/2 先做 run state，不做完整 memory：</p>
-<pre class="code" data-lang="text"><code>~/.myclaw/
-  config.json5
-  state/
-    runs/
-      &lt;runId&gt;.json
-      &lt;runId&gt;.jsonl
-    approvals.json</code></pre>
-<p>Phase 3 agent 加 transcript：</p>
-<pre class="code" data-lang="text"><code>~/.myclaw/
-  agents/main/sessions/
-    sessions.json
-    &lt;sessionId&gt;.jsonl</code></pre>
-<p>Phase 3.5 加轻量 session search：</p>
-<pre class="code" data-lang="text"><code>state.db
-  runs
-  events
-  messages
-  tool_calls
-  messages_fts</code></pre>
-<p>Phase 6 再迁移 SQLite：</p>
-<pre class="code" data-lang="text"><code>state.db
-  runs
-  run_steps
-  approvals
-  sessions
-  messages
-  messages_fts
-  memories</code></pre>
-<h2 id="memory-类型">Memory 类型</h2>
-<p>分三类，避免混在一个文件里：</p>
-<ul><li>User memory：用户偏好、稳定背景、称呼。</li><li>Project memory：当前 workspace 的约定、脚本、路径。</li><li>Procedure memory / skill：可复用工作流步骤。</li></ul>
-<p>推荐文件：</p>
-<pre class="code" data-lang="text"><code>workspace/
-  AGENTS.md
-  MYCLAW.md
-  skills/</code></pre>
-<p>全局：</p>
-<pre class="code" data-lang="text"><code>~/.myclaw/memory/USER.md
-~/.myclaw/memory/MEMORY.md</code></pre>
-<h2 id="session-search">Session Search</h2>
-<p>Phase 6 实现：</p>
-<ul><li>keyword search。</li><li>recent sessions。</li><li>run search。</li><li>approval history search。</li><li>agent 可调用 <code>session_search</code>。</li></ul>
-<p>搜索结果不要直接塞全文，应返回摘要：</p>
-<pre class="code" data-lang="ts"><code>type SearchHit = {
-  sessionId?: string;
-  runId?: string;
-  title: string;
-  when: string;
-  summary: string;
-  source: &quot;session&quot; | &quot;run&quot; | &quot;memory&quot;;
-};</code></pre>
+<p>Agent Runtime 分为五个小模块：</p>
+<pre class="code" data-lang="text"><code>provider/
+  openai-compatible.ts
+  model-ref.ts
+
+prompt/
+  prompt-builder.ts
+  workspace-context.ts
+  skill-context.ts
+
+loop/
+  run-agent-turn.ts
+  tool-call-dispatch.ts
+  iteration-budget.ts
+
+session/
+  transcript.ts
+  compaction.ts
+  result-budget.ts
+
+policy/
+  visible-tools.ts
+  model-capabilities.ts</code></pre>
+<p>最小 agent API：</p>
+<pre class="code" data-lang="ts"><code>runAgentTurn({
+  sessionId,
+  userMessage,
+  model,
+  workspace,
+  visibleTools,
+}): Promise&lt;AgentTurnResult&gt;</code></pre>
+<h2 id="tool-calling-关系">Tool Calling 关系</h2>
+<p>Agent 只能看到 policy 裁剪后的工具。</p>
+<pre class="code" data-lang="text"><code>config/tool policy
+  -&gt; visible tool descriptors
+  -&gt; model tool schemas
+  -&gt; model tool calls
+  -&gt; core tool dispatch
+  -&gt; envelope/tool result
+  -&gt; transcript</code></pre>
+<p>如果 tool 需要 approval，agent turn 应暂停并返回 <code>needs_approval</code>，而不是绕过审批继续执行。</p>
 <h2 id="mvp-边界">MVP 边界</h2>
-<p>Phase 1：</p>
-<ul><li>run JSONL。</li><li>approval index。</li></ul>
 <p>Phase 3：</p>
-<ul><li>agent transcript JSONL。</li><li>session list/status。</li></ul>
-<p>Phase 3.5：</p>
-<ul><li>SQLite + FTS。</li><li>run/session/tool result search。</li><li><code>myclaw search</code>。</li></ul>
-<p>Phase 6：</p>
-<ul><li>memory files。</li><li>session_search tool。</li><li>可选 embedding/chunk/summary tree。</li></ul>
+<ul><li>OpenAI-compatible provider。</li><li>单轮和多轮 session。</li><li>tool call dispatch。</li><li>transcript JSONL。</li><li><code>/new</code>, <code>/status</code>, <code>/model</code> 最小命令。</li><li>no streaming first。</li></ul>
+<p>后续：</p>
+<ul><li>streaming。</li><li>fallback providers。</li><li>context compression。</li><li>session search injection。</li><li>skills auto update。</li></ul>
+<h2 id="不建议照搬">不建议照搬</h2>
+<ul><li>不写巨型 agent class。</li><li>不在 agent loop 中直接实现每个 tool。</li><li>不把 memory write、session search、delegate 全部变成 loop 特例。</li><li>不在第一版做多 agent routing。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>过早做复杂 memory，会影响 workflow core。</li><li>把临时任务进度写入长期 memory，导致 prompt 污染。</li><li>transcript 没有结构化 tool call，后续搜索无法理解行为。</li></ul>
+<ul><li>agent 直接执行 shell，绕过 workflow/approval。</li><li>prompt builder 注入过多动态内容，导致不可缓存和难调试。</li><li>tool result 过大，污染 transcript。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li>每个 run 可追溯到 step 和 approval。</li><li>每个 agent turn 可追溯到 tool call 和 tool result。</li><li>memory 注入 prompt 前有大小限制和来源标注。</li><li>session search 返回摘要和来源，不直接塞超长全文。</li></ul>
+<ul><li><code>myclaw ask &quot;列出当前目录&quot;</code> 能调用工具并返回结果。</li><li>tool call、tool result、assistant response 都写入 transcript。</li><li>被 policy deny 的工具不会出现在模型 schema。</li><li>需要 approval 的工具调用会暂停，resume 后继续或结束。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
@@ -142,8 +129,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
 <a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
 <a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
-<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
 <a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
 <a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
 <a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
 <a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>

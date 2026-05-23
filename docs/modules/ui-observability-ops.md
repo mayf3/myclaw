@@ -87,6 +87,14 @@ Phase 1.1 dashboard 新增：
 - OpenClaw stage review 摘要，明确 review-only，不执行 apply。
 - `/api/status` 内联 `approvals`、`openclawStageReview` 和兼容字段 `openclawStageDiff`。
 
+Phase 1.2 工程约束新增：
+
+- `npm run check` 强制生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。
+- `npm run html-center` 和 `npm run publish:review` 固化 HTML Center 检查与发布。
+- `myclaw doctor` 会报告 HTML Center health。
+- 生成 HTML 模块页移到 `docs/rendered/modules`，避免源文档目录被生成物撑爆。
+- Dashboard client 仍在 344 行，下一阶段必须拆 section renderer。
+
 下一步应补：
 
 - run detail drawer 或独立详情页。

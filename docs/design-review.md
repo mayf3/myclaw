@@ -18,19 +18,19 @@
 
 | 模块 | 文档 | 用途 |
 | --- | --- | --- |
-| 参考项目对比 | [reference-comparison.html](./modules/reference-comparison.html) | 判断 Hermes、OpenClaw、OpenHuman、Lobster 哪些可借鉴，哪些不应照搬 |
-| OpenHuman 参考分析 | [openhuman-analysis.html](./modules/openhuman-analysis.html) | 拆解 OpenHuman 的 RPC、event bus、agent、记忆、工具、skills、UI 和桌面壳 |
-| 初期实现方案 | [initial-mvp-plan.html](./modules/initial-mvp-plan.html) | 把参考项目收敛成 MyClaw Phase 0-4 的 Node.js 实现切片 |
-| Workflow Core | [workflow-core.html](./modules/workflow-core.html) | 定义 runner、envelope、approval/resume 状态机 |
-| 接入层 | [access-layer.html](./modules/access-layer.html) | 拆 CLI、Gateway、未来渠道适配层 |
-| Gateway | [gateway.html](./modules/gateway.html) | 本地 HTTP/WS 控制平面、auth、events |
-| Agent Runtime | [agent-runtime.html](./modules/agent-runtime.html) | LLM provider、prompt、tool calling、session transcript |
-| 工具/审批/安全 | [tools-approval-security.html](./modules/tools-approval-security.html) | ToolDescriptor、policy、approval、安全边界 |
-| 记忆/Session/搜索 | [memory-session-search.html](./modules/memory-session-search.html) | memory、JSONL、SQLite/FTS、session_search |
-| 插件与 Skills | [plugins-skills.html](./modules/plugins-skills.html) | 插件 manifest、register API、skills 边界 |
-| 配置/状态/存储 | [config-state-storage.html](./modules/config-state-storage.html) | config schema、state 目录、secrets、migration |
-| 控制台/观测/运维 | [ui-observability-ops.html](./modules/ui-observability-ops.html) | runs timeline、approval queue、doctor/status、UI 信息架构 |
-| 路线与验收 | [roadmap-acceptance.html](./modules/roadmap-acceptance.html) | 每阶段交付和 done definition |
+| 参考项目对比 | [reference-comparison.html](./rendered/modules/reference-comparison.html) | 判断 Hermes、OpenClaw、OpenHuman、Lobster 哪些可借鉴，哪些不应照搬 |
+| OpenHuman 参考分析 | [openhuman-analysis.html](./rendered/modules/openhuman-analysis.html) | 拆解 OpenHuman 的 RPC、event bus、agent、记忆、工具、skills、UI 和桌面壳 |
+| 初期实现方案 | [initial-mvp-plan.html](./rendered/modules/initial-mvp-plan.html) | 把参考项目收敛成 MyClaw Phase 0-4 的 Node.js 实现切片 |
+| Workflow Core | [workflow-core.html](./rendered/modules/workflow-core.html) | 定义 runner、envelope、approval/resume 状态机 |
+| 接入层 | [access-layer.html](./rendered/modules/access-layer.html) | 拆 CLI、Gateway、未来渠道适配层 |
+| Gateway | [gateway.html](./rendered/modules/gateway.html) | 本地 HTTP/WS 控制平面、auth、events |
+| Agent Runtime | [agent-runtime.html](./rendered/modules/agent-runtime.html) | LLM provider、prompt、tool calling、session transcript |
+| 工具/审批/安全 | [tools-approval-security.html](./rendered/modules/tools-approval-security.html) | ToolDescriptor、policy、approval、安全边界 |
+| 记忆/Session/搜索 | [memory-session-search.html](./rendered/modules/memory-session-search.html) | memory、JSONL、SQLite/FTS、session_search |
+| 插件与 Skills | [plugins-skills.html](./rendered/modules/plugins-skills.html) | 插件 manifest、register API、skills 边界 |
+| 配置/状态/存储 | [config-state-storage.html](./rendered/modules/config-state-storage.html) | config schema、state 目录、secrets、migration |
+| 控制台/观测/运维 | [ui-observability-ops.html](./rendered/modules/ui-observability-ops.html) | runs timeline、approval queue、doctor/status、UI 信息架构 |
+| 路线与验收 | [roadmap-acceptance.html](./rendered/modules/roadmap-acceptance.html) | 每阶段交付和 done definition |
 
 ## 规模判断
 

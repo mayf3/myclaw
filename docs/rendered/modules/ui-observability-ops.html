@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>工具、审批与安全 · MyClaw 模块评审</title>
+    <title>控制台、观测与运维 · MyClaw 模块评审</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,18 +30,18 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>工具、审批与安全</h1>
+          <h1>控制台、观测与运维</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
 <a href="#参考项目观察">参考项目观察</a>
 <a href="#推荐设计">推荐设计</a>
-<a href="#第一批工具">第一批工具</a>
-<a href="#policy-层">Policy 层</a>
-<a href="#安全边界">安全边界</a>
+<a href="#html-control-ui-信息架构">HTML/Control UI 信息架构</a>
+<a href="#logs">Logs</a>
+<a href="#运维命令">运维命令</a>
 <a href="#关键风险">关键风险</a>
 <a href="#验收标准">验收标准</a>
           <a href="#related-modules">相关模块</a>
@@ -49,72 +49,71 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       </aside>
       <main>
         <section id="module-summary" class="hero">
-          <h2>工具、审批与安全</h2>
-          <p>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</p>
+          <h2>控制台、观测与运维</h2>
+          <p>doctor/status、run timeline、approval queue、logs、未来 Control UI。</p>
           <div class="meta">
-            <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 2</span>
-            <span class="tag">安全边界</span>
+            <span class="tag p1">P1</span>
+            <span class="tag phase">Phase 1/4/6</span>
+            <span class="tag">可观察性</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>工具系统必须和审批、安全边界一起设计。MyClaw 的核心风险不是“能不能执行命令”，而是模型或外部输入能否在不清楚的情况下触发副作用。</p>
+<p>UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.1 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail，以及 OpenClaw stage review summary/diff。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
-<p>Hermes 的工具注册模型值得借鉴：</p>
-<ul><li>tool name。</li><li>toolset/group。</li><li>schema。</li><li>handler。</li><li>check_fn。</li><li>max result size。</li><li>tool availability 在发给模型前过滤。</li></ul>
-<p>OpenClaw 值得借鉴：</p>
-<ul><li>tool policy 是模型可见性的一部分。</li><li>sandbox、tool policy、elevated 是不同层。</li><li>exec approval 是 operator intent guardrail，不是多租户安全边界。</li><li>安全文档明确 personal assistant trust model。</li></ul>
-<p>OpenClaw Lobster 值得直接借鉴：</p>
-<ul><li>cwd 相对路径且不能逃出 workspace。</li><li>timeout。</li><li>stdout/stderr cap。</li><li>strict JSON envelope。</li></ul>
+<p>OpenClaw：</p>
+<ul><li>Control UI 通过 gateway schema 渲染 config 表单。</li><li>gateway health/status 是运维入口。</li><li>WS events 支撑实时 UI。</li><li>security audit 和 doctor 是用户自查入口。</li></ul>
+<p>Hermes：</p>
+<ul><li>CLI/TUI 对工具执行有实时 progress。</li><li>session search 和 usage/cost 对长期使用有帮助。</li><li>gateway 平台状态能帮助定位 channel 问题。</li></ul>
+<p>OpenHuman：</p>
+<ul><li>UI-first 的 memory tree、controller registry 和 intelligence 页面说明：控制台不能只是 raw JSON，必须帮助人判断下一步。</li><li>本地状态、事件和 controller schema 适合做成可比较、可审阅的操作面。</li></ul>
 <h2 id="推荐设计">推荐设计</h2>
-<p>Tool descriptor：</p>
-<pre class="code" data-lang="ts"><code>type ToolDescriptor = {
-  name: string;
-  description: string;
-  schema: unknown;
-  sideEffect: &quot;none&quot; | &quot;read&quot; | &quot;write&quot; | &quot;network&quot; | &quot;exec&quot;;
-  defaultApproval: &quot;never&quot; | &quot;on_side_effect&quot; | &quot;always&quot;;
-  execute: (ctx: ToolContext, args: unknown) =&gt; Promise&lt;ToolResult&gt;;
-};</code></pre>
-<p>Approval request：</p>
-<pre class="code" data-lang="ts"><code>type ApprovalRequest = {
-  approvalId: string;
-  runId: string;
-  stepId: string;
-  prompt: string;
-  items: unknown[];
-  expiresAt?: string;
-};</code></pre>
-<p>Phase 1.1 已落地的最小种子：</p>
-<ul><li><code>packages/core/src/approvals.mjs</code> 提供 approval create/list/read/decide。</li><li>OpenClaw migration stage 会生成 pending approval。</li><li>Gateway <code>POST /api/approvals/:id/decision</code> 必须配置 token，不能依赖 loopback 免 token。</li><li>decision 只记录 approved/rejected，不执行 tool、apply 或 runtime mutation。</li><li>当前还不是完整 tool approval，只是给后续危险动作审批铺 state/API/UI。</li></ul>
-<h2 id="第一批工具">第一批工具</h2>
-<p>Phase 2：</p>
-<ul><li><code>exec</code>：执行命令，默认需要 approval 或 allowlist。</li><li><code>read</code>：读取 workspace 内文件。</li><li><code>write</code>：写 workspace 内文件，默认需要 approval。</li><li><code>http.fetch</code>：网络请求，默认只允许 GET；POST 等后续。</li><li><code>llm.complete</code>：provider-backed 简单补全，后续给 agent 用。</li></ul>
-<h2 id="policy-层">Policy 层</h2>
-<p>最小配置：</p>
-<pre class="code" data-lang="json5"><code>{
-  tools: {
-    allow: [&quot;read&quot;, &quot;exec&quot;],
-    deny: [&quot;write&quot;],
-    fs: { workspaceOnly: true },
-    exec: {
-      security: &quot;ask&quot;,
-      allowlist: [&quot;node --version&quot;, &quot;pwd&quot;, &quot;ls *&quot;]
-    }
-  }
-}</code></pre>
-<p>Policy 必须在两处生效：</p>
-<ul><li>发送给模型前过滤 visible tools。</li><li>tool dispatch 前再次检查。</li></ul>
-<h2 id="安全边界">安全边界</h2>
-<p>MyClaw v0 明确采用：</p>
-<ul><li>单用户本地 assistant model。</li><li>workspace-bound file access。</li><li>dangerous/mutating action approval。</li><li>local-only gateway default。</li><li>structured state audit。</li></ul>
-<p>不承诺：</p>
-<ul><li>hostile multi-tenant isolation。</li><li>防止本机恶意用户。</li><li>完整容器沙箱。</li></ul>
+<p>Phase 0/1 CLI observability：</p>
+<ul><li><code>myclaw doctor</code>。</li><li><code>myclaw status &lt;runId&gt;</code>。</li><li><code>myclaw runs list</code>。</li><li><code>--json</code> 输出。</li><li>run event JSONL。</li></ul>
+<p>Phase 4 Gateway observability：</p>
+<ul><li><code>/health</code>。</li><li><code>/status</code>。</li><li>WS event stream。</li><li><code>/runs/:id/events</code>。</li></ul>
+<p>Phase 5/6 UI：</p>
+<ul><li>本地 Control UI。</li><li>runs 列表。</li><li>run step timeline。</li><li>approval pending queue。</li><li>config read-only view，后续可编辑。</li></ul>
+<p>Phase 0.6 dashboard 当前已经具备：</p>
+<ul><li>只读 <code>/api/status</code> 工作台，并通过 <code>/api/reference-completion</code>、<code>/api/feishu-adoption</code> 加载评审态数据。</li><li>参考完成度矩阵。</li><li>Feishu/Lark 复用决策卡片。</li><li>OpenClaw migration stage 摘要。</li><li>runs/events/channels/raw JSON。</li></ul>
+<p>Phase 0.7 dashboard 新增：</p>
+<ul><li>Feishu adapter facade readiness。</li><li>signed webhook readiness。</li><li>adapter issues/warnings 展示。</li></ul>
+<p>Phase 0.8 dashboard 新增：</p>
+<ul><li>最新 run detail 区块，通过 <code>GET /api/runs/:runId</code> 读取 envelope 与 events。</li><li>stage snapshot review summary，显示 staged modules、missing expected、blocked 和 review-only 标记。</li><li>Feishu encrypted challenge readiness 通过 adapter readiness 和 tests 体现。</li></ul>
+<p>Phase 0.9 dashboard 新增：</p>
+<ul><li>Milestones 区块，展示 M0-M5 当前完成度。</li><li><code>/api/status</code> 和 <code>/api/milestones</code> 返回同一套 milestone payload。</li><li>Feishu outbound facade 进度纳入 M2。</li></ul>
+<p>Phase 1.0 dashboard 新增：</p>
+<ul><li>Human Experiments 区块，展示 E0-E6 的测试目标、命令、成功信号和解锁关系。</li><li><code>/api/status</code> 内联 <code>experiments</code>，<code>/api/experiments</code> 可单独读取同一套路线。</li><li>Dashboard 和 Gateway 的只读 API 走 <code>control-plane/src/http-routes.mjs</code>，减少状态接口漂移。</li></ul>
+<p>Phase 1.1 dashboard 新增：</p>
+<ul><li>Approvals 区块，展示 pending/approved/rejected 与 OpenClaw stage approval。</li><li>OpenClaw stage review 摘要，明确 review-only，不执行 apply。</li><li><code>/api/status</code> 内联 <code>approvals</code>、<code>openclawStageReview</code> 和兼容字段 <code>openclawStageDiff</code>。</li></ul>
+<p>Phase 1.2 工程约束新增：</p>
+<ul><li><code>npm run check</code> 强制生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。</li><li><code>npm run html-center</code> 和 <code>npm run publish:review</code> 固化 HTML Center 检查与发布。</li><li><code>myclaw doctor</code> 会报告 HTML Center health。</li><li>生成 HTML 模块页移到 <code>docs/rendered/modules</code>，避免源文档目录被生成物撑爆。</li><li>Dashboard client 仍在 344 行，下一阶段必须拆 section renderer。</li></ul>
+<p>下一步应补：</p>
+<ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 可操作 review drawer 和后续真实 schema diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li><li>Human Experiments 和自动化 test/check 结果的映射。</li></ul>
+<h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>
+<p>第一版 UI 不做营销页，直接是工具界面：</p>
+<pre class="code" data-lang="text"><code>Runs
+Approvals
+Sessions
+Tools
+Config
+Logs</code></pre>
+<p>每个 run 展示：</p>
+<ul><li>status。</li><li>started/ended。</li><li>workflow input。</li><li>step timeline。</li><li>tool args/result 摘要。</li><li>pending approval 操作。</li><li>raw JSON。</li></ul>
+<h2 id="logs">Logs</h2>
+<p>日志分三类：</p>
+<ul><li>user-facing events：写入 run JSONL。</li><li>diagnostic logs：写入 logs。</li><li>audit events：approval、config change、plugin load。</li></ul>
+<h2 id="运维命令">运维命令</h2>
+<p>后续增加：</p>
+<pre class="code" data-lang="bash"><code>myclaw gateway start
+myclaw gateway status
+myclaw gateway stop
+myclaw logs tail
+myclaw security audit</code></pre>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>只在 prompt 里告诉模型不要做危险事，没有 runtime enforcement。</li><li>allow/deny 只影响 UI，不影响 dispatch。</li><li>approval 只靠终端交互，不落盘，无法 resume。</li><li><code>exec</code> 支持 shell interpolation 时没有清楚的风险提示。</li></ul>
+<ul><li>只靠 stdout，后续 UI 无法复现 run。</li><li>UI 只展示最终答案，不展示 step 和 approval。</li><li>logs 泄露 secret。</li><li>HTML/Control UI 变成 landing page，反而不服务操作。</li><li>stage summary 只停留在摘要，无法审具体字段变更。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li>未 allow 的 tool 不出现在 agent schema，且 dispatch 也拒绝。</li><li><code>write</code> 和高风险 <code>exec</code> 会生成 approvalId。</li><li>approvalId 能被 <code>myclaw resume</code> 恢复。</li><li>cwd escape、absolute path、<code>..</code> escape 都有测试。</li><li>stdout/stderr cap 和 timeout 有测试。</li></ul>
+<ul><li>任意 run 都能从 state 复原 timeline。</li><li>Dashboard 能通过 API 打开单个 run detail，而不是读取 raw JSON。</li><li>Dashboard 能把 OpenClaw staged modules 和缺失项展示出来。</li><li>Dashboard 能把每个阶段对应的人类实验展示出来，并说明成功信号。</li><li>pending approvals 有独立列表。</li><li>status/doctor 能定位 config、state、tool policy 常见问题。</li><li>UI 所需数据全部来自 gateway API，不读私有文件。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
@@ -124,10 +123,10 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
 <a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
 <a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
 <a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
 <a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
 <a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
-<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
 <a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
         </article>
       </main>

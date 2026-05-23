@@ -3,7 +3,7 @@ export function buildHumanExperimentsPayload() {
     schemaVersion: 1,
     computed: false,
     source: "static-human-roadmap",
-    currentPhase: "1.1",
+    currentPhase: "1.2",
     title: "Human Experiment Roadmap",
     goal: "把每个阶段改成用户可亲自验证的实验，而不是只看 agent 自评。",
     planningMap: [
@@ -13,6 +13,7 @@ export function buildHumanExperimentsPayload() {
       step("M3", "OpenClaw 迁移", "E4", "立即可测"),
       step("M4", "审批与安全", "E5", "立即可测"),
       step("M5", "Agent Runtime 与记忆", "E6", "后续开放"),
+      step("M6", "工程约束与技术债", "E7", "立即可测"),
     ],
     experiments: [
       experiment({
@@ -38,7 +39,7 @@ export function buildHumanExperimentsPayload() {
           "open http://127.0.0.1:4321",
           "curl -s http://127.0.0.1:4321/api/experiments",
         ],
-        successSignals: ["Human Experiments 区块可见", "当前 Phase 显示 1.0", "每个实验都有命令和成功信号"],
+        successSignals: ["Human Experiments 区块可见", "当前 Phase 显示 1.2", "每个实验都有命令和成功信号"],
         nextUnlock: "E2 Feishu outbound smoke",
       }),
       experiment({
@@ -110,6 +111,17 @@ export function buildHumanExperimentsPayload() {
         commands: ["后续开放：myclaw run --task ...", "后续开放：myclaw memory search ..."],
         successSignals: ["任务有 step timeline", "tool call 有权限记录", "记忆可搜索并可解释来源"],
         nextUnlock: "长期插件/skills 实验",
+      }),
+      experiment({
+        id: "E7",
+        milestone: "M6",
+        title: "工程约束红线检查",
+        status: "ready",
+        role: "协作开发者",
+        whatToTest: "确认生成 HTML 不 stale，且每个目录最多 20 个文件、最多 4 层子目录、单文件最多 500 行都会被 npm run check 拦住。",
+        commands: ["npm run check", "node scripts/check-generated-docs.mjs", "node scripts/check-file-lines.mjs"],
+        successSignals: ["生成文档输出 up to date", "结构检查输出 20 files/dir", "结构检查输出 depth 4", "没有目录或文件超过红线"],
+        nextUnlock: "下一阶段拆 Dashboard renderer 并接入 tool approval",
       }),
     ],
   };

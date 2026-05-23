@@ -5,7 +5,9 @@
   "type": "module",
   "packageManager": "pnpm@10.10.0",
   "scripts": {
-    "check": "find packages docs scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check && node scripts/check-file-lines.mjs && node scripts/check-doc-phase-sync.mjs",
+    "check": "find packages docs scripts -name '*.mjs' -print0 | xargs -0 -n1 node --check && node scripts/check-generated-docs.mjs && node scripts/check-file-lines.mjs && node scripts/check-doc-phase-sync.mjs",
+    "html-center": "node scripts/html-center.mjs",
+    "publish:review": "node scripts/html-center.mjs publish",
     "test": "node --test",
     "myclaw": "node packages/cli/src/index.mjs"
   },

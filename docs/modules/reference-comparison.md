@@ -4,9 +4,9 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.1 在 Human Experiments 和共享 route adapter 之后，新增 migration approval queue 与 review-only stage review summary。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.2 在 Human Experiments、共享 route adapter 和 migration approval queue 之后，新增强制结构红线：生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.1 完成度矩阵
+## Phase 1.2 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
@@ -18,6 +18,7 @@ Phase 1.1 在 Human Experiments 和共享 route adapter 之后，新增 migratio
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
 | Tools / Security | 32 | 88 | 74 | 84 | 有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox |
 | Plugins / Skills | 18 | 92 | 88 | 78 | 仅 channel registry，没有 plugin manifest/skill loader |
+| Engineering Guardrails | 100 | 80 | 70 | 75 | `npm run check` 已强制生成物新鲜度、文件行数、目录文件数、目录深度 |
 
 ## Hermes Agent 观察
 
@@ -88,6 +89,12 @@ Phase 1.1 MyClaw 结论：
 - approval queue 已进入 state/API/Dashboard，但只适合作为 review record。
 - approval decision 需要配置 gateway token，不能靠 loopback 免 token。
 - OpenClaw stage review summary 不等于字段级 schema diff；下一阶段再做真实 source/target diff。
+
+Phase 1.2 MyClaw 结论：
+
+- 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
+- `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。
+- 旧 HTML Center 链接打不开的根因是 4177 服务未运行，已恢复 tmux 常驻，并补了 `scripts/html-center.mjs`、`myclaw doctor` 和 `publish:review`。
 
 ## OpenClaw Lobster 观察
 

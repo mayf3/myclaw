@@ -43,7 +43,7 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.1");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.2");
 
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);

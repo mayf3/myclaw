@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>配置、状态与存储 · MyClaw 模块评审</title>
+    <title>工具、审批与安全 · MyClaw 模块评审</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,18 +30,18 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>配置、状态与存储</h1>
+          <h1>工具、审批与安全</h1>
           <p>MyClaw 模块化设计评审</p>
         </div>
-        <a class="back" href="../index.html">← 返回全局索引</a>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#诊断">诊断</a>
 <a href="#参考项目观察">参考项目观察</a>
 <a href="#推荐设计">推荐设计</a>
-<a href="#config-schema">Config Schema</a>
-<a href="#state-store">State Store</a>
-<a href="#secrets">Secrets</a>
+<a href="#第一批工具">第一批工具</a>
+<a href="#policy-层">Policy 层</a>
+<a href="#安全边界">安全边界</a>
 <a href="#关键风险">关键风险</a>
 <a href="#验收标准">验收标准</a>
           <a href="#related-modules">相关模块</a>
@@ -49,60 +49,72 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       </aside>
       <main>
         <section id="module-summary" class="hero">
-          <h2>配置、状态与存储</h2>
-          <p>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</p>
+          <h2>工具、审批与安全</h2>
+          <p>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 0/1</span>
-            <span class="tag">可恢复基础</span>
+            <span class="tag phase">Phase 2</span>
+            <span class="tag">安全边界</span>
           </div>
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>配置和状态是 MyClaw 的可恢复基础。第一阶段不需要数据库，但必须把 config、state、workspace、transcript 的目录边界定清楚。</p>
+<p>工具系统必须和审批、安全边界一起设计。MyClaw 的核心风险不是“能不能执行命令”，而是模型或外部输入能否在不清楚的情况下触发副作用。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
-<p>Hermes：</p>
-<ul><li><code>~/.hermes/config.yaml</code> 和 <code>.env</code> 简单直接。</li><li>session 用 SQLite + WAL + FTS5，适合长期运行。</li><li>文件权限做了 owner-only。</li></ul>
-<p>OpenClaw：</p>
-<ul><li><code>~/.openclaw/openclaw.json</code> 使用 JSON5。</li><li>strict schema validation，未知 key 会拒绝启动。</li><li>last-known-good config、doctor repair、Control UI schema lookup 很成熟。</li><li>state/config/credentials 权限是安全审计重点。</li></ul>
+<p>Hermes 的工具注册模型值得借鉴：</p>
+<ul><li>tool name。</li><li>toolset/group。</li><li>schema。</li><li>handler。</li><li>check_fn。</li><li>max result size。</li><li>tool availability 在发给模型前过滤。</li></ul>
+<p>OpenClaw 值得借鉴：</p>
+<ul><li>tool policy 是模型可见性的一部分。</li><li>sandbox、tool policy、elevated 是不同层。</li><li>exec approval 是 operator intent guardrail，不是多租户安全边界。</li><li>安全文档明确 personal assistant trust model。</li></ul>
+<p>OpenClaw Lobster 值得直接借鉴：</p>
+<ul><li>cwd 相对路径且不能逃出 workspace。</li><li>timeout。</li><li>stdout/stderr cap。</li><li>strict JSON envelope。</li></ul>
 <h2 id="推荐设计">推荐设计</h2>
-<p>默认目录：</p>
-<pre class="code" data-lang="text"><code>~/.myclaw/
-  config.json5
-  secrets.json
-  state/
-  logs/
-  memory/
-  plugins/</code></pre>
-<p>Workspace：</p>
-<pre class="code" data-lang="text"><code>~/.myclaw/workspace</code></pre>
-<p>可以通过环境变量覆盖：</p>
-<pre class="code" data-lang="bash"><code>MYCLAW_HOME=/path/to/home
-MYCLAW_CONFIG_PATH=/path/to/config.json5</code></pre>
-<h2 id="config-schema">Config Schema</h2>
-<p>用 Zod 做 runtime schema：</p>
-<pre class="code" data-lang="ts"><code>const ConfigSchema = z.object({
-  workspace: z.string().default(&quot;~/.myclaw/workspace&quot;),
-  tools: ToolsConfigSchema.default({}),
-  gateway: GatewayConfigSchema.default({}),
-  models: ModelsConfigSchema.default({}),
-}).strict();</code></pre>
-<p>严格策略：</p>
-<ul><li>unknown root key 报错。</li><li>类型错误报错。</li><li>config 写入必须 atomic。</li><li>secrets 不写入普通 config。</li></ul>
-<h2 id="state-store">State Store</h2>
-<p>Phase 1：</p>
-<ul><li>JSON files + JSONL event log。</li><li>atomic write。</li><li>id 用 timestamp + random suffix。</li></ul>
-<p>Phase 6：</p>
-<ul><li>SQLite migration。</li><li>WAL。</li><li>FTS。</li><li>schema version。</li></ul>
-<h2 id="secrets">Secrets</h2>
-<p>先支持：</p>
-<ul><li>env var。</li><li><code>secrets.json</code>。</li></ul>
-<p>后续：</p>
-<ul><li>file ref。</li><li>exec ref。</li><li>OS keychain。</li></ul>
+<p>Tool descriptor：</p>
+<pre class="code" data-lang="ts"><code>type ToolDescriptor = {
+  name: string;
+  description: string;
+  schema: unknown;
+  sideEffect: &quot;none&quot; | &quot;read&quot; | &quot;write&quot; | &quot;network&quot; | &quot;exec&quot;;
+  defaultApproval: &quot;never&quot; | &quot;on_side_effect&quot; | &quot;always&quot;;
+  execute: (ctx: ToolContext, args: unknown) =&gt; Promise&lt;ToolResult&gt;;
+};</code></pre>
+<p>Approval request：</p>
+<pre class="code" data-lang="ts"><code>type ApprovalRequest = {
+  approvalId: string;
+  runId: string;
+  stepId: string;
+  prompt: string;
+  items: unknown[];
+  expiresAt?: string;
+};</code></pre>
+<p>Phase 1.1 已落地的最小种子：</p>
+<ul><li><code>packages/core/src/approvals.mjs</code> 提供 approval create/list/read/decide。</li><li>OpenClaw migration stage 会生成 pending approval。</li><li>Gateway <code>POST /api/approvals/:id/decision</code> 必须配置 token，不能依赖 loopback 免 token。</li><li>decision 只记录 approved/rejected，不执行 tool、apply 或 runtime mutation。</li><li>当前还不是完整 tool approval，只是给后续危险动作审批铺 state/API/UI。</li></ul>
+<h2 id="第一批工具">第一批工具</h2>
+<p>Phase 2：</p>
+<ul><li><code>exec</code>：执行命令，默认需要 approval 或 allowlist。</li><li><code>read</code>：读取 workspace 内文件。</li><li><code>write</code>：写 workspace 内文件，默认需要 approval。</li><li><code>http.fetch</code>：网络请求，默认只允许 GET；POST 等后续。</li><li><code>llm.complete</code>：provider-backed 简单补全，后续给 agent 用。</li></ul>
+<h2 id="policy-层">Policy 层</h2>
+<p>最小配置：</p>
+<pre class="code" data-lang="json5"><code>{
+  tools: {
+    allow: [&quot;read&quot;, &quot;exec&quot;],
+    deny: [&quot;write&quot;],
+    fs: { workspaceOnly: true },
+    exec: {
+      security: &quot;ask&quot;,
+      allowlist: [&quot;node --version&quot;, &quot;pwd&quot;, &quot;ls *&quot;]
+    }
+  }
+}</code></pre>
+<p>Policy 必须在两处生效：</p>
+<ul><li>发送给模型前过滤 visible tools。</li><li>tool dispatch 前再次检查。</li></ul>
+<h2 id="安全边界">安全边界</h2>
+<p>MyClaw v0 明确采用：</p>
+<ul><li>单用户本地 assistant model。</li><li>workspace-bound file access。</li><li>dangerous/mutating action approval。</li><li>local-only gateway default。</li><li>structured state audit。</li></ul>
+<p>不承诺：</p>
+<ul><li>hostile multi-tenant isolation。</li><li>防止本机恶意用户。</li><li>完整容器沙箱。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>config 非 strict，用户写错字段但系统悄悄忽略。</li><li>secrets 混进 logs/transcript。</li><li>state 只存在内存，approval 无法恢复。</li><li>后期数据库迁移没有 schema version。</li></ul>
+<ul><li>只在 prompt 里告诉模型不要做危险事，没有 runtime enforcement。</li><li>allow/deny 只影响 UI，不影响 dispatch。</li><li>approval 只靠终端交互，不落盘，无法 resume。</li><li><code>exec</code> 支持 shell interpolation 时没有清楚的风险提示。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li><code>myclaw doctor</code> 能显示 config 路径、state 路径、workspace 路径。</li><li>config parse 错误能定位字段。</li><li>state 文件写入是 atomic。</li><li>secrets 不出现在 <code>--json</code> 输出和 logs。</li></ul>
+<ul><li>未 allow 的 tool 不出现在 agent schema，且 dispatch 也拒绝。</li><li><code>write</code> 和高风险 <code>exec</code> 会生成 approvalId。</li><li>approvalId 能被 <code>myclaw resume</code> 恢复。</li><li>cwd escape、absolute path、<code>..</code> escape 都有测试。</li><li>stdout/stderr cap 和 timeout 有测试。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
@@ -112,9 +124,9 @@ MYCLAW_CONFIG_PATH=/path/to/config.json5</code></pre>
 <a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
 <a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
 <a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
-<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
 <a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
 <a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
 <a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
 <a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
         </article>
