@@ -30,6 +30,7 @@
 | 插件与 Skills | [plugins-skills.html](./rendered/modules/plugins-skills.html) | 插件 manifest、register API、skills 边界 |
 | 配置/状态/存储 | [config-state-storage.html](./rendered/modules/config-state-storage.html) | config schema、state 目录、secrets、migration |
 | 控制台/观测/运维 | [ui-observability-ops.html](./rendered/modules/ui-observability-ops.html) | runs timeline、approval queue、doctor/status、UI 信息架构 |
+| 人类测试手册 | [human-testing-playbook.html](./rendered/modules/human-testing-playbook.html) | 大方向进度、可参与阶段、全流程测试路径和反馈格式 |
 | 路线与验收 | [roadmap-acceptance.html](./rendered/modules/roadmap-acceptance.html) | 每阶段交付和 done definition |
 
 ## 规模判断

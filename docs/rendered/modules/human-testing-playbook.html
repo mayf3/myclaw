@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>人类测试手册 · MyClaw 模块评审</title>
+    <style>
+:root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--accent);text-decoration:none}a:hover,a:focus{text-decoration:underline}
+.shell{display:grid;grid-template-columns:292px minmax(0,1fr);min-height:100vh}
+aside{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);background:#fff;padding:22px 18px}
+main{max-width:1120px;width:100%;padding:30px}
+.brand h1{margin:0 0 6px;font-size:21px;line-height:1.2}.brand p{margin:0 0 18px;color:var(--muted);font-size:13px}
+nav{display:grid;gap:6px;margin-top:14px}nav a{display:block;border-radius:6px;padding:8px 10px;color:#26323d}nav a:hover,nav a:focus{background:var(--accent-soft);text-decoration:none}
+.back{display:inline-block;margin-bottom:18px;color:#475569}
+.hero{border:1px solid var(--line);border-left:5px solid var(--accent);background:#fff;padding:20px 22px;margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:25px;line-height:1.25}.hero p{margin:0;color:#34404b;max-width:860px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}.tag{border-radius:999px;background:#eef2f6;color:#334155;padding:3px 9px;font-size:12px;font-weight:700}.tag.p0{background:var(--critical-soft);color:var(--critical)}.tag.p1{background:var(--warn-soft);color:var(--warn)}.tag.phase{background:var(--accent-soft);color:#115e59}
+.content{border:1px solid var(--line);background:#fff;padding:22px}.content h2{margin:24px 0 10px;padding-top:8px;font-size:21px}.content h2:first-child{margin-top:0}.content h3{margin:18px 0 8px;font-size:17px}.content p{margin:8px 0;color:#2f3944}.content ul{margin:8px 0 14px;padding-left:22px}.content li{margin:5px 0}
+code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.code{position:relative;margin:14px 0;border:1px solid var(--line);background:#0f172a;color:#e5e7eb;border-radius:8px;padding:16px;overflow:auto}.code code{background:transparent;color:inherit;padding:0}
+.mermaid{margin:14px 0;border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;overflow:auto}
+.table-wrap{overflow:auto;margin:14px 0}table{width:100%;border-collapse:collapse;border:1px solid var(--line);background:#fff}th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef2f6;font-size:13px}tr:last-child td{border-bottom:0}
+.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.module-link{border:1px solid var(--line);border-radius:8px;background:#fff;padding:12px}.module-link strong{display:block;margin-bottom:4px}.module-link span{display:block;color:var(--muted);font-size:13px}
+@media (max-width:860px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}nav{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:20px}.module-grid{grid-template-columns:1fr}}
+</style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <h1>人类测试手册</h1>
+          <p>MyClaw 模块化设计评审</p>
+        </div>
+          <a class="back" href="../../index.html">← 返回全局索引</a>
+        <nav aria-label="模块导航">
+          <a href="#module-summary">模块诊断</a>
+          <a href="#总诊断">总诊断</a>
+<a href="#大方向">大方向</a>
+<a href="#当前进度">当前进度</a>
+<a href="#你现在可以测什么">你现在可以测什么</a>
+<a href="#还不能测什么">还不能测什么</a>
+<a href="#全流程测试路径">全流程测试路径</a>
+<a href="#进入-l3-前的门禁">进入 L3 前的门禁</a>
+<a href="#反馈记录格式">反馈记录格式</a>
+<a href="#阶段推进规则">阶段推进规则</a>
+<a href="#当前推荐下一轮">当前推荐下一轮</a>
+<a href="#本地文档入口">本地文档入口</a>
+          <a href="#related-modules">相关模块</a>
+        </nav>
+      </aside>
+      <main>
+        <section id="module-summary" class="hero">
+          <h2>人类测试手册</h2>
+          <p>从 L0 接入层到 L6 长期记忆的测试入口、参与阶段、反馈格式和推进规则。</p>
+          <div class="meta">
+            <span class="tag p0">P0</span>
+            <span class="tag phase">全阶段</span>
+            <span class="tag">人类测试</span>
+          </div>
+        </section>
+        <article class="content">
+          <h2 id="总诊断">总诊断</h2>
+<p>这份文档是 MyClaw 的本地人类测试手册，目标是把大方向、当前进度、你可以参与的阶段、测试步骤、反馈入口串成一个稳定流程。以后每一轮研发都应该先更新这里，再实现功能，避免 agent 自己随意推进。</p>
+<h2 id="大方向">大方向</h2>
+<p>MyClaw 的路线不是从“全能 agent”开始，而是从“可信信息交互”开始。</p>
+<div class="mermaid">flowchart LR
+  L0[L0 接入层] --&gt; L1[L1 Gateway]
+  L1 --&gt; L2[L2 Workflow / 审批]
+  L2 --&gt; L3[L3 单 Agent]
+  L3 --&gt; L4[L4 Session Search / Provenance]
+  L4 --&gt; L5[L5 Agent-to-Agent]
+  L5 --&gt; L6[L6 Long Memory / Search]</div>
+<p>Review 观察：</p>
+<ul><li>L0/L1 决定人、CLI、飞书、HTTP 能不能稳定交换信息。</li><li>L2 决定高风险动作是否能暂停、审查和恢复。</li><li>L3 以后才开始真正的 agent 能力。</li><li>L4 必须早于 L5，否则多 agent 交接没有可审计来源。</li></ul>
+<h2 id="当前进度">当前进度</h2>
+<div class="table-wrap"><table><thead><tr><th>层</th><th>当前状态</th><th>你能否参与</th><th>当前入口</th><th>下一步</th></tr></thead><tbody><tr><td>L0 接入层</td><td>partial</td><td>可以</td><td>E0，E2/E3 配置后</td><td>补 Feishu 配置化 smoke</td></tr><tr><td>L1 Gateway</td><td>partial</td><td>可以</td><td>E1，E3，E5</td><td>补 mutation audit 和 health strip</td></tr><tr><td>L2 Workflow / 审批</td><td>partial</td><td>可以</td><td>E4，E5</td><td>把 approval 接到真实 tool action</td></tr><tr><td>L3 单 Agent</td><td>planned</td><td>暂不能</td><td>E6 占位</td><td>最小 run/resume/tool loop</td></tr><tr><td>L4 Session Search / Provenance</td><td>planned</td><td>暂不能</td><td>E8 占位</td><td>run/step/tool result 可检索</td></tr><tr><td>L5 Agent-to-Agent</td><td>planned</td><td>暂不能</td><td>E9 占位</td><td>agent 分工、交接、互审</td></tr><tr><td>L6 Long Memory / Search</td><td>planned</td><td>暂不能</td><td>E10 占位</td><td>长期记忆、来源、遗忘</td></tr></tbody></table></div>
+<h2 id="你现在可以测什么">你现在可以测什么</h2>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>层</th><th>推荐程度</th><th>最小命令链</th><th>成功信号</th></tr></thead><tbody><tr><td>E0 本地消息闭环</td><td>L0</td><td>现在就测</td><td><code>npm run myclaw -- send --text &quot;hello from human&quot; --json</code></td><td>返回 ok envelope，记录 runId</td></tr><tr><td>E1 Dashboard</td><td>L1</td><td>现在就测</td><td><code>npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw</code>；打开 <code>http://127.0.0.1:4321</code></td><td>能看到 Phase、L0-L6、Approvals、Runs</td></tr><tr><td>E4 OpenClaw stage</td><td>L2</td><td>现在就测</td><td><code>npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json</code></td><td>stage 是 review-only，记录 stageId 和 approvalId</td></tr><tr><td>E5 审批队列</td><td>L1/L2</td><td>现在就测</td><td><code>MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw</code>；POST <code>/api/openclaw-migration/stage</code>；GET <code>/api/approvals</code>；POST <code>/api/approvals/&lt;approvalId&gt;/decision</code></td><td>pending 变 approved/rejected，event 有记录</td></tr><tr><td>E7 工程约束</td><td>全局</td><td>现在就测</td><td><code>npm run check</code></td><td>生成物 up to date，结构红线通过</td></tr><tr><td>E2/E3 Feishu</td><td>L0/L1</td><td>配置后测</td><td>设置 <code>MYCLAW_FEISHU_WEBHOOK_URL</code> 后发送 webhook；设置 verify/encrypt token 后 POST callback challenge</td><td>群消息收到，callback challenge 通过</td></tr></tbody></table></div>
+<h2 id="还不能测什么">还不能测什么</h2>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>原因</th><th>开放前置条件</th></tr></thead><tbody><tr><td>E6 单 Agent</td><td>还没有 agent runtime</td><td>L0/L1 smoke 稳定，L2 tool approval 可用</td></tr><tr><td>E8 Session Search</td><td>还没有可检索 run/step/source</td><td>run event schema 更稳定</td></tr><tr><td>E9 Agent-to-Agent</td><td>还没有 agent runtime 和 provenance</td><td>E6/E8 先完成</td></tr><tr><td>E10 Long Memory</td><td>还没有 memory store 和遗忘策略</td><td>E8 先完成，记忆来源可解释</td></tr></tbody></table></div>
+<h2 id="全流程测试路径">全流程测试路径</h2>
+<div class="mermaid">flowchart TD
+  Start[开始测试] --&gt; Check[npm run check]
+  Check --&gt; Dashboard[打开 Dashboard]
+  Dashboard --&gt; Send[E0 send message]
+  Send --&gt; L0Gate{L0/L1 smoke 通过?}
+  L0Gate --&gt;|否| Record[记录阻塞证据]
+  L0Gate --&gt;|是| Stage[E4 stage OpenClaw]
+  Stage --&gt; Approval[E5 审批 decision]
+  Approval --&gt; Record[记录体验问题]
+  Record --&gt; Report[更新 issue / 文档 / 下一轮目标]</div>
+<p>Review 观察：</p>
+<ul><li>每次测试先跑 <code>npm run check</code>，保证文档和代码不是 stale。</li><li>Dashboard 是你观察状态的主入口，不只是装饰 UI。</li><li>E4/E5 是后续 agent 写操作的安全前置。</li><li>L0/L1 smoke 没过，不进入 L3 agent。</li><li>测试反馈必须回到文档或 issue，不能只留在对话里。</li></ul>
+<h2 id="进入-l3-前的门禁">进入 L3 前的门禁</h2>
+<div class="table-wrap"><table><thead><tr><th>门禁</th><th>必须证据</th><th>状态</th></tr></thead><tbody><tr><td>E0 本地消息</td><td>runId、JSON 输出、Dashboard run 可见</td><td>必须通过</td></tr><tr><td>E1 Dashboard</td><td>页面可打开，L0-L6 和 E0-E10 可见</td><td>必须通过</td></tr><tr><td>E2 Feishu outbound</td><td>飞书群消息截图或 result code</td><td>配置后必须通过</td></tr><tr><td>E3 Feishu callback</td><td>challenge 回显、签名错误被拒绝</td><td>配置后必须通过</td></tr><tr><td>Gateway token</td><td>无 token 拒绝，有 token 放行</td><td>必须通过</td></tr><tr><td>Approval evidence</td><td>stageId、approvalId、decision event</td><td>必须通过</td></tr><tr><td>Mutation audit</td><td>高风险 mutation 有 event 或 audit record</td><td>下一轮补齐</td></tr></tbody></table></div>
+<h2 id="反馈记录格式">反馈记录格式</h2>
+<p>每次你参与测试时，建议按这个格式记录：</p>
+<pre class="code" data-lang="text"><code>日期：
+测试实验：E0/E1/E4/E5/E7/...
+入口命令或 URL：
+命令退出码：
+runId：
+stageId：
+approvalId：
+证据路径或截图：
+预期结果：
+实际结果：
+卡住的位置：
+owner：
+处理状态：open/fixed/blocked
+需要回填的文档：stage-status / human-testing-playbook / roadmap
+issue 或 commit：
+希望下一轮怎么改：
+是否阻塞下一阶段：是/否</code></pre>
+<h2 id="阶段推进规则">阶段推进规则</h2>
+<div class="table-wrap"><table><thead><tr><th>规则</th><th>说明</th></tr></thead><tbody><tr><td>先 L0/L1 后 Agent</td><td>接入和 gateway 没稳，不做 L3 agent</td></tr><tr><td>先审批后写操作</td><td>L2 没有真实 tool approval，不开放 agent 写操作</td></tr><tr><td>先 provenance 后 A2A</td><td>L4 没有来源追踪，不做 L5 agent-to-agent</td></tr><tr><td>先可删后长期记忆</td><td>L6 记忆必须支持来源解释和删除</td></tr><tr><td>每轮都可测试</td><td>每个 active/partial 层必须至少有一个可执行实验；planned 层必须写清开放前置条件</td></tr></tbody></table></div>
+<h2 id="当前推荐下一轮">当前推荐下一轮</h2>
+<p>下一轮建议仍然留在 L0/L1，不直接做 agent：</p>
+<ul><li>Feishu webhook 配置化 smoke。</li><li>Gateway mutation audit。</li><li>Dashboard 顶部 health strip。</li><li>保持 E0/E1/E4/E5/E7 作为回归测试。</li></ul>
+<h2 id="本地文档入口">本地文档入口</h2>
+<div class="table-wrap"><table><thead><tr><th>类型</th><th>路径</th></tr></thead><tbody><tr><td>Markdown</td><td><code>docs/modules/human-testing-playbook.md</code></td></tr><tr><td>HTML</td><td><code>docs/rendered/modules/human-testing-playbook.html</code></td></tr><tr><td>全局索引</td><td><code>docs/index.html</code></td></tr></tbody></table></div>
+          <h2 id="related-modules">相关模块</h2>
+          <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
+<a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>
+<a class="module-link" href="./initial-mvp-plan.html"><strong>MyClaw 初期实现方案</strong><span>把三个参考项目收敛成 MyClaw 的 Node.js 初期实现切片、目录结构和验收顺序。</span></a>
+<a class="module-link" href="./openclaw-migration.html"><strong>OpenClaw 一键迁移方案</strong><span>把 OpenClaw 一键迁移拆成 plan、stage、apply 三段，先做 dry-run inventory。</span></a>
+<a class="module-link" href="./workflow-core.html"><strong>Workflow Core</strong><span>定义 workflow AST、runner、统一 envelope、approval/resume 状态机。</span></a>
+<a class="module-link" href="./access-layer.html"><strong>接入层</strong><span>拆分 CLI、Gateway、未来 channel adapter，确保入口层不承载业务逻辑。</span></a>
+<a class="module-link" href="./gateway.html"><strong>Gateway</strong><span>本地 HTTP/WS 控制平面、token auth、run events、未来 UI 和渠道入口。</span></a>
+<a class="module-link" href="./agent-runtime.html"><strong>Agent Runtime</strong><span>LLM provider、prompt builder、tool calling、transcript 和 approval pause。</span></a>
+<a class="module-link" href="./tools-approval-security.html"><strong>工具、审批与安全</strong><span>ToolDescriptor、allow/deny、workspace boundary、dangerous action approval。</span></a>
+<a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
+<a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
+<a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./roadmap-acceptance.html"><strong>阶段路线与验收</strong><span>Phase 0-6 的交付、测试、验收标准和全局 Done Definition。</span></a></div>
+        </article>
+      </main>
+    </div>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>
+  </body>
+</html>

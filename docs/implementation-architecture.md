@@ -323,14 +323,15 @@ Review 观察：
 | `scripts/check-generated-docs.mjs` | 63 行 | 重建 HTML 并检测 stale 生成物 | 健康 |
 | `scripts/html-center.mjs` | 121 行 | HTML Center status/start/publish/verify，发布前校验生成物 | 健康 |
 | `docs/build-review-html.mjs` | 414 行 | HTML report builder | 接近 450，下一轮拆 |
-| `docs/modules` | 15 文件 | 模块 Markdown 源文档 | 已低于 20 |
-| `docs/rendered/modules` | 15 文件 | 生成 HTML 模块页 | 已低于 20 |
+| `docs/modules` | 16 文件 | 模块 Markdown 源文档，含人类测试手册 | 已低于 20 |
+| `docs/rendered/modules` | 16 文件 | 生成 HTML 模块页 | 已低于 20 |
+| `docs/modules/human-testing-playbook.md` | 121 行 | 人类测试手册、本地参与流程和反馈格式 | 健康 |
 | `packages/cli/src/index.mjs` | 354 行 | CLI 命令与 doctor | 健康，但继续增长要拆命令 |
 | `packages/control-plane/src/experiments.mjs` | 184 行 | Human Experiments 与分层路线 payload | 健康 |
 | `packages/dashboard/src/client.mjs` | 357 行 | Dashboard client，含分层路线渲染 | 仍需拆 renderer |
 | `packages/core/src/approvals.mjs` | 198 行 | approval state | 健康 |
 
-当前最大目录深度是 4，当前最大目录文件数是 15。
+当前最大目录深度是 4，当前最大目录文件数是 16。
 
 ## 风险分级
 
@@ -340,6 +341,7 @@ Review 观察：
 | High | Dashboard client 仍在变大 | 分层展示后会继续推高行数 | 拆 section renderer registry |
 | High | 跳过接入层/Gateway 直接做 agent | 后续 agent 和记忆会缺少可信事件边界 | 先完成 L0/L1 smoke，再做 L3 |
 | High | 跳过 session provenance 直接做 agent-to-agent | 多 agent 交接无法审计 | L4 最小 search/provenance 必须早于 L5 |
+| Medium | 人类测试手册若不维护会变成静态愿望清单 | 用户反馈无法回流到阶段计划 | 每轮开始先更新 playbook，再实现 |
 | Medium | docs build script 414 行 | 接近拆分预警 | 拆 parser/template/rewrite |
 | Medium | 20 文件硬限制会影响生成物布局 | 以后新增模块需规划目录 | 保持 source/rendered 分离 |
 | Low | 结构检查没有配置文件 | 规则变更需改脚本 | 先保持硬规则，避免早配置化 |

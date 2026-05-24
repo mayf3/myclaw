@@ -63,6 +63,7 @@ Phase 1.2: Structure Guardrails + Layered Human Testing Roadmap。
 - Dashboard/Control payload 的 phase 更新到 1.2，新增 E7 工程约束实验。
 - Dashboard/Control payload 新增 L0-L6 分层路线，并新增 E8/E9/E10 作为后续 session provenance、agent 协作和长期记忆实验占位。
 - 新增 control-plane invariant test，约束 layer 顺序、实验引用和 ready 状态，避免路线状态漂移。
+- 新增本地人类测试手册 `docs/modules/human-testing-playbook.md`，把大方向、参与阶段、全流程测试路径和反馈格式固定下来。
 
 ## 当前能力边界
 
@@ -109,7 +110,8 @@ curl -s http://127.0.0.1:4322/api/approvals
 1. 先补 L0/L1：Feishu 配置化 smoke、Gateway mutation audit、Dashboard health strip。
 2. 再补 L2：把 approval queue 接到真实 tool action，而不只是 migration stage。
 3. 再补 L3：Agent runtime 最小 run/resume/tool loop。
-4. 最后进入 L5/L6：Agent-to-Agent 协作和 Long Memory/Search。
+4. 再补 L4：Session Search / Provenance，确保 run/step/tool result 可追溯。
+5. 最后进入 L5/L6：Agent-to-Agent 协作和 Long Memory/Search。
 
 ## 验证记录
 
@@ -120,6 +122,6 @@ npm test
 
 验证结果：
 
-- `npm run check` 通过，输出 `Generated docs are up to date.`、`Structure check passed: 105 files, max 500 lines, 20 files/dir, depth 4.` 与 `Doc phase sync check passed.`
+- `npm run check` 通过，输出 `Generated docs are up to date.`、`Structure check passed: 107 files, max 500 lines, 20 files/dir, depth 4.` 与 `Doc phase sync check passed.`
 - `npm test` 通过，39 个测试全部通过，包含 doctor health 和分层路线 invariant 新用例。
-- 结构快照：当前最大目录文件数为 15，目录是 `docs/modules`；当前最大目录深度为 4，目录是 `packages/gateway/src/routes`。
+- 结构快照：当前最大目录文件数为 16，目录是 `docs/modules` 和 `docs/rendered/modules`；当前最大目录深度为 4，目录是 `packages/gateway/src/routes`。

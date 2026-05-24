@@ -27,6 +27,12 @@ Layering:
 - L5 Agent-to-agent: delegation, handoff, peer review.
 - L6 Long memory/search: durable facts, source attribution, forgetting.
 
+Human testing:
+
+- Local playbook: `docs/modules/human-testing-playbook.md`.
+- HTML playbook: `docs/rendered/modules/human-testing-playbook.html`.
+- The playbook is the source for what a human can test now, what is blocked, and how feedback should be recorded.
+
 The first channel implementation is intentionally small:
 
 - `console`: local inbound/outbound channel for verifying the message pipeline.
