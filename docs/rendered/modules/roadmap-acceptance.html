@@ -37,6 +37,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <nav aria-label="模块导航">
           <a href="#module-summary">模块诊断</a>
           <a href="#总诊断">总诊断</a>
+<a href="#分层路线">分层路线</a>
 <a href="#phase-0-contract-skeleton">Phase 0: Contract Skeleton</a>
 <a href="#phase-1-workflow-core-and-event-bus">Phase 1: Workflow Core and Event Bus</a>
 <a href="#phase-2-tool-registry-and-policy">Phase 2: Tool Registry and Policy</a>
@@ -62,6 +63,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <article class="content">
           <h2 id="总诊断">总诊断</h2>
 <p>MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“全能个人助理”开始。OpenHuman 增加后的判断更明确：controller registry、event bus、tool permission 可以早做；桌面壳、memory tree、subconscious、渠道和大规模集成必须后置。</p>
+<h2 id="分层路线">分层路线</h2>
+<div class="table-wrap"><table><thead><tr><th>层</th><th>目标</th><th>用户可测实验</th></tr></thead><tbody><tr><td>L0 接入层</td><td>人、CLI、webhook、Feishu/Lark 的基础消息交互</td><td>E0、E2、E3</td></tr><tr><td>L1 Gateway</td><td>HTTP 控制面、鉴权、状态读取、mutation 边界</td><td>E1、E3、E5</td></tr><tr><td>L2 Workflow 与审批</td><td>高风险动作进入 review/approval，而不是自动执行</td><td>E4、E5</td></tr><tr><td>L3 单 Agent Runtime</td><td>单个 agent 可拆任务、调用工具、失败重试、人工确认</td><td>E6</td></tr><tr><td>L4 Session Search / Provenance</td><td>run、step、tool result 可检索，召回来源可解释</td><td>E8</td></tr><tr><td>L5 Agent-to-Agent</td><td>多 agent 分工、交接上下文、互相 review</td><td>E9</td></tr><tr><td>L6 Long Memory / Search</td><td>长期事实、来源解释、遗忘策略和跨会话召回</td><td>E10</td></tr></tbody></table></div>
+<p>原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。</p>
 <h2 id="phase-0-contract-skeleton">Phase 0: Contract Skeleton</h2>
 <p>目标：</p>
 <ul><li>Node.js/TypeScript/pnpm workspace。</li><li><code>myclaw</code> bin。</li><li>tests。</li><li>controller registry。</li><li>统一 envelope。</li><li>config/state 路径。</li></ul>

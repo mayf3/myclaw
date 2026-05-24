@@ -87,7 +87,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <p>Phase 1.1 dashboard 新增：</p>
 <ul><li>Approvals 区块，展示 pending/approved/rejected 与 OpenClaw stage approval。</li><li>OpenClaw stage review 摘要，明确 review-only，不执行 apply。</li><li><code>/api/status</code> 内联 <code>approvals</code>、<code>openclawStageReview</code> 和兼容字段 <code>openclawStageDiff</code>。</li></ul>
 <p>Phase 1.2 工程约束新增：</p>
-<ul><li><code>npm run check</code> 强制生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。</li><li><code>npm run html-center</code> 和 <code>npm run publish:review</code> 固化 HTML Center 检查与发布。</li><li><code>myclaw doctor</code> 会报告 HTML Center health。</li><li>生成 HTML 模块页移到 <code>docs/rendered/modules</code>，避免源文档目录被生成物撑爆。</li><li>Dashboard client 仍在 344 行，下一阶段必须拆 section renderer。</li></ul>
+<ul><li><code>npm run check</code> 强制生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。</li><li><code>npm run html-center</code> 和 <code>npm run publish:review</code> 固化 HTML Center 检查与发布。</li><li><code>myclaw doctor</code> 会报告 HTML Center health。</li><li>生成 HTML 模块页移到 <code>docs/rendered/modules</code>，避免源文档目录被生成物撑爆。</li><li>Dashboard client 仍在 357 行，下一阶段必须拆 section renderer。</li></ul>
 <p>下一步应补：</p>
 <ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 可操作 review drawer 和后续真实 schema diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li><li>Human Experiments 和自动化 test/check 结果的映射。</li></ul>
 <h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>

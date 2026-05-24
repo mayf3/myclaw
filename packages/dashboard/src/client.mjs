@@ -83,6 +83,7 @@ function renderExperiments(payload) {
   ).join(" ");
   $("experimentPanel").outerHTML = '<div id="experimentPanel" class="experiment-list">' +
     '<div class="decision-card"><strong>' + esc(payload.title || "Human Experiment Roadmap") + '</strong><p>' + esc(payload.goal || "") + '</p><p>' + map + '</p></div>' +
+    renderLayerRoadmap(payload.layerRoadmap || []) +
     payload.experiments.map((item) => '<article class="experiment-card">' +
       '<div class="experiment-title"><strong>' + esc(item.id) + ' · ' + esc(item.title) + '</strong><span class="tag ' + experimentTone(item.status) + '">' + esc(item.status) + '</span></div>' +
       '<p><span class="small">' + esc(item.milestone) + ' · ' + esc(item.role) + '</span></p>' +
@@ -94,8 +95,20 @@ function renderExperiments(payload) {
     '</div>';
 }
 
+function renderLayerRoadmap(layers) {
+  if (!layers.length) {
+    return "";
+  }
+  return '<div class="layer-table"><table><thead><tr><th>层</th><th>状态</th><th>重点</th><th>实验</th></tr></thead><tbody>' +
+    layers.map((item) => '<tr><td><strong>' + esc(item.id) + '</strong><br><span class="small">' + esc(item.label) + '</span></td>' +
+      '<td><span class="tag ' + experimentTone(item.status) + '">' + esc(item.status) + '</span></td>' +
+      '<td>' + esc(item.purpose) + '</td>' +
+      '<td>' + (item.experiments || []).map((id) => '<span class="tag info">' + esc(id) + '</span>').join(" ") + '</td></tr>').join("") +
+    '</tbody></table></div>';
+}
+
 function experimentTone(status) {
-  return status === "ready" ? "ok" : status === "needs_config" ? "warn" : "info";
+  return status === "ready" ? "ok" : status === "needs_config" || status === "partial" ? "warn" : "info";
 }
 
 function commandList(commands = []) {

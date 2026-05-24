@@ -38,6 +38,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <a href="#module-summary">总诊断</a>
           <a href="#总诊断">总诊断</a>
 <a href="#大规划图">大规划图</a>
+<a href="#分层交互架构图">分层交互架构图</a>
 <a href="#系统上下文图">系统上下文图</a>
 <a href="#模块架构图">模块架构图</a>
 <a href="#核心业务流程图">核心业务流程图</a>
@@ -66,10 +67,10 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
             <span class="tag">实现评审</span>
           </div>
         </section>
-        <article class="content"><p>更新时间：2026-05-23</p>
+        <article class="content"><p>更新时间：2026-05-24</p>
 <h2 id="总诊断">总诊断</h2>
-<p>Phase 1.2 先处理两个会让后续研发变脏的问题：HTML Center 链接不可访问，以及生成文档和源文档混在同一目录导致结构膨胀。独立 Linus 视角审查指出最初修复仍有 3 个 High：HTML Center 不可复现、行数检查可绕过、生成 HTML 可能 stale。本轮已补成硬约束：<code>npm run check</code> 现在会重建并校验 HTML 生成物、检查所有文本文件的 500 行上限、检查 20 文件/目录和 4 层目录深度。</p>
-<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>8/10</td><td>结构红线变成机器检查，E7 可由用户亲自跑</td></tr><tr><td>可扩展性</td><td>8/10</td><td>源文档与生成 HTML 拆开，后续模块页不再挤爆目录</td></tr><tr><td>可靠性</td><td>8/10</td><td>HTML Center 有仓库命令和 doctor health，仍缺自动告警</td></tr><tr><td>可维护性</td><td>8/10</td><td>结构债务和生成物 stale 进入 <code>npm run check</code>，Dashboard client 仍要拆</td></tr><tr><td>安全性</td><td>7/10</td><td>本轮未扩大 mutation 面，沿用 Phase 1.1 token 审批边界</td></tr></tbody></table></div>
+<p>Phase 1.2 继续收紧研发路线：技术债红线已经进入 <code>npm run check</code>，现在把用户可参与测试也改成分层路线。结论：MyClaw 不能一上来跳到 agent 和记忆，必须先把 L0 接入层、L1 Gateway、L2 workflow/审批打稳；L3 单 Agent 之后先补 L4 Session Search/Provenance，再进入 L5 Agent-to-Agent 和 L6 Long Memory/Search。</p>
+<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>9/10</td><td>路线从功能清单改成 L0-L6 分层测试</td></tr><tr><td>可扩展性</td><td>8/10</td><td>先接入层/Gateway，再 agent/记忆，依赖顺序更稳</td></tr><tr><td>可靠性</td><td>8/10</td><td>HTML Center 有仓库命令和 doctor health，仍缺自动告警</td></tr><tr><td>可维护性</td><td>8/10</td><td>结构债务和生成物 stale 进入 <code>npm run check</code>，Dashboard client 仍要拆</td></tr><tr><td>安全性</td><td>7/10</td><td>本轮未扩大 mutation 面，沿用 Phase 1.1 token 审批边界</td></tr></tbody></table></div>
 <h2 id="大规划图">大规划图</h2>
 <p>这张图回答：当前哪些能力已经可由用户亲手测试，哪些还在后续阶段。</p>
 <div class="mermaid">flowchart LR
@@ -77,12 +78,29 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   E1 --&gt; E4[E4 OpenClaw stage]
   E4 --&gt; E5[E5 Approval decision]
   E5 --&gt; E7[E7 工程约束]
-  E7 --&gt; Next1[拆 Dashboard renderer]
-  Next1 --&gt; Next2[Tool approval]
-  Next2 --&gt; E6[E6 Agent + Memory]
+  E7 --&gt; L0[L0 接入层]
+  L0 --&gt; L1[L1 Gateway]
+  L1 --&gt; L2[L2 Workflow + Approval]
+  L2 --&gt; E6[E6 单 Agent]
+  E6 --&gt; E8[E8 Session Search]
+  E8 --&gt; E9[E9 Agent-to-Agent]
+  E9 --&gt; E10[E10 Long Memory]
   E2[E2 Feishu outbound] -.配置后.-&gt; E3[E3 callback smoke]</div>
 <p>Review 观察：</p>
-<ul><li>优点：E7 把技术债约束变成可执行实验。</li><li>优点：当前可测入口已经覆盖消息、Dashboard、迁移、审批、结构约束。</li><li>风险：E6 仍未实现，不能测试 agent runtime 和记忆。</li><li>改进：下一阶段把审批接到真实 tool action。</li></ul>
+<ul><li>优点：E7 把技术债约束变成可执行实验。</li><li>优点：当前可测入口已经覆盖消息、Dashboard、迁移、审批、结构约束。</li><li>优点：L0-L6 让“先交互基础、后 agent 智能”成为硬路线。</li><li>风险：L3-L6 仍未实现，不能测试 agent runtime、agent 协作 和记忆。</li><li>改进：下一阶段优先补 L0/L1 的 Feishu/Gateway smoke，而不是直接堆 agent。</li></ul>
+<h2 id="分层交互架构图">分层交互架构图</h2>
+<p>这张图回答：为什么接入层和 gateway 要排在 agent、agent 协作、记忆之前。</p>
+<div class="mermaid">flowchart TB
+  User[用户/飞书/CLI] --&gt; L0[L0 接入层]
+  L0 --&gt; L1[L1 Gateway]
+  L1 --&gt; L2[L2 Workflow + Approval]
+  L2 --&gt; L3[L3 单 Agent Runtime]
+  L3 --&gt; L4[L4 Session Search / Provenance]
+  L4 --&gt; L5[L5 Agent-to-Agent]
+  L5 --&gt; L6[L6 Long Memory/Search]
+  L6 --&gt; L3</div>
+<p>Review 观察：</p>
+<ul><li>优点：L0/L1 先解决信息入口、回执、鉴权、状态查询，是所有 agent 能力的地基。</li><li>优点：L2 把高风险动作先变成 review/approval，避免 agent 直接执行危险操作。</li><li>风险：如果跳过 L0/L1，后续 agent 和记忆会缺少可信事件来源；如果跳过 L4，agent-to-agent 没有可追踪上下文。</li><li>改进：Dashboard 必须按层展示测试入口和开放条件。</li></ul>
 <h2 id="系统上下文图">系统上下文图</h2>
 <p>这张图回答：HTML Center、文档生成、Dashboard 和本地用户之间的边界。</p>
 <div class="mermaid">flowchart LR
@@ -220,19 +238,19 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <p>Review 观察：</p>
 <ul><li>优点：三个本地服务都回到 tmux 常驻。</li><li>风险：没有统一 supervisor。</li><li>改进：doctor 已有 HTML Center health；后续做统一 services status。</li></ul>
 <h2 id="human-experiments">Human Experiments</h2>
-<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.2、Approvals 可见</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected</td></tr><tr><td>E7</td><td>ready</td><td><code>npm run check</code></td><td>输出 500 行、20 文件/目录、depth 4</td></tr><tr><td>E2/E3</td><td>needs_config</td><td>Feishu webhook/callback</td><td>配置后可测</td></tr><tr><td>E6</td><td>planned</td><td>agent run + memory search</td><td>后续开放</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.2、Approvals 可见</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected</td></tr><tr><td>E7</td><td>ready</td><td><code>npm run check</code></td><td>输出 500 行、20 文件/目录、depth 4</td></tr><tr><td>E2/E3</td><td>needs_config</td><td>Feishu webhook/callback</td><td>配置后可测</td></tr><tr><td>E6</td><td>planned</td><td>单 agent run/resume/tool loop</td><td>后续开放</td></tr><tr><td>E8</td><td>planned</td><td>session search + provenance</td><td>后续开放</td></tr><tr><td>E9</td><td>planned</td><td>agent-to-agent review</td><td>后续开放</td></tr><tr><td>E10</td><td>planned</td><td>long memory add/search/delete</td><td>后续开放</td></tr></tbody></table></div>
 <h2 id="概念解释">概念解释</h2>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Structure guardrail</td><td>机器强制的技术债红线</td><td>500 行、20 文件、4 层深度</td></tr><tr><td>Direct file count</td><td>一个目录下直接文件数</td><td>不递归计入子目录</td></tr><tr><td>Rendered docs</td><td>从 Markdown 生成的 HTML</td><td>位于 <code>docs/rendered/modules</code></td></tr><tr><td>HTML Center</td><td>本机报告中心</td><td>依赖 4177 服务常驻</td></tr><tr><td>Phase sync</td><td>Markdown 与 HTML 阶段一致性</td><td>防止 stale report</td></tr><tr><td>Generated freshness</td><td>生成物新鲜度</td><td><code>check-generated-docs</code> 重建后检测 diff</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Structure guardrail</td><td>机器强制的技术债红线</td><td>500 行、20 文件、4 层深度</td></tr><tr><td>Direct file count</td><td>一个目录下直接文件数</td><td>不递归计入子目录</td></tr><tr><td>Rendered docs</td><td>从 Markdown 生成的 HTML</td><td>位于 <code>docs/rendered/modules</code></td></tr><tr><td>HTML Center</td><td>本机报告中心</td><td>依赖 4177 服务常驻</td></tr><tr><td>Phase sync</td><td>Markdown 与 HTML 阶段一致性</td><td>防止 stale report</td></tr><tr><td>Generated freshness</td><td>生成物新鲜度</td><td><code>check-generated-docs</code> 重建后检测 diff</td></tr><tr><td>Access layer</td><td>接入层</td><td>CLI/webhook/Feishu 等消息入口和出口</td></tr><tr><td>Gateway</td><td>控制面入口</td><td>HTTP route、鉴权、状态和 mutation 边界</td></tr><tr><td>Session provenance</td><td>session 来源追踪</td><td>run、step、message、tool result 的可检索来源</td></tr><tr><td>Agent-to-Agent</td><td>agent 协作</td><td>多 agent 分工、交接上下文、互相 review</td></tr></tbody></table></div>
 <h2 id="相似技术比较">相似技术比较</h2>
 <div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.2</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>结构约束</td><td>硬性 check 脚本</td><td>大 repo 模块化</td><td>成熟工程分层</td><td>Rust workspace 分层</td></tr><tr><td>文档发布</td><td>HTML Center + rendered docs</td><td>docs/control UI</td><td>README/ops docs</td><td>UI/docs 混合</td></tr><tr><td>审批</td><td>migration approval seed</td><td>成熟 policy/approval</td><td>ops guard</td><td>risk/autonomy policy</td></tr><tr><td>Dashboard</td><td>本地只读 console</td><td>control UI</td><td>TUI/ops</td><td>UI-first</td></tr></tbody></table></div>
 <h2 id="目录结构与文件行数">目录结构与文件行数</h2>
-<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数/文件数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>scripts/check-file-lines.mjs</code></td><td>120 行</td><td>文本文件行数、目录文件数、深度检查</td><td>健康</td></tr><tr><td><code>scripts/check-generated-docs.mjs</code></td><td>63 行</td><td>重建 HTML 并检测 stale 生成物</td><td>健康</td></tr><tr><td><code>scripts/html-center.mjs</code></td><td>121 行</td><td>HTML Center status/start/publish/verify，发布前校验生成物</td><td>健康</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>414 行</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr><tr><td><code>docs/modules</code></td><td>15 文件</td><td>模块 Markdown 源文档</td><td>已低于 20</td></tr><tr><td><code>docs/rendered/modules</code></td><td>15 文件</td><td>生成 HTML 模块页</td><td>已低于 20</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>354 行</td><td>CLI 命令与 doctor</td><td>健康，但继续增长要拆命令</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>344 行</td><td>Dashboard client</td><td>仍需拆 renderer</td></tr><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198 行</td><td>approval state</td><td>健康</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数/文件数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>scripts/check-file-lines.mjs</code></td><td>120 行</td><td>文本文件行数、目录文件数、深度检查</td><td>健康</td></tr><tr><td><code>scripts/check-generated-docs.mjs</code></td><td>63 行</td><td>重建 HTML 并检测 stale 生成物</td><td>健康</td></tr><tr><td><code>scripts/html-center.mjs</code></td><td>121 行</td><td>HTML Center status/start/publish/verify，发布前校验生成物</td><td>健康</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>414 行</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr><tr><td><code>docs/modules</code></td><td>15 文件</td><td>模块 Markdown 源文档</td><td>已低于 20</td></tr><tr><td><code>docs/rendered/modules</code></td><td>15 文件</td><td>生成 HTML 模块页</td><td>已低于 20</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>354 行</td><td>CLI 命令与 doctor</td><td>健康，但继续增长要拆命令</td></tr><tr><td><code>packages/control-plane/src/experiments.mjs</code></td><td>184 行</td><td>Human Experiments 与分层路线 payload</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>357 行</td><td>Dashboard client，含分层路线渲染</td><td>仍需拆 renderer</td></tr><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198 行</td><td>approval state</td><td>健康</td></tr></tbody></table></div>
 <p>当前最大目录深度是 4，当前最大目录文件数是 15。</p>
 <h2 id="风险分级">风险分级</h2>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>Medium</td><td>HTML Center 依赖 tmux 常驻</td><td>服务掉了链接就打不开</td><td>doctor 已覆盖，后续纳入 Dashboard health</td></tr><tr><td>High</td><td>Dashboard client 仍在变大</td><td>下轮功能会推向 400+ 行</td><td>拆 section renderer registry</td></tr><tr><td>Medium</td><td>docs build script 414 行</td><td>接近拆分预警</td><td>拆 parser/template/rewrite</td></tr><tr><td>Medium</td><td>20 文件硬限制会影响生成物布局</td><td>以后新增模块需规划目录</td><td>保持 source/rendered 分离</td></tr><tr><td>Low</td><td>结构检查没有配置文件</td><td>规则变更需改脚本</td><td>先保持硬规则，避免早配置化</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>Medium</td><td>HTML Center 依赖 tmux 常驻</td><td>服务掉了链接就打不开</td><td>doctor 已覆盖，后续纳入 Dashboard health</td></tr><tr><td>High</td><td>Dashboard client 仍在变大</td><td>分层展示后会继续推高行数</td><td>拆 section renderer registry</td></tr><tr><td>High</td><td>跳过接入层/Gateway 直接做 agent</td><td>后续 agent 和记忆会缺少可信事件边界</td><td>先完成 L0/L1 smoke，再做 L3</td></tr><tr><td>High</td><td>跳过 session provenance 直接做 agent-to-agent</td><td>多 agent 交接无法审计</td><td>L4 最小 search/provenance 必须早于 L5</td></tr><tr><td>Medium</td><td>docs build script 414 行</td><td>接近拆分预警</td><td>拆 parser/template/rewrite</td></tr><tr><td>Medium</td><td>20 文件硬限制会影响生成物布局</td><td>以后新增模块需规划目录</td><td>保持 source/rendered 分离</td></tr><tr><td>Low</td><td>结构检查没有配置文件</td><td>规则变更需改脚本</td><td>先保持硬规则，避免早配置化</td></tr></tbody></table></div>
 <h2 id="linus-视角严苛审查">Linus 视角严苛审查</h2>
-<p>独立 subagent 结论：初版不建议直接进入下一阶段，必须先修 HTML Center 可复现、行数检查绕过、生成物 stale 这三个 High。处理后结论：可以进入下一阶段，但 Dashboard client 和 docs builder 已经接近需要拆分的边界，不允许继续堆功能。</p>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td>HTML Center 恢复只是手工补丁</td><td>已加 <code>scripts/html-center.mjs</code>、<code>npm run html-center</code>、<code>npm run publish:review</code> 和 <code>myclaw doctor</code> health</td></tr><tr><td>High</td><td>行数检查只看白名单扩展，可被 <code>.sh/.yaml/Dockerfile</code> 绕过</td><td>已改成默认检查所有文本文件，二进制检测排除</td></tr><tr><td>High</td><td>HTML 生成物可能 stale，旧 sync 只看 Phase 字符串</td><td>已加 <code>scripts/check-generated-docs.mjs</code>，<code>npm run check</code> 重建后 fail on diff</td></tr><tr><td>High</td><td><code>docs/rendered</code> 未跟踪会导致索引坏链</td><td>本轮跟踪生成 HTML，并由 generated docs check 校验缺失/多余</td></tr><tr><td>Medium</td><td><code>docs/build-review-html.mjs</code> 414 行接近阈值</td><td>记录为下一阶段拆分任务</td></tr><tr><td>Medium</td><td>Dashboard client 344 行继续增长</td><td>下一阶段拆 renderer registry</td></tr><tr><td>Low</td><td>硬规则会带来目录规划成本</td><td>保留，作为技术债刹车</td></tr></tbody></table></div>
+<p>独立 subagent 结论：分层方向正确，但不能把路线定义当成能力完成。L0/L1/L2 只能标 partial，L4 必须先做最小 session provenance，再让多 agent 交接上下文。处理后结论：不要进入 Agent/A2A/Memory 实现阶段，下一步先补 Feishu/Gateway 的真实 smoke，并拆 Dashboard renderer。</p>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>High</td><td>HTML Center 恢复只是手工补丁</td><td>已加 <code>scripts/html-center.mjs</code>、<code>npm run html-center</code>、<code>npm run publish:review</code> 和 <code>myclaw doctor</code> health</td></tr><tr><td>High</td><td>行数检查只看白名单扩展，可被 <code>.sh/.yaml/Dockerfile</code> 绕过</td><td>已改成默认检查所有文本文件，二进制检测排除</td></tr><tr><td>High</td><td>HTML 生成物可能 stale，旧 sync 只看 Phase 字符串</td><td>已加 <code>scripts/check-generated-docs.mjs</code>，<code>npm run check</code> 重建后 fail on diff</td></tr><tr><td>High</td><td><code>docs/rendered</code> 未跟踪会导致索引坏链</td><td>本轮跟踪生成 HTML，并由 generated docs check 校验缺失/多余</td></tr><tr><td>High</td><td>L0/L1/L2 标 ready 会掩盖 E2/E3 配置和真实 tool action 缺口</td><td>已改为 partial，并加 invariant test</td></tr><tr><td>High</td><td>M7 done 100 容易误解为 E8-E10 能力完成</td><td>已改为 partial 45，只表示路线已定义</td></tr><tr><td>High</td><td>Agent-to-Agent 需要可检索 run/step/source</td><td>已把 L4 改成 Session Search/Provenance，排在 L5 Agent-to-Agent 之前</td></tr><tr><td>Medium</td><td><code>docs/build-review-html.mjs</code> 414 行接近阈值</td><td>记录为下一阶段拆分任务</td></tr><tr><td>Medium</td><td>Dashboard client 仍继续增长</td><td>下一阶段拆 renderer registry</td></tr><tr><td>Low</td><td>硬规则会带来目录规划成本</td><td>保留，作为技术债刹车</td></tr></tbody></table></div>
 <h2 id="skill-规范自检">Skill 规范自检</h2>
 <ul><li>已按 <code>web-design-review</code> 输出可视化 design review dashboard。</li><li>报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行、每目录 20 文件、目录深度 4 层由 <code>npm run check</code> 执行。</li><li>本轮已更新 <code>web-design-review</code> skill 的 500 行、20 文件/目录、4 层深度约束；按 <code>skill-creator</code> 原则保持 <code>SKILL.md</code> 247 行，未增加额外过程文档。</li></ul>
 <h2 id="下一阶段建议">下一阶段建议</h2>
