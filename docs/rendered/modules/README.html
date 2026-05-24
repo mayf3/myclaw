@@ -55,7 +55,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <article class="content">
           <p>这组文档是 MyClaw 的模块化 design review。每个模块都按同一套结构组织：参考项目观察、推荐设计、MVP 边界、依赖关系、风险和验收标准。新增 OpenHuman 和 OpenClaw 迁移目标后，初期方案从“先做完整 agent 平台”进一步收敛为“先做可观察的本地控制台 + 可恢复 workflow + 可审计迁移 plan”。</p>
 <h2 id="阅读顺序">阅读顺序</h2>
-<ul><li><a href="./reference-comparison.html">参考项目对比</a></li><li><a href="./openhuman-analysis.html">OpenHuman 参考分析</a></li><li><a href="./initial-mvp-plan.html">MyClaw 初期实现方案</a></li><li><a href="./openclaw-migration.html">OpenClaw 一键迁移方案</a></li><li><a href="./workflow-core.html">Workflow Core</a></li><li><a href="./access-layer.html">接入层</a></li><li><a href="./gateway.html">Gateway</a></li><li><a href="./agent-runtime.html">Agent Runtime</a></li><li><a href="./tools-approval-security.html">工具、审批与安全</a></li><li><a href="./memory-session-search.html">记忆、Session 与搜索</a></li><li><a href="./plugins-skills.html">插件与 Skills</a></li><li><a href="./config-state-storage.html">配置、状态与存储</a></li><li><a href="./ui-observability-ops.html">控制台、观测与运维</a></li><li><a href="./roadmap-acceptance.html">阶段路线与验收</a></li></ul>
+<ul><li><a href="./reference-comparison.html">参考项目对比</a></li><li><a href="./openhuman-analysis.html">OpenHuman 参考分析</a></li><li><a href="./initial-mvp-plan.html">MyClaw 初期实现方案</a></li><li><a href="./openclaw-migration.html">OpenClaw 一键迁移方案</a></li><li><a href="./workflow-core.html">Workflow Core</a></li><li><a href="./access-layer.html">接入层</a></li><li><a href="./gateway.html">Gateway</a></li><li><a href="./agent-runtime.html">Agent Runtime</a></li><li><a href="./tools-approval-security.html">工具、审批与安全</a></li><li><a href="./memory-session-search.html">记忆、Session 与搜索</a></li><li><a href="./plugins-skills.html">插件与 Skills</a></li><li><a href="./config-state-storage.html">配置、状态与存储</a></li><li><a href="./ui-observability-ops.html">控制台、观测与运维</a></li><li><a href="./human-testing-playbook.html">人类测试手册</a></li><li><a href="./roadmap-acceptance.html">阶段路线与验收</a></li></ul>
 <h2 id="模块依赖图">模块依赖图</h2>
 <pre class="code" data-lang="text"><code>Controller Registry / Envelope / Event Bus
   -&gt; Dashboard / Observability
@@ -65,11 +65,14 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   -&gt; CLI Access Layer
   -&gt; Gateway
       -&gt; Agent Runtime
-      -&gt; Memory / Session / Search
-      -&gt; UI / Observability
   -&gt; Plugins / Skills</code></pre>
+<p>横向测试/治理文档：</p>
+<pre class="code" data-lang="text"><code>Human Testing Playbook
+  -&gt; Stage Status
+  -&gt; Roadmap / Acceptance
+  -&gt; Dashboard Human Experiments</code></pre>
 <h2 id="第一阶段必须完成">第一阶段必须完成</h2>
-<ul><li><a href="./workflow-core.html">workflow-core.html</a> 的 envelope、runner、resume 状态机。</li><li><a href="./tools-approval-security.html">tools-approval-security.html</a> 的 workspace boundary、timeout、stdout cap、approval。</li><li><a href="./access-layer.html">access-layer.html</a> 的 CLI 命令。</li><li><a href="./config-state-storage.html">config-state-storage.html</a> 的 state 目录和 JSONL/index 存储。</li><li><a href="./openclaw-migration.html">openclaw-migration.html</a> 的 dry-run plan 和 staged snapshot 设计。</li></ul>
+<ul><li><a href="./workflow-core.html">workflow-core.html</a> 的 envelope、runner、resume 状态机。</li><li><a href="./tools-approval-security.html">tools-approval-security.html</a> 的 workspace boundary、timeout、stdout cap、approval。</li><li><a href="./access-layer.html">access-layer.html</a> 的 CLI 命令。</li><li><a href="./config-state-storage.html">config-state-storage.html</a> 的 state 目录和 JSONL/index 存储。</li><li><a href="./openclaw-migration.html">openclaw-migration.html</a> 的 dry-run plan 和 staged snapshot 设计。</li><li><a href="./human-testing-playbook.html">human-testing-playbook.html</a> 的可参与阶段、测试路径和反馈格式。</li></ul>
 <p>其它模块先保留接口，不急着完整实现。</p>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
@@ -84,7 +87,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
 <a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
 <a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
-<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a></div>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./human-testing-playbook.html"><strong>人类测试手册</strong><span>从 L0 接入层到 L6 长期记忆的测试入口、参与阶段、反馈格式和推进规则。</span></a></div>
         </article>
       </main>
     </div>

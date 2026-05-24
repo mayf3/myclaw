@@ -12,6 +12,7 @@ export const moduleOrder = [
   "plugins-skills",
   "config-state-storage",
   "ui-observability-ops",
+  "human-testing-playbook",
   "roadmap-acceptance",
 ];
 
@@ -93,6 +94,12 @@ export const moduleMeta = {
     priority: "P1",
     label: "可观察性",
     summary: "doctor/status、run timeline、approval queue、logs、未来 Control UI。",
+  },
+  "human-testing-playbook": {
+    phase: "全阶段",
+    priority: "P0",
+    label: "人类测试",
+    summary: "从 L0 接入层到 L6 长期记忆的测试入口、参与阶段、反馈格式和推进规则。",
   },
   "roadmap-acceptance": {
     phase: "全阶段",

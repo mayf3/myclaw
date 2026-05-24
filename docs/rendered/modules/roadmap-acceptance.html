@@ -66,6 +66,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <h2 id="分层路线">分层路线</h2>
 <div class="table-wrap"><table><thead><tr><th>层</th><th>目标</th><th>用户可测实验</th></tr></thead><tbody><tr><td>L0 接入层</td><td>人、CLI、webhook、Feishu/Lark 的基础消息交互</td><td>E0、E2、E3</td></tr><tr><td>L1 Gateway</td><td>HTTP 控制面、鉴权、状态读取、mutation 边界</td><td>E1、E3、E5</td></tr><tr><td>L2 Workflow 与审批</td><td>高风险动作进入 review/approval，而不是自动执行</td><td>E4、E5</td></tr><tr><td>L3 单 Agent Runtime</td><td>单个 agent 可拆任务、调用工具、失败重试、人工确认</td><td>E6</td></tr><tr><td>L4 Session Search / Provenance</td><td>run、step、tool result 可检索，召回来源可解释</td><td>E8</td></tr><tr><td>L5 Agent-to-Agent</td><td>多 agent 分工、交接上下文、互相 review</td><td>E9</td></tr><tr><td>L6 Long Memory / Search</td><td>长期事实、来源解释、遗忘策略和跨会话召回</td><td>E10</td></tr></tbody></table></div>
 <p>原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。</p>
+<p>具体的人类测试入口、反馈格式和每轮回归路径见 <a href="./human-testing-playbook.html">人类测试手册</a>。</p>
 <h2 id="phase-0-contract-skeleton">Phase 0: Contract Skeleton</h2>
 <p>目标：</p>
 <ul><li>Node.js/TypeScript/pnpm workspace。</li><li><code>myclaw</code> bin。</li><li>tests。</li><li>controller registry。</li><li>统一 envelope。</li><li>config/state 路径。</li></ul>
@@ -138,7 +139,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <a class="module-link" href="./memory-session-search.html"><strong>记忆、Session 与搜索</strong><span>JSONL、SQLite/FTS、memory files、session_search 和长期上下文召回。</span></a>
 <a class="module-link" href="./plugins-skills.html"><strong>插件与 Skills</strong><span>区分 runtime capability 与 prompt workflow，设计最小 plugin manifest。</span></a>
 <a class="module-link" href="./config-state-storage.html"><strong>配置、状态与存储</strong><span>JSON5 config、Zod strict schema、state 目录、secrets 与 SQLite 迁移。</span></a>
-<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a></div>
+<a class="module-link" href="./ui-observability-ops.html"><strong>控制台、观测与运维</strong><span>doctor/status、run timeline、approval queue、logs、未来 Control UI。</span></a>
+<a class="module-link" href="./human-testing-playbook.html"><strong>人类测试手册</strong><span>从 L0 接入层到 L6 长期记忆的测试入口、参与阶段、反馈格式和推进规则。</span></a></div>
         </article>
       </main>
     </div>

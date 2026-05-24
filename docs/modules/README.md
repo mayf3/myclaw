@@ -17,7 +17,8 @@
 11. [插件与 Skills](./plugins-skills.md)
 12. [配置、状态与存储](./config-state-storage.md)
 13. [控制台、观测与运维](./ui-observability-ops.md)
-14. [阶段路线与验收](./roadmap-acceptance.md)
+14. [人类测试手册](./human-testing-playbook.md)
+15. [阶段路线与验收](./roadmap-acceptance.md)
 
 ## 模块依赖图
 
@@ -30,9 +31,16 @@ Controller Registry / Envelope / Event Bus
   -> CLI Access Layer
   -> Gateway
       -> Agent Runtime
-      -> Memory / Session / Search
-      -> UI / Observability
   -> Plugins / Skills
+```
+
+横向测试/治理文档：
+
+```text
+Human Testing Playbook
+  -> Stage Status
+  -> Roadmap / Acceptance
+  -> Dashboard Human Experiments
 ```
 
 ## 第一阶段必须完成
@@ -42,5 +50,6 @@ Controller Registry / Envelope / Event Bus
 - [access-layer.html](./access-layer.html) 的 CLI 命令。
 - [config-state-storage.html](./config-state-storage.html) 的 state 目录和 JSONL/index 存储。
 - [openclaw-migration.html](./openclaw-migration.html) 的 dry-run plan 和 staged snapshot 设计。
+- [human-testing-playbook.html](./human-testing-playbook.html) 的可参与阶段、测试路径和反馈格式。
 
 其它模块先保留接口，不急着完整实现。
