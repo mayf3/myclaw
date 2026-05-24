@@ -249,7 +249,7 @@ Phase 4：
 - encrypted challenge 已支持，但 encrypted message event 的类型覆盖仍很窄。
 - token 现在只是 shared secret，没有用户/角色/作用域。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
-- Human Experiments 当前是静态 payload，不能被当作自动验收结果。
+- Human Experiments 当前是静态 payload，不能被当作自动验收结果；但已按 L0-L6 分层暴露测试路线。
 - approval decision 只是 audit record，不是 authorization framework，也没有 scoped token。
 
 ## 验收标准
@@ -262,7 +262,7 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.2 的 E0-E7 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.2 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。

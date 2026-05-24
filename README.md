@@ -17,6 +17,16 @@ npm run html-center
 npm run publish:review
 ```
 
+Layering:
+
+- L0 Access layer: CLI, webhook, Feishu/Lark inbound/outbound message normalization.
+- L1 Gateway: HTTP control plane, auth, state reads, mutation boundary.
+- L2 Workflow and approval: review-only migration, approval queue, later tool approvals.
+- L3 Single agent runtime: task steps, tool calls, retries, human confirmation.
+- L4 Session search/provenance: run, step, message, and tool-result retrieval with source attribution.
+- L5 Agent-to-agent: delegation, handoff, peer review.
+- L6 Long memory/search: durable facts, source attribution, forgetting.
+
 The first channel implementation is intentionally small:
 
 - `console`: local inbound/outbound channel for verifying the message pipeline.

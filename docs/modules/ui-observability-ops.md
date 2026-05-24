@@ -93,7 +93,7 @@ Phase 1.2 工程约束新增：
 - `npm run html-center` 和 `npm run publish:review` 固化 HTML Center 检查与发布。
 - `myclaw doctor` 会报告 HTML Center health。
 - 生成 HTML 模块页移到 `docs/rendered/modules`，避免源文档目录被生成物撑爆。
-- Dashboard client 仍在 344 行，下一阶段必须拆 section renderer。
+- Dashboard client 仍在 357 行，下一阶段必须拆 section renderer。
 
 下一步应补：
 

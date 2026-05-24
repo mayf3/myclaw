@@ -32,7 +32,7 @@ MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/Ty
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
 tool permission。Phase 1.2 已在 Human Experiments、共享 route adapter 和 approval queue 之上，
-补齐强制结构红线、生成物 stale 检查和 HTML Center 仓库命令；
+补齐强制结构红线、生成物 stale 检查、HTML Center 仓库命令和 L0-L6 分层测试路线；
 Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
 <div class="quick-actions">
@@ -53,6 +53,11 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Layered Roadmap</td>
+<td>L0 接入层、L1 Gateway、L2 Workflow/审批、L3 单 Agent、L4 Session Search、L5 Agent-to-Agent、L6 Long Memory。</td>
+<td>先补 L0/L1 的人类 smoke，再进入 agent、协作和复杂记忆。</td>
+</tr>
 <tr>
 <td>Dashboard</td>
 <td>显示 Feishu adapter readiness、milestones、Human Experiments、Approvals、stage review 和最新 run detail。</td>

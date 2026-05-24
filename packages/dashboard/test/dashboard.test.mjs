@@ -72,6 +72,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.match(js, /renderReferenceCompletion/);
     assert.match(js, /renderMilestones/);
     assert.match(js, /renderExperiments/);
+    assert.match(js, /renderLayerRoadmap/);
     assert.match(js, /renderApprovals/);
     assert.match(js, /renderRunDetail/);
     assert.equal(status.ok, true);
@@ -86,6 +87,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.equal(feishu.feishuAdoption.directUse, false);
     assert.equal(feishu.feishuAdapter.connectionMode, "webhook");
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E1"), true);
+    assert.deepEqual(experiments.experiments.layerRoadmap.map((item) => item.id), ["L0", "L1", "L2", "L3", "L4", "L5", "L6"]);
     assert.equal(approvals.approvals[0].title, "Dashboard approval");
     assert.equal(run.run.runId, "in_test");
     assert.equal(run.run.events.length, 1);

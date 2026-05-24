@@ -1,15 +1,15 @@
 # MyClaw Phase 1.2 实现架构可视化评审
 
-更新时间：2026-05-23
+更新时间：2026-05-24
 
 ## 总诊断
 
-Phase 1.2 先处理两个会让后续研发变脏的问题：HTML Center 链接不可访问，以及生成文档和源文档混在同一目录导致结构膨胀。独立 Linus 视角审查指出最初修复仍有 3 个 High：HTML Center 不可复现、行数检查可绕过、生成 HTML 可能 stale。本轮已补成硬约束：`npm run check` 现在会重建并校验 HTML 生成物、检查所有文本文件的 500 行上限、检查 20 文件/目录和 4 层目录深度。
+Phase 1.2 继续收紧研发路线：技术债红线已经进入 `npm run check`，现在把用户可参与测试也改成分层路线。结论：MyClaw 不能一上来跳到 agent 和记忆，必须先把 L0 接入层、L1 Gateway、L2 workflow/审批打稳；L3 单 Agent 之后先补 L4 Session Search/Provenance，再进入 L5 Agent-to-Agent 和 L6 Long Memory/Search。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
-| 设计清晰度 | 8/10 | 结构红线变成机器检查，E7 可由用户亲自跑 |
-| 可扩展性 | 8/10 | 源文档与生成 HTML 拆开，后续模块页不再挤爆目录 |
+| 设计清晰度 | 9/10 | 路线从功能清单改成 L0-L6 分层测试 |
+| 可扩展性 | 8/10 | 先接入层/Gateway，再 agent/记忆，依赖顺序更稳 |
 | 可靠性 | 8/10 | HTML Center 有仓库命令和 doctor health，仍缺自动告警 |
 | 可维护性 | 8/10 | 结构债务和生成物 stale 进入 `npm run check`，Dashboard client 仍要拆 |
 | 安全性 | 7/10 | 本轮未扩大 mutation 面，沿用 Phase 1.1 token 审批边界 |
@@ -24,9 +24,13 @@ flowchart LR
   E1 --> E4[E4 OpenClaw stage]
   E4 --> E5[E5 Approval decision]
   E5 --> E7[E7 工程约束]
-  E7 --> Next1[拆 Dashboard renderer]
-  Next1 --> Next2[Tool approval]
-  Next2 --> E6[E6 Agent + Memory]
+  E7 --> L0[L0 接入层]
+  L0 --> L1[L1 Gateway]
+  L1 --> L2[L2 Workflow + Approval]
+  L2 --> E6[E6 单 Agent]
+  E6 --> E8[E8 Session Search]
+  E8 --> E9[E9 Agent-to-Agent]
+  E9 --> E10[E10 Long Memory]
   E2[E2 Feishu outbound] -.配置后.-> E3[E3 callback smoke]
 ```
 
@@ -34,8 +38,32 @@ Review 观察：
 
 - 优点：E7 把技术债约束变成可执行实验。
 - 优点：当前可测入口已经覆盖消息、Dashboard、迁移、审批、结构约束。
-- 风险：E6 仍未实现，不能测试 agent runtime 和记忆。
-- 改进：下一阶段把审批接到真实 tool action。
+- 优点：L0-L6 让“先交互基础、后 agent 智能”成为硬路线。
+- 风险：L3-L6 仍未实现，不能测试 agent runtime、agent 协作 和记忆。
+- 改进：下一阶段优先补 L0/L1 的 Feishu/Gateway smoke，而不是直接堆 agent。
+
+## 分层交互架构图
+
+这张图回答：为什么接入层和 gateway 要排在 agent、agent 协作、记忆之前。
+
+```mermaid
+flowchart TB
+  User[用户/飞书/CLI] --> L0[L0 接入层]
+  L0 --> L1[L1 Gateway]
+  L1 --> L2[L2 Workflow + Approval]
+  L2 --> L3[L3 单 Agent Runtime]
+  L3 --> L4[L4 Session Search / Provenance]
+  L4 --> L5[L5 Agent-to-Agent]
+  L5 --> L6[L6 Long Memory/Search]
+  L6 --> L3
+```
+
+Review 观察：
+
+- 优点：L0/L1 先解决信息入口、回执、鉴权、状态查询，是所有 agent 能力的地基。
+- 优点：L2 把高风险动作先变成 review/approval，避免 agent 直接执行危险操作。
+- 风险：如果跳过 L0/L1，后续 agent 和记忆会缺少可信事件来源；如果跳过 L4，agent-to-agent 没有可追踪上下文。
+- 改进：Dashboard 必须按层展示测试入口和开放条件。
 
 ## 系统上下文图
 
@@ -258,7 +286,10 @@ Review 观察：
 | E5 | ready | GET approvals + POST decision | approval 变 approved/rejected |
 | E7 | ready | `npm run check` | 输出 500 行、20 文件/目录、depth 4 |
 | E2/E3 | needs_config | Feishu webhook/callback | 配置后可测 |
-| E6 | planned | agent run + memory search | 后续开放 |
+| E6 | planned | 单 agent run/resume/tool loop | 后续开放 |
+| E8 | planned | session search + provenance | 后续开放 |
+| E9 | planned | agent-to-agent review | 后续开放 |
+| E10 | planned | long memory add/search/delete | 后续开放 |
 
 ## 概念解释
 
@@ -270,6 +301,10 @@ Review 观察：
 | HTML Center | 本机报告中心 | 依赖 4177 服务常驻 |
 | Phase sync | Markdown 与 HTML 阶段一致性 | 防止 stale report |
 | Generated freshness | 生成物新鲜度 | `check-generated-docs` 重建后检测 diff |
+| Access layer | 接入层 | CLI/webhook/Feishu 等消息入口和出口 |
+| Gateway | 控制面入口 | HTTP route、鉴权、状态和 mutation 边界 |
+| Session provenance | session 来源追踪 | run、step、message、tool result 的可检索来源 |
+| Agent-to-Agent | agent 协作 | 多 agent 分工、交接上下文、互相 review |
 
 ## 相似技术比较
 
@@ -291,7 +326,8 @@ Review 观察：
 | `docs/modules` | 15 文件 | 模块 Markdown 源文档 | 已低于 20 |
 | `docs/rendered/modules` | 15 文件 | 生成 HTML 模块页 | 已低于 20 |
 | `packages/cli/src/index.mjs` | 354 行 | CLI 命令与 doctor | 健康，但继续增长要拆命令 |
-| `packages/dashboard/src/client.mjs` | 344 行 | Dashboard client | 仍需拆 renderer |
+| `packages/control-plane/src/experiments.mjs` | 184 行 | Human Experiments 与分层路线 payload | 健康 |
+| `packages/dashboard/src/client.mjs` | 357 行 | Dashboard client，含分层路线渲染 | 仍需拆 renderer |
 | `packages/core/src/approvals.mjs` | 198 行 | approval state | 健康 |
 
 当前最大目录深度是 4，当前最大目录文件数是 15。
@@ -301,14 +337,16 @@ Review 观察：
 | 等级 | 问题 | 影响 | 建议 |
 |---|---|---|---|
 | Medium | HTML Center 依赖 tmux 常驻 | 服务掉了链接就打不开 | doctor 已覆盖，后续纳入 Dashboard health |
-| High | Dashboard client 仍在变大 | 下轮功能会推向 400+ 行 | 拆 section renderer registry |
+| High | Dashboard client 仍在变大 | 分层展示后会继续推高行数 | 拆 section renderer registry |
+| High | 跳过接入层/Gateway 直接做 agent | 后续 agent 和记忆会缺少可信事件边界 | 先完成 L0/L1 smoke，再做 L3 |
+| High | 跳过 session provenance 直接做 agent-to-agent | 多 agent 交接无法审计 | L4 最小 search/provenance 必须早于 L5 |
 | Medium | docs build script 414 行 | 接近拆分预警 | 拆 parser/template/rewrite |
 | Medium | 20 文件硬限制会影响生成物布局 | 以后新增模块需规划目录 | 保持 source/rendered 分离 |
 | Low | 结构检查没有配置文件 | 规则变更需改脚本 | 先保持硬规则，避免早配置化 |
 
 ## Linus 视角严苛审查
 
-独立 subagent 结论：初版不建议直接进入下一阶段，必须先修 HTML Center 可复现、行数检查绕过、生成物 stale 这三个 High。处理后结论：可以进入下一阶段，但 Dashboard client 和 docs builder 已经接近需要拆分的边界，不允许继续堆功能。
+独立 subagent 结论：分层方向正确，但不能把路线定义当成能力完成。L0/L1/L2 只能标 partial，L4 必须先做最小 session provenance，再让多 agent 交接上下文。处理后结论：不要进入 Agent/A2A/Memory 实现阶段，下一步先补 Feishu/Gateway 的真实 smoke，并拆 Dashboard renderer。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
@@ -316,8 +354,11 @@ Review 观察：
 | High | 行数检查只看白名单扩展，可被 `.sh/.yaml/Dockerfile` 绕过 | 已改成默认检查所有文本文件，二进制检测排除 |
 | High | HTML 生成物可能 stale，旧 sync 只看 Phase 字符串 | 已加 `scripts/check-generated-docs.mjs`，`npm run check` 重建后 fail on diff |
 | High | `docs/rendered` 未跟踪会导致索引坏链 | 本轮跟踪生成 HTML，并由 generated docs check 校验缺失/多余 |
+| High | L0/L1/L2 标 ready 会掩盖 E2/E3 配置和真实 tool action 缺口 | 已改为 partial，并加 invariant test |
+| High | M7 done 100 容易误解为 E8-E10 能力完成 | 已改为 partial 45，只表示路线已定义 |
+| High | Agent-to-Agent 需要可检索 run/step/source | 已把 L4 改成 Session Search/Provenance，排在 L5 Agent-to-Agent 之前 |
 | Medium | `docs/build-review-html.mjs` 414 行接近阈值 | 记录为下一阶段拆分任务 |
-| Medium | Dashboard client 344 行继续增长 | 下一阶段拆 renderer registry |
+| Medium | Dashboard client 仍继续增长 | 下一阶段拆 renderer registry |
 | Low | 硬规则会带来目录规划成本 | 保留，作为技术债刹车 |
 
 ## Skill 规范自检
