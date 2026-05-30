@@ -95,6 +95,13 @@ Phase 1.2 工程约束新增：
 - 生成 HTML 模块页移到 `docs/rendered/modules`，避免源文档目录被生成物撑爆。
 - Dashboard client 仍在 357 行，下一阶段必须拆 section renderer。
 
+Phase 1.2.1 Feishu 配置安全新增：
+
+- `npm run import:openduck` 从本机 openduck 备份配置生成 `.myclaw/openduck-feishu.env`。
+- `/api/feishu-adoption` 和 Dashboard readiness 可以在加载该 env 后显示 app credential presence，同时明确 WebSocket runtime/app-token outbound 仍缺失。
+- 报告、日志和 JSON 输出只展示变量名、缺失项和 readiness，不展示 secret 值。
+- `npm run check` 会运行本地 secret leak scan，防止 `.myclaw/*.env` 中的敏感值进入 git tracked 文件。
+
 下一步应补：
 
 - run detail drawer 或独立详情页。

@@ -66,6 +66,7 @@ Phase 0/1：
 - CLI 直接调用 core，不走 HTTP。
 - `--json` 输出完整 envelope。
 - 默认输出面向人读，但不隐藏 runId/approvalId。
+- `npm run import:openduck` 只做本地 Feishu app credential presence，不代表 Feishu WebSocket runtime 或 app-token outbound 已完成。
 
 Phase 4：
 

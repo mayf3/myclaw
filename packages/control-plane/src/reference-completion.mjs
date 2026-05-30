@@ -22,11 +22,12 @@ const moduleDefinitions = [
     openclaw: 92,
     hermes: 42,
     openhuman: 35,
-    gap: "已有 adapter/signature/encrypted challenge/custom-bot outbound facade，缺 WebSocket、policy、app token rich card",
+    gap: "已有 adapter/signature/encrypted challenge/custom-bot outbound facade 和 openduck credential presence 本地导入，缺 WebSocket runtime、policy、app token rich card",
     next: "扩展 encrypted event、app token outbound、policy 和持久 replay",
     criteria: [
       c("feishu-event", "event challenge/text normalization", "partial", 70, "packages/feishu-adapter/src/index.mjs"),
       c("feishu-security", "verify token, x-lark signature, replay guard, encrypted challenge", "partial", 75, "packages/feishu-adapter/test/feishu-adapter.test.mjs"),
+      c("feishu-config", "local openduck app credential presence import without printing secrets", "done", 85, "scripts/import-openduck-config.mjs"),
       c("feishu-runtime", "custom-bot outbound facade, encrypted events, WebSocket, policy", "partial", 35, "packages/feishu-adapter/src/outbound.mjs"),
     ],
   },

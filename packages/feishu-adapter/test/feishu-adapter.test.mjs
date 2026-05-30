@@ -71,6 +71,24 @@ test("adapter reports token-only webhook mode as blocked", () => {
   assert.match(readiness.issues[0], /encryptKey/);
 });
 
+test("adapter reports websocket credentials without claiming runtime readiness", () => {
+  const config = buildFeishuAdapterConfig({
+    env: {},
+    connectionMode: "websocket",
+    appId: "app-id",
+    appSecret: "app-secret",
+  });
+  const readiness = describeFeishuAdapterReadiness(config);
+
+  assert.equal(readiness.ok, true);
+  assert.equal(readiness.level, "partial");
+  assert.equal(readiness.appCredentialsReady, true);
+  assert.equal(readiness.websocketRuntimeReady, false);
+  assert.equal(readiness.appTokenOutboundReady, false);
+  assert.equal(readiness.outboundReady, false);
+  assert.match(readiness.warnings[0], /runtime is not implemented/);
+});
+
 function encryptFeishuPayload(encryptKey, payload) {
   const iv = Buffer.alloc(16, 7);
   const key = createHash("sha256").update(encryptKey).digest();

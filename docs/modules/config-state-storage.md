@@ -87,6 +87,7 @@ Phase 6：
 
 - env var。
 - `secrets.json`。
+- `.myclaw/*.env` 本地文件；例如 `npm run import:openduck -- --json` 会从 `~/.openduck/openclaw.json` 生成 `.myclaw/openduck-feishu.env`，只输出变量名和缺失项，不输出 secret 值，不复用 openduck gateway token。
 
 后续：
 
@@ -98,6 +99,7 @@ Phase 6：
 
 - config 非 strict，用户写错字段但系统悄悄忽略。
 - secrets 混进 logs/transcript。
+- 从 OpenClaw/openduck 迁移配置时把 appSecret、verify token、encrypt key 或 webhook URL 写进 git、报告或命令行参数。
 - state 只存在内存，approval 无法恢复。
 - 后期数据库迁移没有 schema version。
 
@@ -107,3 +109,5 @@ Phase 6：
 - config parse 错误能定位字段。
 - state 文件写入是 atomic。
 - secrets 不出现在 `--json` 输出和 logs。
+- `.myclaw/` 始终 git ignored，导入脚本生成的 env 文件权限为 `600`，并拒绝写到非 ignored 路径或 symlink 路径。
+- `npm run check` 会扫描本地 `.myclaw/*.env` 中的敏感值是否进入 git tracked 文件。

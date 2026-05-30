@@ -29,8 +29,8 @@ Review 观察：
 
 | 层 | 当前状态 | 你能否参与 | 当前入口 | 下一步 |
 |---|---|---|---|---|
-| L0 接入层 | partial | 可以 | E0，E2/E3 配置后 | 补 Feishu 配置化 smoke |
-| L1 Gateway | partial | 可以 | E1，E3，E5 | 补 mutation audit 和 health strip |
+| L0 接入层 | partial | 可以 | E0、E2A，E2/E3 配置后 | 补 Feishu WebSocket/app-token smoke |
+| L1 Gateway | partial | 可以 | E1、E2A、E3、E5 | 补 mutation audit 和 health strip |
 | L2 Workflow / 审批 | partial | 可以 | E4，E5 | 把 approval 接到真实 tool action |
 | L3 单 Agent | planned | 暂不能 | E6 占位 | 最小 run/resume/tool loop |
 | L4 Session Search / Provenance | planned | 暂不能 | E8 占位 | run/step/tool result 可检索 |
@@ -43,6 +43,7 @@ Review 观察：
 |---|---|---|---|---|
 | E0 本地消息闭环 | L0 | 现在就测 | `npm run myclaw -- send --text "hello from human" --json` | 返回 ok envelope，记录 runId |
 | E1 Dashboard | L1 | 现在就测 | `npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw`；打开 `http://127.0.0.1:4321` | 能看到 Phase、L0-L6、Approvals、Runs |
+| E2A Openduck Feishu credential presence | L0/L1 | 现在就测 | `npm run import:openduck -- --json`；`set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw` | 输出不含 secret 值，Dashboard 显示 app credentials ready、websocket runtime missing、app-token outbound missing，`.myclaw/` 仍 ignored |
 | E4 OpenClaw stage | L2 | 现在就测 | `npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json` | stage 是 review-only，记录 stageId 和 approvalId |
 | E5 审批队列 | L1/L2 | 现在就测 | `MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw`；POST `/api/openclaw-migration/stage`；GET `/api/approvals`；POST `/api/approvals/<approvalId>/decision` | pending 变 approved/rejected，event 有记录 |
 | E7 工程约束 | 全局 | 现在就测 | `npm run check` | 生成物 up to date，结构红线通过 |
@@ -63,7 +64,8 @@ Review 观察：
 flowchart TD
   Start[开始测试] --> Check[npm run check]
   Check --> Dashboard[打开 Dashboard]
-  Dashboard --> Send[E0 send message]
+  Dashboard --> Import[E2A import openduck env]
+  Import --> Send[E0 send message]
   Send --> L0Gate{L0/L1 smoke 通过?}
   L0Gate -->|否| Record[记录阻塞证据]
   L0Gate -->|是| Stage[E4 stage OpenClaw]
@@ -76,6 +78,7 @@ Review 观察：
 
 - 每次测试先跑 `npm run check`，保证文档和代码不是 stale。
 - Dashboard 是你观察状态的主入口，不只是装饰 UI。
+- E2A 只能验证 app credentials presence，不等于已经完成 Feishu WebSocket runtime 或 app-token 出站发送。
 - E4/E5 是后续 agent 写操作的安全前置。
 - L0/L1 smoke 没过，不进入 L3 agent。
 - 测试反馈必须回到文档或 issue，不能只留在对话里。
@@ -86,6 +89,7 @@ Review 观察：
 |---|---|---|
 | E0 本地消息 | runId、JSON 输出、Dashboard run 可见 | 必须通过 |
 | E1 Dashboard | 页面可打开，L0-L6 和 E0-E10 可见 | 必须通过 |
+| E2A Openduck Feishu credential presence | `.myclaw/openduck-feishu.env` ignored 且 Dashboard 显示 credentials ready/runtime missing | 必须通过 |
 | E2 Feishu outbound | 飞书群消息截图或 result code | 配置后必须通过 |
 | E3 Feishu callback | challenge 回显、签名错误被拒绝 | 配置后必须通过 |
 | Gateway token | 无 token 拒绝，有 token 放行 | 必须通过 |
@@ -130,7 +134,7 @@ issue 或 commit：
 
 下一轮建议仍然留在 L0/L1，不直接做 agent：
 
-1. Feishu webhook 配置化 smoke。
+1. Feishu WebSocket/app-token outbound smoke。
 2. Gateway mutation audit。
 3. Dashboard 顶部 health strip。
 4. 保持 E0/E1/E4/E5/E7 作为回归测试。

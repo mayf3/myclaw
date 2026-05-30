@@ -22,14 +22,18 @@ export function buildFeishuAdapterConfig(options = {}) {
 export function describeFeishuAdapterReadiness(config = buildFeishuAdapterConfig()) {
   const issues = [];
   const warnings = [];
+  const appCredentialsReady = Boolean(config.appId && config.appSecret);
   if (config.connectionMode === "webhook" && !config.verificationToken) {
     issues.push("webhook mode requires verificationToken before exposing callbacks");
   }
   if (config.connectionMode === "webhook" && !config.encryptKey) {
     issues.push("webhook mode requires encryptKey before exposing callbacks");
   }
-  if (config.connectionMode === "websocket" && (!config.appId || !config.appSecret)) {
+  if (config.connectionMode === "websocket" && !appCredentialsReady) {
     issues.push("websocket mode requires appId and appSecret");
+  }
+  if (config.connectionMode === "websocket" && appCredentialsReady) {
+    warnings.push("websocket credentials are present, but MyClaw websocket runtime is not implemented yet");
   }
   return {
     ok: issues.length === 0,
@@ -38,7 +42,10 @@ export function describeFeishuAdapterReadiness(config = buildFeishuAdapterConfig
     domain: config.domain,
     signedWebhookReady: Boolean(config.encryptKey && config.connectionMode === "webhook"),
     verificationTokenReady: Boolean(config.verificationToken),
-    outboundReady: Boolean(config.appId && config.appSecret),
+    appCredentialsReady,
+    websocketRuntimeReady: false,
+    appTokenOutboundReady: false,
+    outboundReady: false,
     issues,
     warnings,
     contracts: [

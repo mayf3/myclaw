@@ -11,7 +11,7 @@ const failures = [];
 for (const [markdownPath, htmlPath] of pairs) {
   const markdown = readFileSync(path.join(root, markdownPath), "utf8");
   const html = readFileSync(path.join(root, htmlPath), "utf8");
-  const phase = markdown.match(/Phase\s+\d+\.\d+/)?.[0];
+  const phase = markdown.match(/Phase\s+\d+\.\d+(?:\.\d+)?/)?.[0];
   if (!phase) {
     failures.push(`${markdownPath}: missing Phase marker`);
     continue;
@@ -19,7 +19,7 @@ for (const [markdownPath, htmlPath] of pairs) {
   if (!html.includes(phase)) {
     failures.push(`${htmlPath}: does not include ${phase}; regenerate docs HTML`);
   }
-  const htmlPhase = html.match(/Phase\s+\d+\.\d+/)?.[0];
+  const htmlPhase = html.match(/Phase\s+\d+\.\d+(?:\.\d+)?/)?.[0];
   if (htmlPhase !== phase) {
     failures.push(`${htmlPath}: first rendered phase is ${htmlPhase || "missing"}, expected ${phase}`);
   }
