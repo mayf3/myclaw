@@ -96,13 +96,13 @@ MYCLAW_CONFIG_PATH=/path/to/config.json5</code></pre>
 <ul><li>SQLite migration。</li><li>WAL。</li><li>FTS。</li><li>schema version。</li></ul>
 <h2 id="secrets">Secrets</h2>
 <p>先支持：</p>
-<ul><li>env var。</li><li><code>secrets.json</code>。</li></ul>
+<ul><li>env var。</li><li><code>secrets.json</code>。</li><li><code>.myclaw/*.env</code> 本地文件；例如 <code>npm run import:openduck -- --json</code> 会从 <code>~/.openduck/openclaw.json</code> 生成 <code>.myclaw/openduck-feishu.env</code>，只输出变量名和缺失项，不输出 secret 值，不复用 openduck gateway token。</li></ul>
 <p>后续：</p>
 <ul><li>file ref。</li><li>exec ref。</li><li>OS keychain。</li></ul>
 <h2 id="关键风险">关键风险</h2>
-<ul><li>config 非 strict，用户写错字段但系统悄悄忽略。</li><li>secrets 混进 logs/transcript。</li><li>state 只存在内存，approval 无法恢复。</li><li>后期数据库迁移没有 schema version。</li></ul>
+<ul><li>config 非 strict，用户写错字段但系统悄悄忽略。</li><li>secrets 混进 logs/transcript。</li><li>从 OpenClaw/openduck 迁移配置时把 appSecret、verify token、encrypt key 或 webhook URL 写进 git、报告或命令行参数。</li><li>state 只存在内存，approval 无法恢复。</li><li>后期数据库迁移没有 schema version。</li></ul>
 <h2 id="验收标准">验收标准</h2>
-<ul><li><code>myclaw doctor</code> 能显示 config 路径、state 路径、workspace 路径。</li><li>config parse 错误能定位字段。</li><li>state 文件写入是 atomic。</li><li>secrets 不出现在 <code>--json</code> 输出和 logs。</li></ul>
+<ul><li><code>myclaw doctor</code> 能显示 config 路径、state 路径、workspace 路径。</li><li>config parse 错误能定位字段。</li><li>state 文件写入是 atomic。</li><li>secrets 不出现在 <code>--json</code> 输出和 logs。</li><li><code>.myclaw/</code> 始终 git ignored，导入脚本生成的 env 文件权限为 <code>600</code>，并拒绝写到非 ignored 路径或 symlink 路径。</li><li><code>npm run check</code> 会扫描本地 <code>.myclaw/*.env</code> 中的敏感值是否进入 git tracked 文件。</li></ul>
           <h2 id="related-modules">相关模块</h2>
           <div class="module-grid"><a class="module-link" href="./reference-comparison.html"><strong>参考项目对比</strong><span>比较 Hermes、OpenClaw、OpenHuman 与 Lobster，明确可借鉴设计和不应照搬的部分。</span></a>
 <a class="module-link" href="./openhuman-analysis.html"><strong>OpenHuman 参考分析</strong><span>拆解 OpenHuman 的 RPC、event bus、agent、记忆、渠道、skills、桌面壳和运维边界。</span></a>

@@ -244,7 +244,9 @@ function adapterSummary(adapter) {
     esc(adapter.connectionMode) + ' · signed webhook ' + (adapter.signedWebhookReady ? "ready" : "not ready") + '</p>' +
     readinessItem("verification token", adapter.verificationTokenReady) +
     readinessItem("x-lark signature", adapter.signedWebhookReady) +
-    readinessItem("outbound app credentials", adapter.outboundReady) +
+    readinessItem("app credentials", adapter.appCredentialsReady) +
+    readinessItem("websocket runtime", adapter.websocketRuntimeReady) +
+    readinessItem("app-token outbound", adapter.appTokenOutboundReady) +
     issues.map((item) => '<p><span class="small">' + esc(item) + '</span></p>').join("") +
     '</div>';
 }

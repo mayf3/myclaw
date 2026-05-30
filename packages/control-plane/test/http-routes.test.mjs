@@ -43,7 +43,7 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.2");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.2.1");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
