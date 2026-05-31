@@ -104,7 +104,7 @@ Review 观察：
 - 优点：HTML 生成物移动后，`docs/modules` 只放源文档。
 - 优点：openduck secret 不进入 repo，导入脚本只允许写 ignored `.myclaw/` 并拒绝 symlink。
 - 风险：HTML Center 仍依赖 tmux 常驻，没有自动告警。
-- 风险：Feishu bot 目前只做文本自动回复，没有 allowlist、requireMention、持久 replay 和 agent replyBuilder。
+- 风险：Feishu bot 目前只做文本自动回复，已支持可选 allowlist/requireMention 和 direct/thread 模式，但还没有持久 replay 和 agent replyBuilder。
 - 改进：后续把 doctor 和 Feishu readiness 显示到 Dashboard 顶部 health strip。
 
 ## 模块架构图
@@ -309,7 +309,7 @@ Review 观察：
 | E0 | ready | `send --text` | ok envelope，run 可见 |
 | E1 | ready | 打开 Dashboard | Phase 1.3、Approvals 可见 |
 | E2A | ready | `npm run import:openduck` | credentials present；runtime/outbound ready |
-| E2B | ready | 在备份飞书群发文本 | 收到 `MyClaw 收到了：...`，出现 `fb_*` run |
+| E2B | ready | 在备份飞书群发文本 | 群内直接收到 `MyClaw 收到了：...`，出现 `fb_*` run |
 | E4 | ready | `migrate openclaw --stage --json` | stage 带 approval，review-only |
 | E5 | ready | GET approvals + POST decision | approval 变 approved/rejected |
 | E7 | ready | `npm run check` | 输出 500 行、20 文件/目录、depth 4 |
@@ -353,14 +353,14 @@ Review 观察：
 | `scripts/html-center.mjs` | 121 行 | HTML Center status/start/publish/verify，发布前校验生成物 | 健康 |
 | `scripts/import-openduck-config.mjs` | 189 行 | openduck Feishu 配置到本地 MyClaw env 的安全导入 | 健康，输出不含 secret 值，拒绝非 `.myclaw/` 输出 |
 | `scripts/check-local-secret-leaks.mjs` | 88 行 | 扫描本地 `.myclaw/*.env` 敏感值是否进入 tracked/untracked files | 健康 |
-| `packages/feishu-bot/src/runtime.mjs` | 142 行 | Feishu WebSocket bot runtime、默认回复、state 记录 | 健康，保持插件边界 |
+| `packages/feishu-bot/src/runtime.mjs` | 155 行 | Feishu WebSocket bot runtime、默认回复、direct/thread reply mode、state 记录 | 健康，保持插件边界 |
 | `packages/feishu-bot/src/ingress-policy.mjs` | 94 行 | Feishu 入站 allowlist、mention 和消息类型策略 | 健康，策略留在插件包内 |
 | `packages/feishu-bot/src/sdk-runtime.mjs` | 48 行 | Feishu SDK 适配层 | 健康 |
 | `docs/build-review-html.mjs` | 414 行 | HTML report builder | 接近 450，下一轮拆 |
 | `docs/modules` | 16 文件 | 模块 Markdown 源文档，含人类测试手册 | 已低于 20 |
 | `docs/rendered/modules` | 16 文件 | 生成 HTML 模块页 | 已低于 20 |
 | `docs/modules/human-testing-playbook.md` | 151 行 | 人类测试手册、本地参与流程和反馈格式 | 健康 |
-| `packages/cli/src/index.mjs` | 411 行 | CLI 命令、doctor 与 feishu-bot 启动入口 | 健康，但继续增长要拆命令 |
+| `packages/cli/src/index.mjs` | 413 行 | CLI 命令、doctor 与 feishu-bot 启动入口 | 健康，但继续增长要拆命令 |
 | `packages/control-plane/src/experiments.mjs` | 224 行 | Human Experiments 与分层路线 payload | 健康 |
 | `packages/dashboard/src/client.mjs` | 359 行 | Dashboard client，含分层路线渲染 | 仍需拆 renderer |
 | `packages/core/src/approvals.mjs` | 198 行 | approval state | 健康 |
@@ -373,6 +373,7 @@ Review 观察：
 |---|---|---|---|
 | Medium | HTML Center 依赖 tmux 常驻 | 服务掉了链接就打不开 | doctor 已覆盖，后续纳入 Dashboard health |
 | High | Feishu secret 被误写进代码/报告/命令行参数 | appSecret、token、encrypt key 或 webhook URL 泄露会影响测试群 | 只允许 ignored `.myclaw/` 本地 env，脚本和报告只输出变量名，check 扫描 tracked/untracked files |
+| Medium | 本机绝对路径进入公开仓库 | 暴露个人环境指纹，降低报告可复用性 | 已把 tracked docs/code 中的 `/Users/...` 替换为环境变量占位 |
 | Medium | openduck 与 active OpenClaw 进程混淆 | 误停正在使用的 OpenClaw | 用配置端口、launchd label 和 cwd 三重确认后只停 `ai.openclaw.gateway.second` |
 | High | Feishu bot 未配置 allowlist/requireMention 时会全量响应 | 测试群外或高噪声群里会自动回复过多 | 插件内已支持 allowed chat、allowed sender、require mention；下一步把测试群 chat id 固化到本地 ignored policy |
 | High | Dashboard client 仍在变大 | 分层展示后会继续推高行数 | 拆 section renderer registry |
@@ -385,7 +386,7 @@ Review 观察：
 
 ## Linus 视角严苛审查
 
-独立 subagent 结论：SDK 隔离方向正确，`@larksuiteoapi/node-sdk` 只落在 `packages/feishu-bot` 和 lockfile；但这还只是“插件包隔离”，不是完整插件注册机制。处理后结论：当前可以做飞书群文本 smoke test，但进入 Agent runtime 前必须继续补持久 replay、Gateway audit、显式插件 manifest/capability contract，并把测试群 policy 固化为 ignored 本地配置。
+独立 subagent 结论：direct reply 改动保持在 `packages/feishu-bot` 插件内，CLI 只转发启动参数，gateway/core/runtime 主线没有被 Feishu SDK 或 reply 语义污染。处理后结论：当前可以做飞书群 direct 文本 smoke test；进入 Agent runtime 前仍必须继续补持久 replay、Dashboard/API read exposure 脱敏、Gateway audit、显式插件 manifest/capability contract，并把测试群 policy 固化为 ignored 本地配置。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
@@ -401,6 +402,10 @@ Review 观察：
 | High | `ready websocket` 会误导为 Feishu runtime 完成 | Phase 1.3 已实现独立 `packages/feishu-bot` websocket/app-token 文本回复；仍标明 policy/rich card/replay 缺口 |
 | Critical | Feishu 群消息缺 allowlist/requireMention 会让任意群消息触发后续 agent | 已在 `packages/feishu-bot/src/ingress-policy.mjs` 加 allowed chat/sender/require mention；当前 smoke 默认开放，agent 前必须配置测试群 allowlist |
 | High | Feishu app reply API 业务失败会被误记为 completed | 已在 bot runtime 检查 `reply.ok`，失败写 `feishu.bot.reply.failed` |
+| Medium | 默认话题回复不符合群内日常沟通 | 已把 bot 默认改成 `reply-mode direct`，用 chat create 直接在群里发消息；thread 模式只在显式配置时启用 |
+| High | Feishu inbound `raw` 持久化会扩大 Dashboard/API 暴露面 | 已从 `normalizeFeishuEvent` 的 normalized inbound 中移除 `raw`；`.myclaw/` 本地 state 仍 ignored，下一轮继续做 read exposure 脱敏 |
+| Medium | 非法 `reply-mode` 静默降级会隐藏配置错误 | 已改为显式报错，只接受 `direct` 或 `thread` |
+| Medium | 公开 GitHub 前存在本机绝对路径 | 已清理 tracked docs/code 中的 `/Users/...`，改成 `$MYCLAW_OPENCLAW_SOURCE` 等环境变量占位 |
 | High | secret leak check 只扫 tracked files，untracked 新增文件可绕过 | 已扩展为 tracked + untracked scan，`.myclaw/` 仍由 git ignore 排除 |
 | Medium | 非文本消息走 recoverable failure 会导致重试噪声 | 已改为 `unsupported_message_type` skipped，不发回复 |
 | Medium | 复用 openduck gateway token 会跨 auth 边界 | 已移除 gateway token/port 映射，导入脚本只处理 Feishu 字段 |
@@ -422,6 +427,6 @@ Review 观察：
 
 1. 把备份飞书群 chat id 写入本地 ignored policy，并默认使用 allowlist/requireMention 启动。
 2. 做持久 replay/dispatch 记录，避免 bot 重启后重复回复。
-3. 把 Feishu replyBuilder 接到后续 agent runtime 的安全壳，而不是写死在 bot。
-4. 拆 `packages/dashboard/src/client.mjs` 为 section renderer registry。
-5. 拆 `docs/build-review-html.mjs` 为 parser/template/rewrite。
+3. 做 Dashboard/API read exposure 脱敏：消息正文、sender/chat 标识默认摘要化。
+4. 把 Feishu replyBuilder 接到后续 agent runtime 的安全壳，而不是写死在 bot。
+5. 拆 `packages/dashboard/src/client.mjs` 和 `docs/build-review-html.mjs`。

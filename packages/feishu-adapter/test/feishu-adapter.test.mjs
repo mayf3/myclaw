@@ -209,4 +209,5 @@ test("adapter normalizes Feishu text event callbacks", () => {
   assert.equal(inbound.sender.id, "ou_user");
   assert.equal(inbound.conversationId, "oc_group");
   assert.equal(inbound.text, "hello feishu");
+  assert.equal(inbound.raw, undefined);
 });

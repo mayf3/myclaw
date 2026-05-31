@@ -4,6 +4,22 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
+Phase 1.3 在 Human Experiments、共享 route adapter、migration approval queue 和结构红线之后，新增插件化 Feishu WebSocket 群消息自动回复。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+
+## Phase 1.3 完成度矩阵
+
+| 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
+|---|---:|---:|---:|---:|---|
+| Gateway / 控制面 | 65 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter 和 approval decision mutation，仍缺 WS/SSE、scoped token |
+| Feishu/Lark 接入 | 60 | 92 | 42 | 35 | 有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token |
+| Dashboard / 观测 | 73 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments，缺实时事件 |
+| OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
+| Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
+| Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
+| Tools / Security | 32 | 88 | 74 | 84 | 有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox |
+| Plugins / Skills | 18 | 92 | 88 | 78 | 仅 channel registry，没有 plugin manifest/skill loader |
+| Engineering Guardrails | 100 | 80 | 70 | 75 | `npm run check` 已强制生成物新鲜度、文件行数、目录文件数、目录深度 |
+
 ## Hermes Agent 观察
 
 可借鉴：
@@ -36,6 +52,53 @@ Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适�
 - 127 个 extensions、完整 channel SDK、移动节点、Control UI、daemon 都不适合第一阶段。
 - 插件 SDK 已经承担外部兼容，MyClaw 初期不应背这个承诺。
 - OpenClaw 的安全文档非常成熟，但实现面很厚，MyClaw 应先做小而强的边界。
+
+## OpenClaw Feishu/Lark 观察
+
+OpenClaw 仓库里可参考的飞书实现位于 `$MYCLAW_OPENCLAW_SOURCE/extensions/feishu`，包名是 `@openclaw/feishu`。它覆盖 Feishu/Lark 两个域，manifest 中声明 `channels: ["feishu"]`，配置包含 `appId`、`appSecret`、`verificationToken`、`encryptKey`、`domain`、`connectionMode`、`accounts`、渲染、流式和 threading 选项。
+
+可借鉴：
+
+- webhook mode 必须要求 verification token 和 encrypt key。
+- WebSocket/webhook 两种 connection mode 的配置边界。
+- DM/group/mention access policy。
+- message、card action、reaction、comment、media 的事件归一化。
+- text/card/threading/send result 的 outbound 归一化。
+
+不建议直接用：
+
+- 插件依赖 `@openclaw/plugin-sdk` 和 OpenClaw runtime API。
+- doc/drive/wiki/bitable 等工具面超出 MyClaw Phase 0。
+- 直接加载会提前引入 OpenClaw 的 config、secret、approval 语义。
+
+Phase 0.9 MyClaw 结论：
+
+- 仍然只参考，不直接加载。
+- `packages/feishu-adapter` 已承接 config readiness、x-lark signature、AES-256-CBC decrypt、verification token、replay guard、event normalize 和 outbound text/card facade。
+- encrypted challenge 已可通过 gateway；encrypted message event 仍只是有解密入口，事件语义覆盖还很窄。
+- outbound 当前仍是 custom-bot webhook 契约，不是 app-token rich card API；下一阶段要补 policy、app token client 和持久 replay。
+
+Phase 1.0 MyClaw 结论：
+
+- OpenClaw Feishu/Lark 仍只参考，不直接加载。
+- 迁移实验 E4 明确要求 `forReviewOnly=true`，避免把 dry-run stage 误当 apply。
+- Dashboard 上的 E0-E6 是人类验收路线，不是自动化完成度计算；后续需要把这些实验和 test/check 结果绑定。
+
+Phase 1.1 MyClaw 结论：
+
+- approval queue 已进入 state/API/Dashboard，但只适合作为 review record。
+- approval decision 需要配置 gateway token，不能靠 loopback 免 token。
+- OpenClaw stage review summary 不等于字段级 schema diff；下一阶段再做真实 source/target diff。
+
+Phase 1.3 MyClaw 结论：
+
+- Feishu 接入从 credential presence 进入真实群消息回复，默认直接发群消息而不是话题回复；但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
+- `packages/feishu-bot` 把 Feishu SDK 隔离成插件包，主线 core/runtime/gateway 仍保持干净。
+- 下一步不应直接进入 agent，而应先补 allowlist、requireMention、持久 replay 和 agent replyBuilder 边界。
+
+- 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
+- `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。
+- 旧 HTML Center 链接打不开的根因是 4177 服务未运行，已恢复 tmux 常驻，并补了 `scripts/html-center.mjs`、`myclaw doctor` 和 `publish:review`。
 
 ## OpenClaw Lobster 观察
 
