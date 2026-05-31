@@ -32,6 +32,7 @@ async function loadStatus() {
       return;
     }
     renderOverview(payload);
+    renderHealth(payload.health);
     renderMilestones(payload.milestones);
     renderExperiments(payload.experiments);
     renderApprovals(payload.approvals || [], payload.openclawStageReview || payload.openclawStageDiff);
@@ -41,6 +42,7 @@ async function loadStatus() {
     renderRunDetail(payload.runDetail);
     renderRuns(payload.runs || []);
     renderEvents(payload.events || []);
+    renderAudit(payload.audit || []);
     renderChannels(payload.channels || []);
   } catch (error) {
     $("subtitle").textContent = error instanceof Error ? error.message : String(error);
@@ -173,6 +175,26 @@ function renderOverview(payload) {
   $("eventCount").textContent = (payload.events || []).length;
   $("pendingApprovalCount").textContent = (payload.approvals || []).filter((item) => item.status === "pending").length;
   $("migrationRisk").textContent = payload.openclawMigration?.unsupported?.length ?? "-";
+}
+
+function renderHealth(health) {
+  const items = health?.items || [];
+  const summary = health?.summary || {};
+  const failing = Number(summary.fail || 0);
+  const warning = Number(summary.warn || 0);
+  $("healthSummary").className = "pill " + (failing ? "fail" : warning ? "warn" : "ok");
+  $("healthSummary").textContent = "ok " + (summary.ok || 0) + " · warn " + warning + " · fail " + failing;
+  $("healthPanel").outerHTML = '<div id="healthPanel" class="health-grid">' +
+    items.map((item) => '<div class="health-item">' +
+      '<span class="tag ' + healthTone(item.status) + '">' + esc(item.status) + '</span>' +
+      '<strong>' + esc(item.label) + '</strong>' +
+      '<p>' + esc(item.summary) + '</p>' +
+    '</div>').join("") +
+    '</div>';
+}
+
+function healthTone(status) {
+  return status === "ok" ? "ok" : status === "fail" ? "fail" : "warn";
 }
 
 function renderReferenceCompletion(payload) {
@@ -334,6 +356,26 @@ function renderEvents(events) {
   $("eventsTable").outerHTML = '<div id="eventsTable"><table><thead><tr><th>时间</th><th>类型</th><th>Run</th></tr></thead><tbody>' +
     events.slice(0, 12).map((event) => '<tr><td>' + esc(event.at || "-") + '</td><td class="mono">' + esc(event.type || "-") + '</td><td class="mono">' + esc(event.runId || "-") + '</td></tr>').join("") +
     '</tbody></table></div>';
+}
+
+function renderAudit(audit) {
+  $("auditStatus").className = "pill " + (audit.some((item) => item.outcome === "blocked" || item.outcome === "failed") ? "warn" : "ok");
+  $("auditStatus").textContent = audit.length + " records";
+  if (!audit.length) {
+    $("auditPanel").outerHTML = '<div id="auditPanel" class="empty">暂无 mutation audit</div>';
+    return;
+  }
+  $("auditPanel").outerHTML = '<div id="auditPanel" class="audit-list"><table><thead><tr><th>时间</th><th>动作</th><th>状态</th><th>Actor</th><th>资源</th></tr></thead><tbody>' +
+    audit.slice(0, 12).map((item) => '<tr><td>' + esc(item.at || "-") + '</td>' +
+      '<td class="mono">' + esc(item.action || "-") + '</td>' +
+      '<td><span class="tag ' + auditTone(item.outcome) + '">' + esc(item.status || "-") + ' · ' + esc(item.outcome || "-") + '</span></td>' +
+      '<td>' + esc(item.actor?.kind || "-") + ' · token ' + (item.actor?.tokenProvided ? "yes" : "no") + '</td>' +
+      '<td>' + esc(item.resource?.type || "-") + '</td></tr>').join("") +
+    '</tbody></table></div>';
+}
+
+function auditTone(outcome) {
+  return outcome === "allowed" ? "ok" : outcome === "blocked" ? "warn" : "fail";
 }
 
 function renderChannels(channels) {

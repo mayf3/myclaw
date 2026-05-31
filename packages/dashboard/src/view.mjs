@@ -11,12 +11,13 @@ export function renderDashboardHtml() {
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <p class="eyebrow">MyClaw Phase 1.1</p>
+          <p class="eyebrow">MyClaw Phase 1.4</p>
           <h1>运行、路线与人工确认</h1>
           <p>本地状态、OpenClaw 迁移、审批队列、Feishu 复用决策、参考项目差距和可亲测路线。</p>
         </div>
         <nav aria-label="Dashboard 导航">
           <a href="#overview">总览</a>
+          <a href="#health">健康</a>
           <a href="#milestones">Milestones</a>
           <a href="#experiments">Human Experiments</a>
           <a href="#approvals">Approvals</a>
@@ -25,6 +26,7 @@ export function renderDashboardHtml() {
           <a href="#migration">OpenClaw 迁移</a>
           <a href="#run-detail">Run 详情</a>
           <a href="#activity">运行与事件</a>
+          <a href="#audit">Mutation Audit</a>
           <a href="#channels">通道</a>
           <a href="#raw">原始状态</a>
         </nav>
@@ -46,6 +48,17 @@ export function renderDashboardHtml() {
           <div class="stat"><span>最近事件</span><strong id="eventCount">-</strong></div>
           <div class="stat"><span>待审批</span><strong id="pendingApprovalCount">-</strong></div>
           <div class="stat"><span>迁移阻塞项</span><strong id="migrationRisk">-</strong></div>
+        </section>
+
+        <section id="health" class="health-strip" aria-label="运行健康">
+          <div class="health-head">
+            <div>
+              <h3>运行健康</h3>
+              <p>服务可用性、状态存储、HTML Center、Feishu adapter 和 mutation auth。</p>
+            </div>
+            <span id="healthSummary" class="pill">未加载</span>
+          </div>
+          <div id="healthPanel" class="health-grid"></div>
         </section>
 
         <section id="milestones" class="panel">
@@ -136,6 +149,17 @@ export function renderDashboardHtml() {
             <h3>事件 Timeline</h3>
             <div id="eventsTable" class="empty">暂无事件记录</div>
           </div>
+        </section>
+
+        <section id="audit" class="panel">
+          <div class="section-head">
+            <div>
+              <h3>Gateway Mutation Audit</h3>
+              <p>记录 Gateway 上的写操作、认证结果和状态码，不保存请求正文或 token。</p>
+            </div>
+            <span id="auditStatus" class="pill">未加载</span>
+          </div>
+          <div id="auditPanel" class="empty">暂无 mutation audit</div>
         </section>
 
         <div class="two-col">

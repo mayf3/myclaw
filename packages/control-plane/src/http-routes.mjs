@@ -1,6 +1,7 @@
 import {
   buildApprovalPayload,
   buildApprovalsPayload,
+  buildAuditPayload,
   buildEventsPayload,
   buildFeishuAdoptionStatusPayload,
   buildHumanExperimentsStatusPayload,
@@ -28,6 +29,9 @@ export async function resolveControlGetRoute(url, context = {}) {
   }
   if (url.pathname === "/api/events") {
     return route(200, await buildEventsPayload(context, { limit: numberParam(url, "limit", 100) }));
+  }
+  if (url.pathname === "/api/audit") {
+    return route(200, await buildAuditPayload(context, { limit: numberParam(url, "limit", 100) }));
   }
   if (url.pathname === "/api/approvals") {
     return route(200, await buildApprovalsPayload(context, { limit: numberParam(url, "limit", 50), status: url.searchParams.get("status") || "" }));

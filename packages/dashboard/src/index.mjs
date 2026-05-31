@@ -12,8 +12,9 @@ export async function startDashboard(options = {}) {
   const port = Number(options.port ?? process.env.MYCLAW_DASHBOARD_PORT ?? 4321);
   const stateDir = resolveStateDir(options.stateDir);
   const openclawSource = options.openclawSource;
+  const token = options.token ?? process.env.MYCLAW_GATEWAY_TOKEN ?? "";
   const server = http.createServer((request, response) => {
-    handleDashboardRequest(request, response, { stateDir, openclawSource }).catch((error) => {
+    handleDashboardRequest(request, response, { stateDir, openclawSource, host, token }).catch((error) => {
       sendJson(response, 500, {
         ok: false,
         error: {

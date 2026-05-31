@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.1 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail，以及 OpenClaw stage review summary/diff。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.4 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条和 Gateway mutation audit。
 
 ## 参考项目观察
 
@@ -117,9 +117,18 @@ Phase 1.3 hardening 新增：
 - Dashboard 仍可看到 `fb_*` run、状态、事件类型和 reply mode，但不显示飞书群的原始消息正文。
 - 下一步要把 raw JSON 面板拆成“可读摘要 + gated debug view”，避免后续 Agent 输入误暴露。
 
+Phase 1.4 Gateway/Dashboard 新增：
+
+- `packages/core/src/audit.mjs` 用本地 `audit.jsonl` 保存 Gateway mutation audit。
+- `packages/gateway/src/audit.mjs` 通过 response finish listener 记录写操作结果，不进入业务 handler。
+- `/api/status` 内联 `health` 和 `audit`，`/api/audit` 可单独读取审计流。
+- Dashboard 顶部 health strip 汇总 Control API、state、HTML Center、Feishu adapter 和 mutation auth。
+- Dashboard 新增 Gateway Mutation Audit 表，不展示 request body、token 或 secret。
+
 下一步应补：
 
 - run detail drawer 或独立详情页。
+- event stream 和 Dashboard 实时刷新。
 - stage snapshot 可操作 review drawer 和后续真实 schema diff。
 - `apply --module feishu` 人工确认入口。
 - 事件 stream 或轮询刷新。
