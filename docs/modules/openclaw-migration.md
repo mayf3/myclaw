@@ -135,7 +135,7 @@ Phase 0.2 不做：
 
 ## 验收标准
 
-- `migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json` 能返回 `ok: true`。
+- `migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --json` 能返回 `ok: true`。
 - 输出包含 `config.sections`、`inventory.channels`、`inventory.pluginEntries`、`unsupported`。
 - dashboard `/api/status` 能展示 migration risk 和 latest stage 指针。
 - `migrate openclaw --stage --json` 能写入 snapshot。

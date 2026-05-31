@@ -55,7 +55,7 @@ Phase 1.3 在 Human Experiments、共享 route adapter、migration approval queu
 
 ## OpenClaw Feishu/Lark 观察
 
-OpenClaw 仓库里可参考的飞书实现位于 `/Users/yanfenma/workspace/github/openclaw/extensions/feishu`，包名是 `@openclaw/feishu`。它覆盖 Feishu/Lark 两个域，manifest 中声明 `channels: ["feishu"]`，配置包含 `appId`、`appSecret`、`verificationToken`、`encryptKey`、`domain`、`connectionMode`、`accounts`、渲染、流式和 threading 选项。
+OpenClaw 仓库里可参考的飞书实现位于 `$MYCLAW_OPENCLAW_SOURCE/extensions/feishu`，包名是 `@openclaw/feishu`。它覆盖 Feishu/Lark 两个域，manifest 中声明 `channels: ["feishu"]`，配置包含 `appId`、`appSecret`、`verificationToken`、`encryptKey`、`domain`、`connectionMode`、`accounts`、渲染、流式和 threading 选项。
 
 可借鉴：
 
@@ -92,7 +92,7 @@ Phase 1.1 MyClaw 结论：
 
 Phase 1.3 MyClaw 结论：
 
-- Feishu 接入从 credential presence 进入真实群消息回复，但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
+- Feishu 接入从 credential presence 进入真实群消息回复，默认直接发群消息而不是话题回复；但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
 - `packages/feishu-bot` 把 Feishu SDK 隔离成插件包，主线 core/runtime/gateway 仍保持干净。
 - 下一步不应直接进入 agent，而应先补 allowlist、requireMention、持久 replay 和 agent replyBuilder 边界。
 

@@ -87,13 +87,16 @@ function resolveSource(input) {
   if (process.env.OPENCLAW_CONFIG_PATH) {
     return path.resolve(expandHome(process.env.OPENCLAW_CONFIG_PATH));
   }
+  if (process.env.MYCLAW_OPENCLAW_SOURCE) {
+    return path.resolve(expandHome(process.env.MYCLAW_OPENCLAW_SOURCE));
+  }
   const homeConfig = path.join(os.homedir(), ".openclaw", "openclaw.json");
   if (existsSync(homeConfig)) {
     return homeConfig;
   }
-  const workspaceRepo = "/Users/yanfenma/workspace/github/openclaw";
-  if (existsSync(workspaceRepo)) {
-    return workspaceRepo;
+  const adjacentRepo = path.resolve(process.cwd(), "..", "openclaw");
+  if (existsSync(adjacentRepo)) {
+    return adjacentRepo;
   }
   return path.join(os.homedir(), ".openclaw");
 }
@@ -132,7 +135,10 @@ async function resolveOpenClawRepoRoot(source, configPath) {
   if (configPath) {
     candidates.push(path.dirname(configPath));
   }
-  candidates.push("/Users/yanfenma/workspace/github/openclaw");
+  if (process.env.MYCLAW_OPENCLAW_SOURCE) {
+    candidates.push(path.resolve(expandHome(process.env.MYCLAW_OPENCLAW_SOURCE)));
+  }
+  candidates.push(path.resolve(process.cwd(), "..", "openclaw"));
 
   for (const candidate of candidates.filter(Boolean)) {
     if ((await safeStat(path.join(candidate, "extensions")))?.isDirectory()) {

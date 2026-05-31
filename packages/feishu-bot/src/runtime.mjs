@@ -21,6 +21,7 @@ export async function startFeishuBot(options = {}) {
     throw new Error("Feishu bot currently requires MYCLAW_FEISHU_CONNECTION_MODE=websocket.");
   }
 
+  const replyMode = normalizeReplyMode(options.replyMode);
   const sdkRuntime = options.sdkRuntime ?? (await loadFeishuSdkRuntime());
   const client = sdkRuntime.createClient(config);
   const eventDispatcher = sdkRuntime.createEventDispatcher(config);
@@ -31,6 +32,7 @@ export async function startFeishuBot(options = {}) {
     logger: options.logger ?? console,
     replyBuilder: options.replyBuilder ?? ((input) => buildDefaultFeishuReply(input)),
     ingressPolicy: buildFeishuIngressPolicy(options.ingressPolicy),
+    replyMode,
     stateDir: resolveStateDir(options.stateDir),
     processed,
   };
@@ -86,18 +88,20 @@ export async function handleFeishuMessageEvent(event, context) {
     if (!replyText) {
       throw new Error("Feishu reply builder returned empty text.");
     }
+    const replyMode = normalizeReplyMode(context.replyMode);
     events.push(
       createEvent("feishu.bot.reply.started", {
         messageId: inbound.id,
         conversationId: inbound.conversationId,
+        replyMode,
       }),
     );
     const reply = await sendFeishuAppText({
       client: context.client,
       text: replyText,
       chatId: inbound.conversationId,
-      replyToMessageId: inbound.id,
-      replyInThread: true,
+      replyToMessageId: replyMode === "thread" ? inbound.id : null,
+      replyInThread: replyMode === "thread",
     });
     if (!reply.ok) {
       throw new Error(`Feishu app reply failed: code=${reply.code}${reply.message ? ` message=${reply.message}` : ""}`);
@@ -106,6 +110,7 @@ export async function handleFeishuMessageEvent(event, context) {
       createEvent("feishu.bot.reply.completed", {
         messageId: reply.messageId,
         target: reply.target,
+        replyMode,
       }),
     );
     const envelope = okEnvelope({ runId, result: { inbound, reply }, events });
@@ -133,6 +138,14 @@ async function recordSkipped(stateDir, runId, events, reason) {
   const envelope = okEnvelope({ runId, result: { skipped: true, reason }, events });
   await recordRun(stateDir, runId, envelope);
   return envelope;
+}
+
+function normalizeReplyMode(value) {
+  const mode = String(value || "direct").toLowerCase();
+  if (mode === "direct" || mode === "thread") {
+    return mode;
+  }
+  throw new Error(`Invalid Feishu reply mode: ${mode}. Expected direct or thread.`);
 }
 
 function redactError(error) {

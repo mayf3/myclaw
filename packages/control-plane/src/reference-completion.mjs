@@ -145,7 +145,7 @@ export function buildFeishuAdoptionPayload() {
     schemaVersion: 1,
     directUse: false,
     referenceUse: true,
-    source: "/Users/yanfenma/workspace/github/openclaw/extensions/feishu",
+    source: "openclaw/extensions/feishu",
     packageName: "@openclaw/feishu",
     verdict:
       "Do not directly load the OpenClaw Feishu plugin in MyClaw Phase 0. It depends on OpenClaw plugin-sdk/runtime contracts. Reuse the design, schema, security tests, and event/outbound normalization ideas.",

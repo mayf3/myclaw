@@ -63,7 +63,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         <article class="content"><p>诊断：不要复刻 Hermes、OpenClaw 或 OpenHuman；你的 MyClaw 应该先做成一个 Node.js/TypeScript 的本地工作流内核，吸收 Lobster 的 typed workflow + approval/resume、OpenHuman 的 controller registry/event bus/tool permission，再逐步长出 agent、gateway、记忆、插件和多渠道能力。</p>
 <h2 id="参考对象">参考对象</h2>
 <p>本次评审基于三个本地项目：</p>
-<ul><li><code>/Users/yanfenma/workspace/github/hermes-agent</code></li><li><code>/Users/yanfenma/workspace/github/openclaw</code></li><li><code>/Users/yanfenma/workspace/github/openhuman</code></li></ul>
+<ul><li><code>$HERMES_AGENT_SOURCE</code></li><li><code>$MYCLAW_OPENCLAW_SOURCE</code></li><li><code>$OPENHUMAN_SOURCE</code></li></ul>
 <p>重点阅读了 README、架构文档、agent loop、session、tool registry、gateway、plugin SDK、安全文档、OpenClaw 的 <code>extensions/lobster</code>，以及 OpenHuman 的 <code>src/core/all.rs</code>、<code>src/core/jsonrpc.rs</code>、<code>src/core/event_bus/</code>、<code>src/openhuman/agent/</code>、<code>src/openhuman/memory/</code>、<code>src/openhuman/tools/</code>、<code>src/openhuman/skills/</code>、<code>app/src/</code>。</p>
 <h2 id="模块化评审包">模块化评审包</h2>
 <p>这份总览只给方向判断。细节已拆到模块文档，并由 <a href="./index.html">HTML 全局索引</a> 统一导航。</p>

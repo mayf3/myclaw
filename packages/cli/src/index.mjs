@@ -206,6 +206,7 @@ async function runFeishuBot(args) {
       mentionNames: parseListArg(args.mentionNames || args.mentionName || process.env.MYCLAW_FEISHU_MENTION_NAMES),
       mentionIds: parseListArg(args.mentionIds || args.mentionId || process.env.MYCLAW_FEISHU_MENTION_IDS),
     },
+    replyMode: args.replyMode || process.env.MYCLAW_FEISHU_REPLY_MODE,
     replyBuilder: args.replyPrefix
       ? ({ inbound }) => `${args.replyPrefix}${inbound.text ? `：${inbound.text}` : ""}`
       : undefined,
@@ -361,7 +362,7 @@ Usage:
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
   myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
   myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>] [--token <token>] [--feishu-verify-token <token>] [--feishu-encrypt-key <key>]
-  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--allowed-chat-ids <ids>] [--require-mention] [--json]
+  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--reply-mode direct|thread] [--allowed-chat-ids <ids>] [--require-mention] [--json]
   myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--json]
 
 Examples:
@@ -370,8 +371,9 @@ Examples:
   myclaw dashboard --port 4321
   myclaw gateway --port 4321
   myclaw feishu-bot --reply-prefix "MyClaw 收到了"
+  myclaw feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct
   myclaw feishu-bot --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS" --require-mention
-  myclaw migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json
+  myclaw migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --json
   myclaw send --channel feishu-webhook --webhook-url "$MYCLAW_FEISHU_WEBHOOK_URL" --text "hello"
 `);
 }

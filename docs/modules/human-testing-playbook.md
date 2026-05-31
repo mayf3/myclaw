@@ -42,11 +42,11 @@ Review 观察：
 | 实验 | 层 | 推荐程度 | 最小命令链 | 成功信号 |
 |---|---|---|---|---|
 | E0 本地消息闭环 | L0 | 现在就测 | `npm run myclaw -- send --text "hello from human" --json` | 返回 ok envelope，记录 runId |
-| E1 Dashboard | L1 | 现在就测 | `npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw`；打开 `http://127.0.0.1:4321` | 能看到 Phase、L0-L6、Approvals、Runs |
-| E2A Openduck Feishu credential presence | L0/L1 | 现在就测 | `npm run import:openduck -- --json`；`set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw` | 输出不含 secret 值，Dashboard 显示 app credentials ready、websocket runtime ready、app-token outbound ready，`.myclaw/` 仍 ignored |
-| E2B Feishu WebSocket 群回复 | L0/L1 | 现在就测 | `set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了"`；在备份群发文本 | 群里收到自动回复，Dashboard 最近 Runs 有 `fb_*` |
-| E4 OpenClaw stage | L2 | 现在就测 | `npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json` | stage 是 review-only，记录 stageId 和 approvalId |
-| E5 审批队列 | L1/L2 | 现在就测 | `MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw`；POST `/api/openclaw-migration/stage`；GET `/api/approvals`；POST `/api/approvals/<approvalId>/decision` | pending 变 approved/rejected，event 有记录 |
+| E1 Dashboard | L1 | 现在就测 | `npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE`；打开 `http://127.0.0.1:4321` | 能看到 Phase、L0-L6、Approvals、Runs |
+| E2A Openduck Feishu credential presence | L0/L1 | 现在就测 | `npm run import:openduck -- --json`；`set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE` | 输出不含 secret 值，Dashboard 显示 app credentials ready、websocket runtime ready、app-token outbound ready，`.myclaw/` 仍 ignored |
+| E2B Feishu WebSocket 群回复 | L0/L1 | 现在就测 | `set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct`；在备份群发文本 | 群里直接收到自动回复，不是话题回复；Dashboard 最近 Runs 有 `fb_*` |
+| E4 OpenClaw stage | L2 | 现在就测 | `npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage --json` | stage 是 review-only，记录 stageId 和 approvalId |
+| E5 审批队列 | L1/L2 | 现在就测 | `MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE`；POST `/api/openclaw-migration/stage`；GET `/api/approvals`；POST `/api/approvals/<approvalId>/decision` | pending 变 approved/rejected，event 有记录 |
 | E7 工程约束 | 全局 | 现在就测 | `npm run check` | 生成物 up to date，结构红线通过 |
 | E2/E3 Feishu | L0/L1 | 配置后测 | 设置 `MYCLAW_FEISHU_WEBHOOK_URL` 后发送 webhook；设置 verify/encrypt token 后 POST callback challenge | 群消息收到，callback challenge 通过 |
 
@@ -92,7 +92,7 @@ Review 观察：
 | E0 本地消息 | runId、JSON 输出、Dashboard run 可见 | 必须通过 |
 | E1 Dashboard | 页面可打开，L0-L6 和 E0-E10 可见 | 必须通过 |
 | E2A Openduck Feishu credential presence | `.myclaw/openduck-feishu.env` ignored 且 Dashboard 显示 credentials ready/runtime ready | 必须通过 |
-| E2B Feishu WebSocket 群回复 | websocket ready、群回复、`fb_*` run | 必须通过 |
+| E2B Feishu WebSocket 群回复 | websocket ready、群内直接回复、`fb_*` run | 必须通过 |
 | E2 Feishu outbound | 飞书群消息截图或 result code | 配置后必须通过 |
 | E3 Feishu callback | challenge 回显、签名错误被拒绝 | 配置后必须通过 |
 | Gateway token | 无 token 拒绝，有 token 放行 | 必须通过 |

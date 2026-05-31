@@ -19,7 +19,7 @@ export function buildHumanExperimentsPayload() {
       role: "产品试用者",
       whatToTest: "打开 Dashboard，判断 3 分钟内能否看懂当前阶段、最近消息、参考完成度和下一步。",
       commands: [
-        "npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw",
+        "npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE",
         "open http://127.0.0.1:4321",
         "curl -s http://127.0.0.1:4321/api/experiments",
       ],
@@ -49,7 +49,7 @@ export function buildHumanExperimentsPayload() {
       whatToTest: "从本机 openduck 备份配置导入 Feishu app 身份，只输出变量名与 credential 状态，不打印 secret。",
       commands: [
         "npm run import:openduck -- --json",
-        "set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source /Users/yanfenma/workspace/github/openclaw",
+        "set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE",
         "curl -s http://127.0.0.1:4321/api/feishu-adoption",
       ],
       successSignals: [
@@ -67,14 +67,14 @@ export function buildHumanExperimentsPayload() {
       role: "飞书测试群使用者",
       whatToTest: "启动 MyClaw Feishu bot，在备份飞书群里发送文本消息，确认 bot 能通过长连接收到消息并用 app-token 回复。",
       commands: [
-        "set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix \"MyClaw 收到了\"",
-        "可选加固：MYCLAW_FEISHU_ALLOWED_CHAT_IDS=oc_xxx npm run myclaw -- feishu-bot --reply-prefix \"MyClaw 收到了\" --require-mention",
+        "set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix \"MyClaw 收到了\" --reply-mode direct",
+        "可选加固：MYCLAW_FEISHU_ALLOWED_CHAT_IDS=oc_xxx npm run myclaw -- feishu-bot --reply-prefix \"MyClaw 收到了\" --reply-mode direct --require-mention",
         "在备份飞书群发送一条文本消息",
         "打开 Dashboard 查看最新 fb_* run",
       ],
       successSignals: [
         "终端显示 websocket ready",
-        "飞书群收到 MyClaw 收到了：<原消息>",
+        "飞书群收到 MyClaw 收到了：<原消息>，不是话题回复",
         "Dashboard 最新 run 包含 feishu.bot.reply.completed",
         "Feishu API 业务错误会记录为 feishu.bot.reply.failed，不会误报 completed",
       ],
@@ -103,8 +103,8 @@ export function buildHumanExperimentsPayload() {
       role: "迁移审阅者",
       whatToTest: "确认一键迁移当前只做 plan/stage，不会直接 apply OpenClaw 运行时配置。",
       commands: [
-        "npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json",
-        "npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage --json",
+        "npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --json",
+        "npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage --json",
       ],
       successSignals: ["输出 destructive=false", "stage.forReviewOnly=true", "Dashboard stage summary 显示 missing/blocked"],
       nextUnlock: "E5 approval queue",
@@ -117,7 +117,7 @@ export function buildHumanExperimentsPayload() {
       role: "安全审阅者",
       whatToTest: "验证 OpenClaw stage 会生成 pending approval，并且用户能用 gateway token 明确 approve/reject。",
       commands: [
-        "MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source /Users/yanfenma/workspace/github/openclaw",
+        "MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE",
         'curl -s http://127.0.0.1:4322/api/openclaw-migration/stage -H "content-type: application/json" -H "x-myclaw-token: dev-token" -d "{}"',
         "curl -s http://127.0.0.1:4322/api/approvals",
         'curl -s http://127.0.0.1:4322/api/approvals/<approvalId>/decision -H "content-type: application/json" -H "x-myclaw-token: dev-token" -d \'{"decision":"rejected","reason":"human smoke"}\'',

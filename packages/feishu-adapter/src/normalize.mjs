@@ -32,7 +32,6 @@ export function normalizeFeishuEvent(input = {}) {
     sender: { id: String(senderId) },
     text: String(text).trim(),
     receivedAt: normalizeFeishuTime(header.create_time) || input.receivedAt || new Date().toISOString(),
-    raw: input,
   };
 }
 

@@ -6,9 +6,9 @@
 
 本次评审基于三个本地项目：
 
-- `/Users/yanfenma/workspace/github/hermes-agent`
-- `/Users/yanfenma/workspace/github/openclaw`
-- `/Users/yanfenma/workspace/github/openhuman`
+- `$HERMES_AGENT_SOURCE`
+- `$MYCLAW_OPENCLAW_SOURCE`
+- `$OPENHUMAN_SOURCE`
 
 重点阅读了 README、架构文档、agent loop、session、tool registry、gateway、plugin SDK、安全文档、OpenClaw 的 `extensions/lobster`，以及 OpenHuman 的 `src/core/all.rs`、`src/core/jsonrpc.rs`、`src/core/event_bus/`、`src/openhuman/agent/`、`src/openhuman/memory/`、`src/openhuman/tools/`、`src/openhuman/skills/`、`app/src/`。
 

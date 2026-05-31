@@ -4,7 +4,7 @@ export function buildFeishuAdapterConfig(options = {}) {
   return {
     schemaVersion: 1,
     source: "myclaw-feishu-adapter",
-    reference: "/Users/yanfenma/workspace/github/openclaw/extensions/feishu",
+    reference: "openclaw/extensions/feishu",
     domain: normalizeDomain(options.domain || env.MYCLAW_FEISHU_DOMAIN || "feishu"),
     connectionMode,
     appId: trim(options.appId || env.MYCLAW_FEISHU_APP_ID || env.FEISHU_APP_ID),

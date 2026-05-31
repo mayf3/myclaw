@@ -1,18 +1,19 @@
 # MyClaw
 
-MyClaw is a local-first Node.js workflow and agent runtime in early Phase 1.2.
+MyClaw is a local-first Node.js workflow and agent runtime in early Phase 1.3.
 
 Current runnable surface:
 
 ```bash
+export MYCLAW_OPENCLAW_SOURCE=/path/to/openclaw
 npm run myclaw -- doctor
 npm run myclaw -- channels
 npm run myclaw -- send --text "hello"
 npm run myclaw -- receive --from local-user --conversation local-thread --text "hello" --reply "received"
 npm run myclaw -- dashboard --port 4321
 npm run myclaw -- gateway --port 4322
-npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw
-npm run myclaw -- migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --stage
+npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE
+npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage
 npm run html-center
 npm run publish:review
 ```
@@ -48,14 +49,15 @@ Dashboard:
 
 Gateway:
 
-- `gateway`: local HTTP control surface. Phase 1.2 supports `GET /api/status`, `GET /api/runs/:runId`, `GET /api/milestones`, `GET /api/experiments`, `GET /api/approvals`, `GET /api/reference-completion`, `GET /api/feishu-adoption`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, `POST /api/openclaw-migration/stage`, and `POST /api/approvals/:id/decision`.
+- `gateway`: local HTTP control surface. Phase 1.3 supports `GET /api/status`, `GET /api/runs/:runId`, `GET /api/milestones`, `GET /api/experiments`, `GET /api/approvals`, `GET /api/reference-completion`, `GET /api/feishu-adoption`, `GET /api/health`, `POST /messages`, `POST /feishu/events`, `POST /api/openclaw-migration/stage`, and `POST /api/approvals/:id/decision`.
 - Mutations stay open only for loopback development. Set `MYCLAW_GATEWAY_TOKEN` or pass `--token` before exposing the gateway beyond `127.0.0.1`.
 - Dashboard and gateway read-only control APIs now share `packages/control-plane/src/http-routes.mjs` so the two surfaces do not drift.
 
 Feishu/Lark:
 
-- The OpenClaw Feishu package at `/Users/yanfenma/workspace/github/openclaw/extensions/feishu` is a strong reference, but MyClaw does not directly load it in Phase 1.2.
+- The OpenClaw Feishu package at `$MYCLAW_OPENCLAW_SOURCE/extensions/feishu` is a strong reference, but MyClaw does not directly load it in Phase 1.3.
 - MyClaw now has a local `packages/feishu-adapter` facade for config readiness, x-lark signature validation, AES-256-CBC encrypted challenge decrypt, replay guard, token verification, event normalization, and outbound text/card result normalization.
+- MyClaw also has `packages/feishu-bot`, a plugin-scoped WebSocket bot that defaults to direct group replies. Use `--reply-mode thread` only when topic/thread replies are wanted.
 - Direct loading is deferred because the plugin depends on OpenClaw plugin-sdk/runtime/config/secrets/approval contracts that MyClaw has not implemented yet.
 
 Feishu event callback smoke test:

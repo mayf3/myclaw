@@ -27,14 +27,16 @@ test("Feishu bot starts a websocket dispatcher and replies to message events", a
   assert.equal(calls.start.eventDispatcher, calls.dispatcher);
   await calls.registered["im.message.receive_v1"](feishuTextEvent({ text: "hello" }));
 
-  assert.deepEqual(calls.reply[0], {
-    path: { message_id: "om_msg" },
-    data: { msg_type: "text", content: JSON.stringify({ text: "ack hello" }), reply_in_thread: true },
+  assert.deepEqual(calls.create[0], {
+    params: { receive_id_type: "chat_id" },
+    data: { receive_id: "oc_group", msg_type: "text", content: JSON.stringify({ text: "ack hello" }) },
   });
   const runs = await listRuns(stateDir);
   assert.equal(runs.length, 1);
   assert.equal(runs[0].envelope.ok, true);
   assert.equal(runs[0].envelope.result.inbound.conversationId, "oc_group");
+  assert.equal(runs[0].envelope.result.inbound.raw, undefined);
+  assert.equal(runs[0].envelope.events.find((event) => event.type === "feishu.bot.reply.completed").replyMode, "direct");
   bot.stop();
 });
 
@@ -55,6 +57,47 @@ test("Feishu bot handler skips app sender messages to avoid reply loops", async 
   assert.equal(envelope.ok, true);
   assert.equal(envelope.result.skipped, true);
   assert.equal(calls.reply.length, 0);
+});
+
+test("Feishu bot handler can reply in thread when explicitly configured", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const calls = { reply: [], create: [] };
+  const envelope = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => "thread ack",
+    ingressPolicy: {},
+    replyMode: "thread",
+    stateDir,
+  });
+
+  assert.equal(envelope.ok, true);
+  assert.equal(calls.create.length, 0);
+  assert.deepEqual(calls.reply[0], {
+    path: { message_id: "om_msg" },
+    data: { msg_type: "text", content: JSON.stringify({ text: "thread ack" }), reply_in_thread: true },
+  });
+  assert.equal(envelope.events.find((event) => event.type === "feishu.bot.reply.completed").replyMode, "thread");
+});
+
+test("Feishu bot rejects invalid reply modes", async () => {
+  await assert.rejects(
+    () =>
+      startFeishuBot({
+        stateDir: "/tmp/myclaw-invalid-reply-mode",
+        config: {
+          connectionMode: "websocket",
+          appId: "app-id",
+          appSecret: "app-secret",
+          domain: "feishu",
+        },
+        sdkRuntime: createFakeSdkRuntime({}),
+        replyMode: "topic",
+        logger: silentLogger(),
+      }),
+    /Invalid Feishu reply mode/,
+  );
 });
 
 test("Feishu bot handler skips messages outside ingress policy", async () => {
@@ -139,11 +182,17 @@ function createFakeSdkRuntime(calls) {
 }
 
 function createFakeClient(calls) {
+  calls.reply ??= [];
+  calls.create ??= [];
   return {
     im: {
       message: {
         async reply(input) {
           calls.reply.push(input);
+          return calls.replyResponse ?? { code: 0, data: { message_id: "om_reply" } };
+        },
+        async create(input) {
+          calls.create.push(input);
           return calls.replyResponse ?? { code: 0, data: { message_id: "om_reply" } };
         },
       },
