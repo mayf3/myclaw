@@ -37,6 +37,9 @@ async function main(argv = process.argv.slice(2)) {
   if (command === "gateway") {
     return await runGateway(parseArgs(rest));
   }
+  if (command === "feishu-bot") {
+    return await runFeishuBot(parseArgs(rest));
+  }
   if (command === "migrate") {
     return await runMigrate(rest);
   }
@@ -189,6 +192,46 @@ async function runGateway(args) {
   return 0;
 }
 
+async function runFeishuBot(args) {
+  const { startFeishuBot } = await import("../../feishu-bot/src/index.mjs");
+  const bot = await startFeishuBot({
+    stateDir: args.stateDir,
+    logger: console,
+    ingressPolicy: {
+      allowedChatIds: parseListArg(args.allowedChatIds || args.allowedChatId || process.env.MYCLAW_FEISHU_ALLOWED_CHAT_IDS),
+      allowedSenderIds: parseListArg(
+        args.allowedSenderIds || args.allowedSenderId || process.env.MYCLAW_FEISHU_ALLOWED_SENDER_IDS,
+      ),
+      requireMention: parseBooleanArg(args.requireMention || process.env.MYCLAW_FEISHU_REQUIRE_MENTION),
+      mentionNames: parseListArg(args.mentionNames || args.mentionName || process.env.MYCLAW_FEISHU_MENTION_NAMES),
+      mentionIds: parseListArg(args.mentionIds || args.mentionId || process.env.MYCLAW_FEISHU_MENTION_IDS),
+    },
+    replyBuilder: args.replyPrefix
+      ? ({ inbound }) => `${args.replyPrefix}${inbound.text ? `：${inbound.text}` : ""}`
+      : undefined,
+  });
+  if (args.json) {
+    console.log(JSON.stringify({ ok: true, mode: bot.mode, stateDir: bot.stateDir }, null, 2));
+  } else {
+    console.log("MyClaw Feishu bot connected.");
+    console.log(`Mode: ${bot.mode}`);
+    console.log(`State: ${bot.stateDir}`);
+  }
+  await waitForStop(bot.stop);
+  return 0;
+}
+
+function parseListArg(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseBooleanArg(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").toLowerCase());
+}
+
 async function runMigrate(argv) {
   const [target, ...rest] = argv;
   if (!target || target === "--help" || target === "-h") {
@@ -272,6 +315,17 @@ function waitForShutdown(server) {
   });
 }
 
+function waitForStop(stop) {
+  return new Promise((resolve) => {
+    const close = () => {
+      stop();
+      resolve();
+    };
+    process.once("SIGINT", close);
+    process.once("SIGTERM", close);
+  });
+}
+
 function toCamelCase(value) {
   return value.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
 }
@@ -307,6 +361,7 @@ Usage:
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
   myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
   myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>] [--token <token>] [--feishu-verify-token <token>] [--feishu-encrypt-key <key>]
+  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--allowed-chat-ids <ids>] [--require-mention] [--json]
   myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--json]
 
 Examples:
@@ -314,6 +369,8 @@ Examples:
   myclaw receive --from local-user --conversation local-thread --text "hello" --reply "received"
   myclaw dashboard --port 4321
   myclaw gateway --port 4321
+  myclaw feishu-bot --reply-prefix "MyClaw 收到了"
+  myclaw feishu-bot --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS" --require-mention
   myclaw migrate openclaw --source /Users/yanfenma/workspace/github/openclaw --json
   myclaw send --channel feishu-webhook --webhook-url "$MYCLAW_FEISHU_WEBHOOK_URL" --text "hello"
 `);

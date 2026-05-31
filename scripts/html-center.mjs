@@ -22,7 +22,7 @@ if (command === "status") {
   runPython(publishScript, [
     args.path || "docs",
     "--title",
-    args.title || "MyClaw Phase 1.2.1 Openduck Feishu 配置安全评审",
+    args.title || "MyClaw Phase 1.3 Feishu WebSocket 群回复评审",
     "--category",
     args.category || "architecture-review",
     "--entry",

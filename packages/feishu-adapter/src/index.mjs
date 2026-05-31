@@ -11,4 +11,10 @@ export {
 } from "./security.mjs";
 export { createFeishuReplayGuard } from "./replay.mjs";
 export { getFeishuEventId, normalizeFeishuEvent } from "./normalize.mjs";
-export { buildFeishuOutboundPayload, normalizeFeishuSendResult } from "./outbound.mjs";
+export {
+  buildFeishuAppTextPayload,
+  buildFeishuOutboundPayload,
+  normalizeFeishuAppSendResult,
+  normalizeFeishuSendResult,
+  sendFeishuAppText,
+} from "./outbound.mjs";

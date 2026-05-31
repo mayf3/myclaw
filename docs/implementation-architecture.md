@@ -1,10 +1,10 @@
-# MyClaw Phase 1.2.1 实现架构可视化评审
+# MyClaw Phase 1.3 实现架构可视化评审
 
 更新时间：2026-05-30
 
 ## 总诊断
 
-Phase 1.2.1 继续收紧研发路线：技术债红线已经进入 `npm run check`，用户可参与测试改成分层路线，本轮又把 openduck 飞书测试群配置接成安全的本地导入。结论：MyClaw 不能一上来跳到 agent 和记忆，必须先把 L0 接入层、L1 Gateway、L2 workflow/审批打稳；L3 单 Agent 之后先补 L4 Session Search/Provenance，再进入 L5 Agent-to-Agent 和 L6 Long Memory/Search。
+Phase 1.3 把 L0/L1 从“配置可识别”推进到“飞书群消息可回复”：新增 `packages/feishu-bot` 插件包，独立封装 Feishu SDK WebSocket、EventDispatcher 和 app-token text reply。结论：MyClaw 仍不能直接跳到 agent 和记忆，下一步要先补 allowlist/requireMention、持久 replay 和 Gateway audit，把飞书接入层做成可靠入口。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
@@ -22,7 +22,8 @@ Phase 1.2.1 继续收紧研发路线：技术债红线已经进入 `npm run chec
 flowchart LR
   E0[E0 本地消息] --> E1[E1 Dashboard]
   E1 --> E2A[E2A Openduck Feishu credential presence]
-  E2A --> E4[E4 OpenClaw stage]
+  E2A --> E2B[E2B Feishu websocket group reply]
+  E2B --> E4[E4 OpenClaw stage]
   E4 --> E5[E5 Approval decision]
   E5 --> E7[E7 工程约束]
   E7 --> L0[L0 接入层]
@@ -33,16 +34,16 @@ flowchart LR
   E8 --> E9[E9 Agent-to-Agent]
   E9 --> E10[E10 Long Memory]
   E2[E2 Feishu outbound] -.配置后.-> E3[E3 callback smoke]
-  E2A -.credentials present，不等于 WebSocket runtime.-> E3
+  E2A -.credentials present.-> E2B
 ```
 
 Review 观察：
 
 - 优点：E7 把技术债约束变成可执行实验。
-- 优点：当前可测入口已经覆盖消息、Dashboard、Feishu app credential presence、迁移、审批、结构约束。
+- 优点：当前可测入口已经覆盖消息、Dashboard、Feishu app credential presence、Feishu 群回复、迁移、审批、结构约束。
 - 优点：L0-L6 让“先交互基础、后 agent 智能”成为硬路线。
 - 风险：L3-L6 仍未实现，不能测试 agent runtime、agent 协作 和记忆。
-- 改进：下一阶段优先补 L0/L1 的 Feishu WebSocket/app-token smoke 和 Gateway audit，而不是直接堆 agent。
+- 改进：下一阶段优先补 L0/L1 的 allowlist、requireMention、持久 replay 和 Gateway audit，而不是直接堆 agent。
 
 ## 分层交互架构图
 
@@ -85,6 +86,9 @@ flowchart LR
   Import --> LocalEnv[.myclaw/openduck-feishu.env 0600]
   LocalEnv --> Dashboard
   LocalEnv --> FeishuAdapter[Feishu adapter readiness]
+  LocalEnv --> FeishuBot[packages/feishu-bot]
+  FeishuBot --> FeishuWs[Feishu WebSocket]
+  FeishuWs --> FeishuGroup[备份飞书群]
   Launchctl[launchctl] --> StopSecond[stop ai.openclaw.gateway.second]
   ActiveOpenClaw[ai.openclaw.gateway active] -.not touched.-> User
   Docs[docs/*.md] --> Builder[docs/build-review-html.mjs]
@@ -100,7 +104,7 @@ Review 观察：
 - 优点：HTML 生成物移动后，`docs/modules` 只放源文档。
 - 优点：openduck secret 不进入 repo，导入脚本只允许写 ignored `.myclaw/` 并拒绝 symlink。
 - 风险：HTML Center 仍依赖 tmux 常驻，没有自动告警。
-- 风险：Feishu app credential presence 不是 WebSocket runtime ready，也不是 app-token 出站发送 ready。
+- 风险：Feishu bot 目前只做文本自动回复，没有 allowlist、requireMention、持久 replay 和 agent replyBuilder。
 - 改进：后续把 doctor 和 Feishu readiness 显示到 Dashboard 顶部 health strip。
 
 ## 模块架构图
@@ -111,6 +115,7 @@ Review 观察：
 flowchart TB
   Package[package.json] --> CheckScript[npm run check]
   Package --> ImportScript[npm run import:openduck]
+  Package --> BotScript[myclaw feishu-bot]
   CheckScript --> Syntax[node --check]
   CheckScript --> Generated[scripts/check-generated-docs.mjs]
   CheckScript --> Structure[scripts/check-file-lines.mjs]
@@ -127,6 +132,9 @@ flowchart TB
   ImportScript --> LocalOnly[.myclaw/openduck-feishu.env]
   LocalOnly --> GitIgnored[git ignored + mode 600]
   SecretScan --> NoLeaks[fail if local secrets appear in tracked files]
+  BotScript --> FeishuBotPkg[packages/feishu-bot]
+  FeishuBotPkg --> Sdk[@larksuiteoapi/node-sdk]
+  FeishuBotPkg --> CoreState[core state recordRun]
 ```
 
 Review 观察：
@@ -135,6 +143,7 @@ Review 观察：
 - 优点：目录文件数按直接文件计算，能防止一个目录变抽屉。
 - 优点：导入脚本和运行 env 分离，避免把 secret 当成项目配置提交。
 - 优点：本地 secret 泄露扫描进入 `npm run check`，不是只靠人工纪律。
+- 优点：Feishu SDK 只在 `packages/feishu-bot`，core/runtime/gateway 主线保持干净。
 - 风险：`docs/build-review-html.mjs` 414 行，仍接近 450 预警。
 - 改进：拆 Markdown parser、shell template、index rewrite。
 
@@ -298,8 +307,9 @@ Review 观察：
 | 实验 | 状态 | 用户动作 | 成功信号 |
 |---|---|---|---|
 | E0 | ready | `send --text` | ok envelope，run 可见 |
-| E1 | ready | 打开 Dashboard | Phase 1.2.1、Approvals 可见 |
-| E2A | ready | `npm run import:openduck` | credentials present；runtime/outbound 仍 missing |
+| E1 | ready | 打开 Dashboard | Phase 1.3、Approvals 可见 |
+| E2A | ready | `npm run import:openduck` | credentials present；runtime/outbound ready |
+| E2B | ready | 在备份飞书群发文本 | 收到 `MyClaw 收到了：...`，出现 `fb_*` run |
 | E4 | ready | `migrate openclaw --stage --json` | stage 带 approval，review-only |
 | E5 | ready | GET approvals + POST decision | approval 变 approved/rejected |
 | E7 | ready | `npm run check` | 输出 500 行、20 文件/目录、depth 4 |
@@ -326,7 +336,7 @@ Review 观察：
 
 ## 相似技术比较
 
-| 维度 | MyClaw Phase 1.2.1 | OpenClaw | Hermes-agent | OpenHuman |
+| 维度 | MyClaw Phase 1.3 | OpenClaw | Hermes-agent | OpenHuman |
 |---|---|---|---|---|
 | 结构约束 | 硬性 check 脚本 | 大 repo 模块化 | 成熟工程分层 | Rust workspace 分层 |
 | Secret 导入 | `.myclaw/*.env` 本地导入，只输出变量名 | schema + credential 边界成熟 | `.env`/session 配置简单 | controller/tool 权限清晰 |
@@ -342,13 +352,16 @@ Review 观察：
 | `scripts/check-generated-docs.mjs` | 63 行 | 重建 HTML 并检测 stale 生成物 | 健康 |
 | `scripts/html-center.mjs` | 121 行 | HTML Center status/start/publish/verify，发布前校验生成物 | 健康 |
 | `scripts/import-openduck-config.mjs` | 189 行 | openduck Feishu 配置到本地 MyClaw env 的安全导入 | 健康，输出不含 secret 值，拒绝非 `.myclaw/` 输出 |
-| `scripts/check-local-secret-leaks.mjs` | 84 行 | 扫描本地 `.myclaw/*.env` 敏感值是否进入 tracked files | 健康 |
+| `scripts/check-local-secret-leaks.mjs` | 88 行 | 扫描本地 `.myclaw/*.env` 敏感值是否进入 tracked/untracked files | 健康 |
+| `packages/feishu-bot/src/runtime.mjs` | 142 行 | Feishu WebSocket bot runtime、默认回复、state 记录 | 健康，保持插件边界 |
+| `packages/feishu-bot/src/ingress-policy.mjs` | 94 行 | Feishu 入站 allowlist、mention 和消息类型策略 | 健康，策略留在插件包内 |
+| `packages/feishu-bot/src/sdk-runtime.mjs` | 48 行 | Feishu SDK 适配层 | 健康 |
 | `docs/build-review-html.mjs` | 414 行 | HTML report builder | 接近 450，下一轮拆 |
 | `docs/modules` | 16 文件 | 模块 Markdown 源文档，含人类测试手册 | 已低于 20 |
 | `docs/rendered/modules` | 16 文件 | 生成 HTML 模块页 | 已低于 20 |
-| `docs/modules/human-testing-playbook.md` | 148 行 | 人类测试手册、本地参与流程和反馈格式 | 健康 |
-| `packages/cli/src/index.mjs` | 354 行 | CLI 命令与 doctor | 健康，但继续增长要拆命令 |
-| `packages/control-plane/src/experiments.mjs` | 203 行 | Human Experiments 与分层路线 payload | 健康 |
+| `docs/modules/human-testing-playbook.md` | 151 行 | 人类测试手册、本地参与流程和反馈格式 | 健康 |
+| `packages/cli/src/index.mjs` | 411 行 | CLI 命令、doctor 与 feishu-bot 启动入口 | 健康，但继续增长要拆命令 |
+| `packages/control-plane/src/experiments.mjs` | 224 行 | Human Experiments 与分层路线 payload | 健康 |
 | `packages/dashboard/src/client.mjs` | 359 行 | Dashboard client，含分层路线渲染 | 仍需拆 renderer |
 | `packages/core/src/approvals.mjs` | 198 行 | approval state | 健康 |
 
@@ -359,8 +372,9 @@ Review 观察：
 | 等级 | 问题 | 影响 | 建议 |
 |---|---|---|---|
 | Medium | HTML Center 依赖 tmux 常驻 | 服务掉了链接就打不开 | doctor 已覆盖，后续纳入 Dashboard health |
-| High | Feishu secret 被误写进代码/报告/命令行参数 | appSecret、token、encrypt key 或 webhook URL 泄露会影响测试群 | 只允许 ignored `.myclaw/` 本地 env，脚本和报告只输出变量名，check 扫描 tracked files |
+| High | Feishu secret 被误写进代码/报告/命令行参数 | appSecret、token、encrypt key 或 webhook URL 泄露会影响测试群 | 只允许 ignored `.myclaw/` 本地 env，脚本和报告只输出变量名，check 扫描 tracked/untracked files |
 | Medium | openduck 与 active OpenClaw 进程混淆 | 误停正在使用的 OpenClaw | 用配置端口、launchd label 和 cwd 三重确认后只停 `ai.openclaw.gateway.second` |
+| High | Feishu bot 未配置 allowlist/requireMention 时会全量响应 | 测试群外或高噪声群里会自动回复过多 | 插件内已支持 allowed chat、allowed sender、require mention；下一步把测试群 chat id 固化到本地 ignored policy |
 | High | Dashboard client 仍在变大 | 分层展示后会继续推高行数 | 拆 section renderer registry |
 | High | 跳过接入层/Gateway 直接做 agent | 后续 agent 和记忆会缺少可信事件边界 | 先完成 L0/L1 smoke，再做 L3 |
 | High | 跳过 session provenance 直接做 agent-to-agent | 多 agent 交接无法审计 | L4 最小 search/provenance 必须早于 L5 |
@@ -371,7 +385,7 @@ Review 观察：
 
 ## Linus 视角严苛审查
 
-独立 subagent 结论：分层方向正确，但不能把路线定义或 app credential presence 当成 Feishu runtime 能力完成。L0/L1/L2 只能标 partial，L4 必须先做最小 session provenance，再让多 agent 交接上下文。处理后结论：不要进入 Agent/A2A/Memory 实现阶段，下一步先补 Feishu WebSocket/app-token smoke、Gateway audit，并拆 Dashboard renderer。
+独立 subagent 结论：SDK 隔离方向正确，`@larksuiteoapi/node-sdk` 只落在 `packages/feishu-bot` 和 lockfile；但这还只是“插件包隔离”，不是完整插件注册机制。处理后结论：当前可以做飞书群文本 smoke test，但进入 Agent runtime 前必须继续补持久 replay、Gateway audit、显式插件 manifest/capability contract，并把测试群 policy 固化为 ignored 本地配置。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
@@ -384,7 +398,11 @@ Review 观察：
 | High | Agent-to-Agent 需要可检索 run/step/source | 已把 L4 改成 Session Search/Provenance，排在 L5 Agent-to-Agent 之前 |
 | High | 从 openduck 导入 secret 很容易污染 git 或报告 | 已做 `scripts/import-openduck-config.mjs`，只写 `.myclaw/` 并输出变量名 |
 | High | `--output` 可写任意路径会绕开 `.myclaw/` 边界 | 已限制输出必须位于 ignored `.myclaw/`，并拒绝 symlink |
-| High | `ready websocket` 会误导为 Feishu runtime 完成 | 已把 websocket credentials 改成 `partial`，runtime/outbound 明确 missing |
+| High | `ready websocket` 会误导为 Feishu runtime 完成 | Phase 1.3 已实现独立 `packages/feishu-bot` websocket/app-token 文本回复；仍标明 policy/rich card/replay 缺口 |
+| Critical | Feishu 群消息缺 allowlist/requireMention 会让任意群消息触发后续 agent | 已在 `packages/feishu-bot/src/ingress-policy.mjs` 加 allowed chat/sender/require mention；当前 smoke 默认开放，agent 前必须配置测试群 allowlist |
+| High | Feishu app reply API 业务失败会被误记为 completed | 已在 bot runtime 检查 `reply.ok`，失败写 `feishu.bot.reply.failed` |
+| High | secret leak check 只扫 tracked files，untracked 新增文件可绕过 | 已扩展为 tracked + untracked scan，`.myclaw/` 仍由 git ignore 排除 |
+| Medium | 非文本消息走 recoverable failure 会导致重试噪声 | 已改为 `unsupported_message_type` skipped，不发回复 |
 | Medium | 复用 openduck gateway token 会跨 auth 边界 | 已移除 gateway token/port 映射，导入脚本只处理 Feishu 字段 |
 | Medium | secret 不泄露缺少自动约束 | 已新增 `scripts/check-local-secret-leaks.mjs` 并纳入 `npm run check` |
 | Medium | 停服务靠名字猜会误伤 active OpenClaw | 已用 openduck 配置端口匹配 PID，再用 cwd/launchd label 复核 |
@@ -402,8 +420,8 @@ Review 观察：
 
 ## 下一阶段建议
 
-1. 做 Feishu WebSocket/app-token outbound smoke，明确和 custom-bot webhook 的边界。
-2. 拆 `packages/dashboard/src/client.mjs` 为 section renderer registry。
-3. 拆 `docs/build-review-html.mjs` 为 parser/template/rewrite。
-4. 把 approval queue 接到真实 tool action。
-5. 做真实 OpenClaw source/target schema diff drawer。
+1. 把备份飞书群 chat id 写入本地 ignored policy，并默认使用 allowlist/requireMention 启动。
+2. 做持久 replay/dispatch 记录，避免 bot 重启后重复回复。
+3. 把 Feishu replyBuilder 接到后续 agent runtime 的安全壳，而不是写死在 bot。
+4. 拆 `packages/dashboard/src/client.mjs` 为 section renderer registry。
+5. 拆 `docs/build-review-html.mjs` 为 parser/template/rewrite。

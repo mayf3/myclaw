@@ -4,9 +4,9 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.2 在 Human Experiments、共享 route adapter 和 migration approval queue 之后，新增强制结构红线：生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.3 在 Human Experiments、共享 route adapter、migration approval queue 和结构红线之后，新增插件化 Feishu WebSocket 群消息自动回复。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.2 完成度矩阵
+## Phase 1.3 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
@@ -90,7 +90,11 @@ Phase 1.1 MyClaw 结论：
 - approval decision 需要配置 gateway token，不能靠 loopback 免 token。
 - OpenClaw stage review summary 不等于字段级 schema diff；下一阶段再做真实 source/target diff。
 
-Phase 1.2 MyClaw 结论：
+Phase 1.3 MyClaw 结论：
+
+- Feishu 接入从 credential presence 进入真实群消息回复，但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
+- `packages/feishu-bot` 把 Feishu SDK 隔离成插件包，主线 core/runtime/gateway 仍保持干净。
+- 下一步不应直接进入 agent，而应先补 allowlist、requireMention、持久 replay 和 agent replyBuilder 边界。
 
 - 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
 - `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。

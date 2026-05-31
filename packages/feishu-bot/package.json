@@ -1,0 +1,12 @@
+{
+  "name": "@myclaw/feishu-bot",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.mjs"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "1.63.1"
+  }
+}
