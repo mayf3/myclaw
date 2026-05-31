@@ -1,5 +1,6 @@
 import http from "node:http";
 import { URL } from "node:url";
+import { handleControlEventStream } from "../../control-plane/src/event-stream.mjs";
 import { resolveControlGetRoute } from "../../control-plane/src/http-routes.mjs";
 import { resolveStateDir } from "../../core/src/state.mjs";
 import { getDashboardAsset } from "./assets.mjs";
@@ -57,6 +58,10 @@ export async function handleDashboardRequest(request, response, context) {
   const asset = getDashboardAsset(url.pathname);
   if (asset) {
     sendText(response, 200, asset.contentType, asset.body, "public, max-age=60");
+    return;
+  }
+  if (url.pathname === "/api/events/stream") {
+    await handleControlEventStream(request, response, { ...context, service: "myclaw-dashboard" });
     return;
   }
 

@@ -4,19 +4,19 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.4 在 Human Experiments、共享 route adapter、migration approval queue、结构红线和 Feishu WebSocket 群消息自动回复之后，新增 Gateway mutation audit 和 Dashboard health strip。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.5 在 Human Experiments、共享 route adapter、migration approval queue、结构红线、Feishu WebSocket 群消息自动回复、Gateway mutation audit 和 Dashboard health strip 之后，新增 Gateway SSE snapshot 与 scoped token。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.4 完成度矩阵
+## Phase 1.5 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
-| Gateway / 控制面 | 69 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter、approval decision mutation 和 mutation audit，仍缺 WS/SSE、scoped token |
+| Gateway / 控制面 | 83 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter、approval decision mutation、mutation audit、SSE snapshot 和 scoped token，仍缺 route schema、seq/replay 和 WebSocket |
 | Feishu/Lark 接入 | 64 | 92 | 42 | 35 | 有 WebSocket app-token direct text、default-closed policy、replay 和 redaction，缺 rich card/agent replyBuilder |
-| Dashboard / 观测 | 78 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments/health/audit，缺实时事件 |
+| Dashboard / 观测 | 81 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments/health/audit/stream 状态，缺 review drawer 和 delta replay |
 | OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
-| Tools / Security | 32 | 88 | 74 | 84 | 有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox |
+| Tools / Security | 34 | 88 | 74 | 84 | 有 migration approval seed 和 scoped gateway guard，缺 tool schema、tool approval、policy snapshot、sandbox |
 | Plugins / Skills | 26 | 92 | 88 | 78 | 有 Feishu plugin manifest 草案，但还没有通用 loader/skill loader |
 | Engineering Guardrails | 100 | 80 | 70 | 75 | `npm run check` 已强制生成物新鲜度、文件行数、目录文件数、目录深度 |
 
@@ -101,6 +101,12 @@ Phase 1.4 MyClaw 结论：
 - Gateway mutation audit 已落地，写操作会记录 action、状态码、actor 类型和资源类型，但不保存请求正文或 token。
 - Dashboard health strip 已落地，用户能从第一屏判断 Control API、state、HTML Center、Feishu adapter 和 mutation auth 是否健康。
 - 下一步应补 event stream、scoped token 和 review drawer，然后再进入 Agent runtime skeleton。
+
+Phase 1.5 MyClaw 结论：
+
+- Gateway SSE 已落地，但当前是 snapshot/heartbeat 驱动 Dashboard 自动刷新，还不是带 seq/replay 的真实增量事件总线。
+- Gateway scoped token 已落地，非 loopback 控制面 GET 不再裸露；`events:read` 和 `control:read` 已分开。
+- 下一步应补 approval-to-tool、route schema、event seq/replay，并拆 Dashboard renderer。
 
 - 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
 - `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。

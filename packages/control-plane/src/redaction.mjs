@@ -26,7 +26,7 @@ export function redactRunDetail(run) {
 }
 
 export function redactEvents(events = []) {
-  return events.map((event) => (isFeishuEvent(event) ? redactEvent(event) : event));
+  return events.map((event) => redactLocalPaths(isFeishuEvent(event) ? redactEvent(event) : event));
 }
 
 function redactEnvelope(envelope) {
@@ -75,6 +75,25 @@ function isFeishuEvent(event = {}) {
 
 function redactSummary(summary) {
   return String(summary || "").replace(/feishu-event inbound:.*/i, "feishu-event inbound: [redacted]");
+}
+
+function redactLocalPaths(value, key = "") {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactLocalPaths(item));
+  }
+  if (!value || typeof value !== "object") {
+    return shouldRedactPath(key, value) ? REDACTED : value;
+  }
+  return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [
+    entryKey,
+    redactLocalPaths(entryValue, entryKey),
+  ]));
+}
+
+function shouldRedactPath(key, value) {
+  const name = String(key || "").toLowerCase();
+  const text = String(value || "");
+  return (name === "path" || name.endsWith("path") || name === "reporoot") && text.startsWith("/");
 }
 
 function summarizeRedactedText(text) {

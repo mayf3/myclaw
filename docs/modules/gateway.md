@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.4 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.5 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot 和 scoped token。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -230,12 +230,20 @@ Phase 1.4：
 - Control-plane 新增 `GET /api/audit`，`GET /api/status` 内联最近 audit。
 - Dashboard 顶部 health strip 展示 Control API、state、HTML Center、Feishu adapter 和 mutation auth。
 
+Phase 1.5：
+
+- `GET /api/events/stream` 返回 SSE snapshot 和 heartbeat，snapshot 包含脱敏 events 与 audit。
+- Gateway 非 loopback 控制面 GET 统一走 read auth；`/api/health` 仍可公开探活。
+- `MYCLAW_GATEWAY_SCOPED_TOKENS` 支持 JSON 数组，形如 `{ "token": "...", "scopes": ["events:read"] }`。
+- scope 使用 any-scope 语义：`mutation` 可覆盖 mutation route，`read` 可覆盖 read route；细分 scope 如 `message:write`、`events:read`、`control:read` 用于最小授权。
+- legacy `MYCLAW_GATEWAY_TOKEN` 仍等价于 `*`，只建议本地开发或明确受保护网络使用。
+
 Phase 4：
 
 - HTTP + WS。
 - token auth。
 - run/resume/status。
-- event stream。
+- event stream seq/replay。
 - graceful shutdown。
 
 先不做：
@@ -255,10 +263,10 @@ Phase 4：
 - event 没有 seq，前端断线后无法判断丢事件。
 - Feishu webhook replay guard 目前仍是 adapter 内存 Map；WebSocket bot 已有 persistent replay，callback 路径后续也要统一。
 - encrypted challenge 已支持，但 encrypted message event 的类型覆盖仍很窄。
-- token 现在只是 shared secret，没有用户/角色/作用域。
+- scoped token 已有最小实现，但还不是用户/角色/租户权限系统。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 - Human Experiments 当前是静态 payload，不能被当作自动验收结果；但已按 L0-L6 分层暴露测试路线。
-- approval decision 只是 audit record，不是 authorization framework，也没有 scoped token。
+- approval decision 只是 audit record，不是完整 authorization framework。
 
 ## 验收标准
 
@@ -270,8 +278,10 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.4 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.5 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
 - `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
+- `GET /api/events/stream` 能返回脱敏 snapshot；非 loopback 时必须有 `events:read` 或 `read` scope。
+- 非 loopback 的 `/api/status`、`/api/events`、`/api/audit`、`/api/approvals`、Dashboard HTML 都必须有 `control:read` 或 `read` scope。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。

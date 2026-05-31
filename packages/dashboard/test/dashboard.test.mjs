@@ -50,6 +50,7 @@ test("dashboard serves HTML and status API", async () => {
     experimentsResponse,
     approvalsResponse,
     auditResponse,
+    streamResponse,
     runResponse,
     badRun,
   ] =
@@ -63,6 +64,7 @@ test("dashboard serves HTML and status API", async () => {
       fetch(`${dashboard.url}/api/experiments`),
       fetch(`${dashboard.url}/api/approvals`),
       fetch(`${dashboard.url}/api/audit`),
+      fetch(`${dashboard.url}/api/events/stream`),
       fetch(`${dashboard.url}/api/runs/in_test`),
       fetch(`${dashboard.url}/api/runs/..%2Fsecret`),
     ]);
@@ -81,6 +83,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.match(html, /MyClaw Dashboard/);
     assert.match(html, /运行健康/);
     assert.match(html, /Gateway Mutation Audit/);
+    assert.match(html, /streamStatus/);
     assert.match(html, /assets\/dashboard\.js/);
     assert.match(css, /reference-row/);
     assert.match(js, /renderReferenceCompletion/);
@@ -89,14 +92,15 @@ test("dashboard serves HTML and status API", async () => {
     assert.match(js, /renderLayerRoadmap/);
     assert.match(js, /renderHealth/);
     assert.match(js, /renderAudit/);
+    assert.match(js, /initEventStream/);
     assert.match(js, /renderApprovals/);
     assert.match(js, /renderRunDetail/);
     assert.equal(status.ok, true);
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 2);
     assert.equal(status.channels.length, 4);
-    assert.equal(status.milestones.currentPhase, "1.4");
-    assert.equal(status.experiments.currentPhase, "1.4");
+    assert.equal(status.milestones.currentPhase, "1.5");
+    assert.equal(status.experiments.currentPhase, "1.5");
     assert.equal(status.health.items.some((item) => item.id === "html-center"), true);
     assert.equal(status.audit.length, 1);
     assert.equal(status.approvals.length, 1);
@@ -108,6 +112,7 @@ test("dashboard serves HTML and status API", async () => {
     assert.deepEqual(experiments.experiments.layerRoadmap.map((item) => item.id), ["L0", "L1", "L2", "L3", "L4", "L5", "L6"]);
     assert.equal(approvals.approvals[0].title, "Dashboard approval");
     assert.equal(audit.audit[0].action, "gateway.message.receive");
+    assert.match(await readFirstChunk(streamResponse), /event: snapshot/);
     assert.equal(run.run.runId, "in_test");
     assert.equal(run.run.events.length, 1);
     assert.equal(badRun.status, 400);
@@ -115,3 +120,10 @@ test("dashboard serves HTML and status API", async () => {
     await new Promise((resolve) => dashboard.server.close(resolve));
   }
 });
+
+async function readFirstChunk(response) {
+  const reader = response.body.getReader();
+  const { value } = await reader.read();
+  await reader.cancel();
+  return Buffer.from(value).toString("utf8");
+}
