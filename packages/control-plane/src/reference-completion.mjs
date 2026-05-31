@@ -22,13 +22,13 @@ const moduleDefinitions = [
     openclaw: 92,
     hermes: 42,
     openhuman: 35,
-    gap: "已有 adapter/signature/encrypted challenge/custom-bot outbound facade、openduck credential import 和 WebSocket app-token 群回复，缺 policy、rich card 和持久 replay",
-    next: "扩展 policy、rich card、持久 replay 和 agent replyBuilder 接入",
+    gap: "已有 adapter/signature/encrypted challenge/custom-bot outbound facade、openduck credential import、WebSocket app-token 群回复、default-closed local policy、persistent replay 和 read redaction，缺 rich card 和 agent replyBuilder",
+    next: "扩展 rich card、agent replyBuilder 和持久 dispatch 详情",
     criteria: [
       c("feishu-event", "event challenge/text normalization", "partial", 70, "packages/feishu-adapter/src/index.mjs"),
-      c("feishu-security", "verify token, x-lark signature, replay guard, encrypted challenge", "partial", 75, "packages/feishu-adapter/test/feishu-adapter.test.mjs"),
+      c("feishu-security", "verify token, x-lark signature, replay guard, encrypted challenge, default-closed ingress and control read redaction", "partial", 90, "packages/feishu-bot/src/ingress-policy.mjs"),
       c("feishu-config", "local openduck app credential presence import without printing secrets", "done", 85, "scripts/import-openduck-config.mjs"),
-      c("feishu-runtime", "custom-bot outbound, app-token reply, WebSocket bot runtime", "partial", 70, "packages/feishu-bot/src/runtime.mjs"),
+      c("feishu-runtime", "custom-bot outbound, app-token direct reply, WebSocket bot runtime, local policy and persistent replay", "partial", 88, "packages/feishu-bot/src/runtime.mjs"),
     ],
   },
   {
@@ -113,11 +113,12 @@ const moduleDefinitions = [
     openclaw: 92,
     hermes: 88,
     openhuman: 78,
-    gap: "仅有 channel registry，没有 plugin manifest/skill loader",
-    next: "先做只读 skill loader，再做 plugin manifest",
+    gap: "已有 Feishu plugin manifest 草案，但还没有通用 loader/skill loader",
+    next: "先做 manifest validator，再做只读 skill loader",
     criteria: [
       c("channel-registry", "static channel registry", "partial", 30, "packages/channels/src/index.mjs"),
       c("skill-rule", "design review skill governance", "partial", 25, "~/.codex/skills/web-design-review/SKILL.md"),
+      c("plugin-manifest", "Feishu bot capability manifest", "partial", 28, "packages/feishu-bot/myclaw.plugin.json"),
       c("plugin-runtime", "manifest validation and runtime loader", "missing", 0, "OpenClaw reference"),
     ],
   },
@@ -154,14 +155,14 @@ export function buildFeishuAdoptionPayload() {
       "security posture: x-lark signature uses sha256(timestamp + nonce + encryptKey + rawBody)",
       "event model: message, card action, reaction, comment, media and dedup keys",
       "policy model: DM/group allowlist, mention requirement, pairing/approval",
-      "outbound model: text/card/threading/send result normalization; MyClaw has a facade, not app token delivery yet",
+      "outbound model: text/card/threading/send result normalization; MyClaw has app-token text delivery, not rich cards yet",
     ],
     blockers: [
       "OpenClaw plugin depends on @openclaw/plugin-sdk and OpenClaw runtime APIs",
       "plugin surface includes doc/drive/wiki/bitable tools far beyond MyClaw Phase 0",
       "direct loading would import OpenClaw config, secret and approval semantics before MyClaw owns them",
     ],
-    next: "Use the MyClaw Feishu adapter facade as the only gateway dependency, then port encrypted events, app-token outbound and policy pieces.",
+    next: "Keep the MyClaw Feishu adapter facade as the only gateway dependency, then port rich cards, agent replyBuilder and persistent dispatch details.",
   };
 }
 

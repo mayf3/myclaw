@@ -220,6 +220,8 @@ Phase 1.3：
 - `npm run check` 会重建 HTML 并在生成物 stale、缺失或多余时失败。
 - `myclaw doctor` 会报告 HTML Center health，避免报告链接坏了却没人知道。
 - 生成的模块 HTML 从 `docs/modules` 移到 `docs/rendered/modules`，避免源文档目录超过 20 个文件。
+- `packages/feishu-bot` 在 Gateway 外独立持有 Feishu SDK、default-closed policy 和 persistent replay。
+- Gateway/control-plane read API 对 Feishu run 做脱敏，避免 Dashboard 暴露正文、chat_id、sender_id。
 
 Phase 4：
 
@@ -236,16 +238,15 @@ Phase 4：
 - Control UI config editor。
 - public remote access。
 - launchd/systemd。
-- Feishu WebSocket mode。
 - Feishu outbound rich card。
-- 持久 replay window。
+- Feishu agent replyBuilder。
 
 ## 关键风险
 
 - 过早把 gateway 做成 OpenClaw 级别控制平面。
 - auth 作为后补，会导致 UI/channel 接入时重构。
 - event 没有 seq，前端断线后无法判断丢事件。
-- Feishu replay guard 目前是 adapter 内存 Map，服务重启后不保留 replay window。
+- Feishu webhook replay guard 目前仍是 adapter 内存 Map；WebSocket bot 已有 persistent replay，callback 路径后续也要统一。
 - encrypted challenge 已支持，但 encrypted message event 的类型覆盖仍很窄。
 - token 现在只是 shared secret，没有用户/角色/作用域。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。

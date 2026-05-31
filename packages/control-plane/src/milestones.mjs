@@ -6,7 +6,7 @@ export function buildMilestonesPayload() {
     currentPhase: "1.3",
     currentMilestone: "M7",
     summary:
-      "Phase 1.3 adds a plugin-scoped Feishu WebSocket bot so backup group messages can receive MyClaw text replies.",
+      "Phase 1.3 now hardens the plugin-scoped Feishu WebSocket bot with direct group replies, default-closed ingress, persistent replay, local policy files, and redacted control reads.",
     milestones: [
       m("M0", "本地消息闭环", "done", 100, "CLI send/receive、state、channel registry 已可用"),
       m("M1", "Gateway 与 Dashboard", "partial", 82, "共享 control route adapter、run detail、reference matrix、人类实验路线已可用，缺 event stream"),
@@ -14,8 +14,8 @@ export function buildMilestonesPayload() {
         "M2",
         "Feishu/Lark 边界",
         "partial",
-        78,
-        "signed encrypted challenge、custom-bot outbound facade、openduck credential import 和 WebSocket app-token 群回复已可用，缺 policy/rich card/持久 replay",
+        88,
+        "signed encrypted challenge、custom-bot outbound facade、openduck credential import、WebSocket app-token 群回复、default-closed local policy、persistent replay 和 redacted reads 已可用，缺 rich card/agent replyBuilder",
       ),
       m("M3", "OpenClaw 迁移", "partial", 65, "plan/stage/review summary 与 stage review 已有，缺 apply/rollback"),
       m("M4", "Agent Runtime 与审批", "partial", 25, "已有 migration approval queue，缺 tool approval、LLM loop 和 scoped token"),

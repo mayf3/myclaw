@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 export function buildFeishuIngressPolicy(options = {}) {
   const env = options.env ?? process.env;
   return {
@@ -6,7 +9,14 @@ export function buildFeishuIngressPolicy(options = {}) {
     requireMention: normalizeBoolean(options.requireMention ?? env.MYCLAW_FEISHU_REQUIRE_MENTION),
     mentionNames: normalizeList(options.mentionNames ?? env.MYCLAW_FEISHU_MENTION_NAMES),
     mentionIds: normalizeList(options.mentionIds ?? env.MYCLAW_FEISHU_MENTION_IDS),
+    unsafeOpenIngress: normalizeBoolean(options.unsafeOpenIngress ?? env.MYCLAW_FEISHU_UNSAFE_OPEN_INGRESS),
   };
+}
+
+export async function loadFeishuIngressPolicy(options = {}) {
+  const policyFile = resolvePolicyFile(options);
+  const fileOptions = policyFile ? await readPolicyFile(policyFile) : {};
+  return buildFeishuIngressPolicy({ ...fileOptions, ...definedOptions(options) });
 }
 
 export function isSupportedTextEvent(event = {}) {
@@ -17,11 +27,16 @@ export function isSupportedTextEvent(event = {}) {
 
 export function evaluateFeishuIngressPolicy({ event = {}, inbound, policy = {} } = {}) {
   const allowedChatIds = new Set(policy.allowedChatIds || []);
+  const allowedSenderIds = new Set(policy.allowedSenderIds || []);
+  const hasMentionRule = Boolean(policy.requireMention && ((policy.mentionNames || []).length || (policy.mentionIds || []).length));
+  if (!allowedChatIds.size && !allowedSenderIds.size && !hasMentionRule && !policy.unsafeOpenIngress) {
+    return { ok: false, reason: "ingress_policy_required" };
+  }
+
   if (allowedChatIds.size && !allowedChatIds.has(inbound.conversationId)) {
     return { ok: false, reason: "chat_not_allowed" };
   }
 
-  const allowedSenderIds = new Set(policy.allowedSenderIds || []);
   if (allowedSenderIds.size && !allowedSenderIds.has(inbound.sender.id)) {
     return { ok: false, reason: "sender_not_allowed" };
   }
@@ -31,6 +46,30 @@ export function evaluateFeishuIngressPolicy({ event = {}, inbound, policy = {} }
   }
 
   return { ok: true };
+}
+
+async function readPolicyFile(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return {};
+    }
+    throw error;
+  }
+}
+
+function resolvePolicyFile(options) {
+  const env = options.env ?? process.env;
+  const configured = options.policyFile ?? env.MYCLAW_FEISHU_POLICY_FILE;
+  if (configured === false || configured === "false") {
+    return "";
+  }
+  return path.resolve(String(configured || path.join(process.cwd(), ".myclaw", "feishu-policy.json")));
+}
+
+function definedOptions(options) {
+  return Object.fromEntries(Object.entries(options).filter(([, value]) => value !== undefined));
 }
 
 function messageMentionsBot(event, policy) {

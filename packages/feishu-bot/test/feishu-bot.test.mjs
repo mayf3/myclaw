@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -18,6 +18,7 @@ test("Feishu bot starts a websocket dispatcher and replies to message events", a
       domain: "feishu",
     },
     sdkRuntime: createFakeSdkRuntime(calls),
+    ingressPolicy: { unsafeOpenIngress: true, policyFile: false },
     replyBuilder: ({ inbound }) => `ack ${inbound.text}`,
     logger: silentLogger(),
   });
@@ -38,6 +39,103 @@ test("Feishu bot starts a websocket dispatcher and replies to message events", a
   assert.equal(runs[0].envelope.result.inbound.raw, undefined);
   assert.equal(runs[0].envelope.events.find((event) => event.type === "feishu.bot.reply.completed").replyMode, "direct");
   bot.stop();
+});
+
+test("Feishu bot stores replay state and skips duplicate events after restart", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const firstCalls = { registered: null, start: null, create: [] };
+  const first = await startFeishuBot({
+    stateDir,
+    config: {
+      connectionMode: "websocket",
+      appId: "app-id",
+      appSecret: "app-secret",
+      domain: "feishu",
+    },
+    sdkRuntime: createFakeSdkRuntime(firstCalls),
+    ingressPolicy: { unsafeOpenIngress: true, policyFile: false },
+    replyBuilder: () => "ack",
+    logger: silentLogger(),
+  });
+  await firstCalls.registered["im.message.receive_v1"](feishuTextEvent({ text: "hello" }));
+  first.stop();
+
+  const secondCalls = { registered: null, start: null, create: [] };
+  const second = await startFeishuBot({
+    stateDir,
+    config: {
+      connectionMode: "websocket",
+      appId: "app-id",
+      appSecret: "app-secret",
+      domain: "feishu",
+    },
+    sdkRuntime: createFakeSdkRuntime(secondCalls),
+    ingressPolicy: { unsafeOpenIngress: true, policyFile: false },
+    replyBuilder: () => "ack again",
+    logger: silentLogger(),
+  });
+  const duplicate = await secondCalls.registered["im.message.receive_v1"](feishuTextEvent({ text: "hello" }));
+
+  assert.equal(duplicate.duplicate, true);
+  assert.equal(firstCalls.create.length, 1);
+  assert.equal(secondCalls.create.length, 0);
+  second.stop();
+});
+
+test("Feishu bot loads ingress policy from a local policy file", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const policyFile = path.join(stateDir, "feishu-policy.json");
+  await writeFile(policyFile, `${JSON.stringify({ allowedChatIds: ["oc_group"] })}\n`, "utf8");
+  const calls = { registered: null, start: null, create: [] };
+  const bot = await startFeishuBot({
+    stateDir,
+    config: {
+      connectionMode: "websocket",
+      appId: "app-id",
+      appSecret: "app-secret",
+      domain: "feishu",
+    },
+    sdkRuntime: createFakeSdkRuntime(calls),
+    ingressPolicy: { policyFile },
+    replyBuilder: () => "should not send",
+    logger: silentLogger(),
+  });
+
+  const skipped = await calls.registered["im.message.receive_v1"](feishuTextEvent({ text: "hello", chatId: "oc_other" }));
+
+  assert.equal(skipped.result.reason, "chat_not_allowed");
+  assert.equal(calls.create.length, 0);
+  assert.match(await readFile(policyFile, "utf8"), /allowedChatIds/);
+  bot.stop();
+});
+
+test("Feishu bot blocks open ingress unless a policy or unsafe override is explicit", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const calls = { reply: [] };
+  const blocked = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => "should not send",
+    ingressPolicy: {},
+    stateDir,
+  });
+
+  assert.equal(blocked.ok, true);
+  assert.equal(blocked.result.reason, "ingress_policy_required");
+  assert.equal(calls.reply.length, 0);
+
+  const allowed = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => "ack",
+    ingressPolicy: { unsafeOpenIngress: true },
+    stateDir,
+  });
+
+  assert.equal(allowed.ok, true);
+  assert.equal(calls.create.length, 1);
 });
 
 test("Feishu bot handler skips app sender messages to avoid reply loops", async () => {
@@ -67,7 +165,7 @@ test("Feishu bot handler can reply in thread when explicitly configured", async 
     logger: silentLogger(),
     processed: new Set(),
     replyBuilder: () => "thread ack",
-    ingressPolicy: {},
+    ingressPolicy: { unsafeOpenIngress: true },
     replyMode: "thread",
     stateDir,
   });
@@ -126,7 +224,7 @@ test("Feishu bot handler records failed reply when app API returns an error", as
     logger: silentLogger(),
     processed: new Set(),
     replyBuilder: () => "ack",
-    ingressPolicy: {},
+    ingressPolicy: { unsafeOpenIngress: true },
     stateDir,
   });
 
@@ -145,7 +243,7 @@ test("Feishu bot handler skips unsupported message types without retrying", asyn
     logger: silentLogger(),
     processed: new Set(),
     replyBuilder: () => "should not send",
-    ingressPolicy: {},
+    ingressPolicy: { unsafeOpenIngress: true },
     stateDir,
   });
 

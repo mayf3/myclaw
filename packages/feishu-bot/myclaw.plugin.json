@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "myclaw.feishu-bot",
+  "name": "MyClaw Feishu Bot",
+  "version": "0.1.0",
+  "runtime": "node",
+  "entry": "src/index.mjs",
+  "capabilities": {
+    "channels": ["feishu"],
+    "inbound": ["im.message.receive_v1"],
+    "outbound": ["text.direct", "text.thread"],
+    "policy": ["allowedChatIds", "allowedSenderIds", "requireMention", "unsafeOpenIngress"],
+    "state": ["persistentReplay"]
+  },
+  "secrets": [
+    "MYCLAW_FEISHU_APP_ID",
+    "MYCLAW_FEISHU_APP_SECRET"
+  ],
+  "localConfig": [
+    ".myclaw/feishu-policy.json"
+  ]
+}
