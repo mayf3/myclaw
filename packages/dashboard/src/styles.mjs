@@ -86,6 +86,32 @@ section{margin-bottom:16px}
 }
 .stat span{display:block;color:var(--muted);font-size:12px;font-weight:700}
 .stat strong{display:block;margin-top:10px;font-size:30px;line-height:1}
+.health-strip{
+  border:1px solid var(--line);
+  border-left:5px solid var(--accent);
+  background:#fff;
+  border-radius:8px;
+  padding:14px 16px;
+}
+.health-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.health-head h3{margin:0 0 4px;font-size:17px}
+.health-head p{margin:0;color:var(--muted)}
+.health-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.health-item{
+  min-height:84px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px;
+  background:#fbfcfd;
+}
+.health-item strong{display:block;margin:7px 0 4px}
+.health-item p{margin:0;color:var(--muted);font-size:12px}
 .panel{
   border:1px solid var(--line);
   background:var(--panel);
@@ -178,6 +204,8 @@ section{margin-bottom:16px}
 .experiment-card p{margin:6px 0}
 .mini-pre{max-height:none;margin:8px 0;font-size:12px}
 .approval-list,.diff-list{display:grid;gap:8px}
+.audit-list{overflow:auto}
+.audit-list table{min-width:760px}
 .approval-row,.diff-row{
   display:grid;
   grid-template-columns:150px minmax(0,1fr) 120px;
@@ -223,6 +251,7 @@ pre{
   .topbar{display:block}
   .topbar button{margin-top:12px}
   .stats,.two-col,.decision-grid,.approval-row,.diff-row{grid-template-columns:1fr}
+  .health-grid{grid-template-columns:1fr}
   .milestone-row{grid-template-columns:1fr}
   .reference-row{grid-template-columns:180px 90px minmax(220px,1fr) 82px 82px 82px}
 }

@@ -30,7 +30,7 @@ Review 观察：
 | 层 | 当前状态 | 你能否参与 | 当前入口 | 下一步 |
 |---|---|---|---|---|
 | L0 接入层 | partial | 可以 | E0、E2A、E2B、E2C，E2/E3 配置后 | rich card 和 agent replyBuilder |
-| L1 Gateway | partial | 可以 | E1、E2A、E2B、E2C、E3、E5 | 补 mutation audit 和 health strip |
+| L1 Gateway | partial | 可以 | E1、E1B、E2A、E2B、E2C、E3、E5 | 补 event stream 和 scoped token |
 | L2 Workflow / 审批 | partial | 可以 | E4，E5 | 把 approval 接到真实 tool action |
 | L3 单 Agent | planned | 暂不能 | E6 占位 | 最小 run/resume/tool loop |
 | L4 Session Search / Provenance | planned | 暂不能 | E8 占位 | run/step/tool result 可检索 |
@@ -81,6 +81,7 @@ Review 观察：
 
 - 每次测试先跑 `npm run check`，保证文档和代码不是 stale。
 - Dashboard 是你观察状态的主入口，不只是装饰 UI。
+- E1B 现在用于确认 Dashboard health 和 Gateway mutation audit；audit 不能包含请求正文或 token。
 - E2B 当前只做文本自动回复；default-closed ingress 和 persistent replay 已有，还缺 rich card 和 agent replyBuilder。
 - E4/E5 是后续 agent 写操作的安全前置。
 - L0/L1 smoke 没过，不进入 L3 agent。
@@ -140,8 +141,8 @@ issue 或 commit：
 下一轮建议仍然留在 L0/L1，不直接做 agent：
 
 1. Feishu rich card 和 agent replyBuilder 安全边界。
-2. Gateway mutation audit。
-3. Dashboard 顶部 health strip。
+2. Gateway event stream 和 scoped token。
+3. Dashboard review drawer 和实时事件。
 4. 保持 E0/E1/E4/E5/E7 作为回归测试。
 
 ## 本地文档入口

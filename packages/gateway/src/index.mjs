@@ -2,6 +2,7 @@ import http from "node:http";
 import { URL } from "node:url";
 import { resolveStateDir } from "../../core/src/state.mjs";
 import { authorizeGatewayMutation, authorizeGatewayToken } from "./auth.mjs";
+import { attachGatewayAudit, classifyGatewayMutation, shouldAuditGatewayRequest } from "./audit.mjs";
 import { sendJson } from "./http.mjs";
 import { handlePostApprovalDecision, parseApprovalDecisionPath } from "./routes/approvals.mjs";
 import { handleGetRequest } from "./routes/control.mjs";
@@ -18,6 +19,7 @@ export async function startGateway(options = {}) {
     openclawSource: options.openclawSource,
     host,
     token: options.token ?? process.env.MYCLAW_GATEWAY_TOKEN ?? "",
+    logger: options.logger ?? console,
     feishuVerifyToken: options.feishuVerifyToken ?? process.env.MYCLAW_FEISHU_VERIFY_TOKEN ?? "",
     feishuEncryptKey: options.feishuEncryptKey ?? process.env.MYCLAW_FEISHU_ENCRYPT_KEY ?? "",
   };
@@ -53,6 +55,9 @@ export async function startGateway(options = {}) {
 export async function handleGatewayRequest(request, response, context) {
   const url = new URL(request.url || "/", "http://127.0.0.1");
   const approvalDecisionId = parseApprovalDecisionPath(url.pathname);
+  if (shouldAuditGatewayRequest(request)) {
+    attachGatewayAudit(request, response, context, classifyGatewayMutation(url, { approvalDecisionId }));
+  }
   if (request.method === "POST" && (url.pathname === "/feishu/events" || url.pathname === "/api/feishu/events")) {
     await handlePostFeishuEvent(request, response, context);
     return;

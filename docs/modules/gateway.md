@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.3 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，而不是塞进 gateway 主线。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.4 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -223,6 +223,13 @@ Phase 1.3：
 - `packages/feishu-bot` 在 Gateway 外独立持有 Feishu SDK、default-closed policy 和 persistent replay。
 - Gateway/control-plane read API 对 Feishu run 做脱敏，避免 Dashboard 暴露正文、chat_id、sender_id。
 
+Phase 1.4：
+
+- Gateway 对 `/messages`、`/api/openclaw-migration/stage`、approval decision 和 Feishu callback 写 mutation audit。
+- Audit 记录 action、method、path、status、elapsedMs、actor 类型和 resource 类型，不保存 request body、token 或 secret。
+- Control-plane 新增 `GET /api/audit`，`GET /api/status` 内联最近 audit。
+- Dashboard 顶部 health strip 展示 Control API、state、HTML Center、Feishu adapter 和 mutation auth。
+
 Phase 4：
 
 - HTTP + WS。
@@ -263,7 +270,8 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.3 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.4 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
+- `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。

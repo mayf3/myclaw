@@ -1,5 +1,6 @@
 import { listChannels } from "../../channels/src/index.mjs";
 import { listApprovals, readApproval } from "../../core/src/approvals.mjs";
+import { listAuditEvents } from "../../core/src/audit.mjs";
 import { listRuns, readEvents, readRun } from "../../core/src/state.mjs";
 import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
@@ -21,6 +22,10 @@ export async function buildStatusPayload(context) {
     cachedOpenClawPlan(context.openclawSource),
     readLatestOpenClawStage(context.stateDir),
   ]);
+  const [audit, health] = await Promise.all([
+    listAuditEvents(context.stateDir, { limit: 20 }),
+    buildRuntimeHealthPayload(context),
+  ]);
   const stageSummary = buildOpenClawStageSummary(migrationPlan, migrationStage);
   const stageReview = buildOpenClawStageReview(migrationPlan, migrationStage);
   return {
@@ -31,9 +36,11 @@ export async function buildStatusPayload(context) {
     channels: listChannels(),
     milestones: buildMilestonesPayload(),
     experiments: buildHumanExperimentsPayload(),
+    health,
     approvals,
     runs: runs.map(redactRunRecord),
     events: redactEvents(events),
+    audit,
     openclawMigration: migrationPlan,
     openclawStage: migrationStage,
     openclawStageSummary: stageSummary,
@@ -68,6 +75,13 @@ export async function buildEventsPayload(context, options = {}) {
   return {
     ok: true,
     events: redactEvents(await readEvents(context.stateDir, { limit: options.limit || 100 })),
+  };
+}
+
+export async function buildAuditPayload(context, options = {}) {
+  return {
+    ok: true,
+    audit: await listAuditEvents(context.stateDir, { limit: options.limit || 100 }),
   };
 }
 
@@ -143,6 +157,30 @@ export function buildFeishuAdoptionStatusPayload(context = {}) {
   };
 }
 
+export async function buildRuntimeHealthPayload(context = {}) {
+  const adapter = describeFeishuAdapterReadiness(
+    buildFeishuAdapterConfig({
+      verificationToken: context.feishuVerifyToken,
+      encryptKey: context.feishuEncryptKey,
+    }),
+  );
+  const htmlCenter = await checkHttpHealth(context.htmlCenterUrl || process.env.HTML_CENTER_URL || "http://127.0.0.1:4177");
+  const auth = mutationAuthHealth(context);
+  const items = [
+    healthItem("control-plane", "Control API", "ok", context.service || "myclaw-control-plane"),
+    healthItem("state-store", "Local state", "ok", "runs/events/audit readable"),
+    healthItem("html-center", "HTML Center", htmlCenter.ok ? "ok" : "warn", htmlCenter.summary),
+    healthItem("feishu-adapter", "Feishu adapter", adapter.level === "blocked" ? "fail" : adapter.level === "ready" ? "ok" : "warn", adapter.level),
+    healthItem("mutation-auth", "Mutation auth", auth.status, auth.summary),
+  ];
+  return {
+    schemaVersion: 1,
+    at: new Date().toISOString(),
+    summary: healthSummary(items),
+    items,
+  };
+}
+
 async function cachedOpenClawPlan(source) {
   const key = source || "<default>";
   const now = Date.now();
@@ -169,6 +207,46 @@ async function cachedOpenClawPlan(source) {
       destructive: false,
     };
   }
+}
+
+async function checkHttpHealth(baseUrl) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 600);
+  try {
+    const response = await fetch(`${String(baseUrl).replace(/\/$/, "")}/api/health`, { signal: controller.signal });
+    return { ok: response.ok, summary: response.ok ? "ready" : `http ${response.status}` };
+  } catch {
+    return { ok: false, summary: "unreachable" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function mutationAuthHealth(context) {
+  const token = String(context.token ?? process.env.MYCLAW_GATEWAY_TOKEN ?? "");
+  if (token) {
+    return { status: "ok", summary: "token configured" };
+  }
+  if (isLoopbackHost(context.host || "127.0.0.1")) {
+    return { status: "warn", summary: "loopback mutations allowed without token" };
+  }
+  return { status: "fail", summary: "non-loopback mutations require token" };
+}
+
+function isLoopbackHost(host) {
+  return ["127.0.0.1", "localhost", "::1"].includes(String(host || "").toLowerCase());
+}
+
+function healthItem(id, label, status, summary) {
+  return { id, label, status, summary };
+}
+
+function healthSummary(items) {
+  return {
+    ok: items.filter((item) => item.status === "ok").length,
+    warn: items.filter((item) => item.status === "warn").length,
+    fail: items.filter((item) => item.status === "fail").length,
+  };
 }
 
 export function buildOpenClawStageSummary(plan, stage) {

@@ -314,10 +314,10 @@ function buildStageStatus() {
       <main>
         <section id="module-summary" class="hero">
           <h2>阶段状态</h2>
-          <p>MyClaw 当前 Phase 1.3 的可运行能力、结构约束、用户实验、验证记录、下一步和风险。</p>
+          <p>MyClaw 当前 Phase 1.4 的可运行能力、结构约束、用户实验、验证记录、下一步和风险。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.3</span>
+            <span class="tag phase">Phase 1.4</span>
             <span class="tag">状态文档</span>
           </div>
         </section>
@@ -360,10 +360,10 @@ function buildImplementationArchitecture() {
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 1.3 的结构约束、HTML Center 修复、文档目录拆分、Feishu WebSocket bot 和当前架构审查。</p>
+          <p>MyClaw Phase 1.4 的 Gateway audit、Dashboard health、Feishu WebSocket bot、结构约束和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.3</span>
+            <span class="tag phase">Phase 1.4</span>
             <span class="tag">实现评审</span>
           </div>
         </section>

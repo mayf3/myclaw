@@ -4,15 +4,15 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.3 在 Human Experiments、共享 route adapter、migration approval queue 和结构红线之后，新增插件化 Feishu WebSocket 群消息自动回复。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.4 在 Human Experiments、共享 route adapter、migration approval queue、结构红线和 Feishu WebSocket 群消息自动回复之后，新增 Gateway mutation audit 和 Dashboard health strip。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.3 完成度矩阵
+## Phase 1.4 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
-| Gateway / 控制面 | 65 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter 和 approval decision mutation，仍缺 WS/SSE、scoped token |
+| Gateway / 控制面 | 69 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter、approval decision mutation 和 mutation audit，仍缺 WS/SSE、scoped token |
 | Feishu/Lark 接入 | 64 | 92 | 42 | 35 | 有 WebSocket app-token direct text、default-closed policy、replay 和 redaction，缺 rich card/agent replyBuilder |
-| Dashboard / 观测 | 73 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments，缺实时事件 |
+| Dashboard / 观测 | 78 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments/health/audit，缺实时事件 |
 | OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
@@ -95,6 +95,12 @@ Phase 1.3 MyClaw 结论：
 - Feishu 接入从 credential presence 进入真实群消息回复，默认直接发群消息而不是话题回复；已补 default-closed local policy、persistent replay 和 read redaction，但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
 - `packages/feishu-bot` 把 Feishu SDK 隔离成插件包，主线 core/runtime/gateway 仍保持干净。
 - 下一步不应把飞书群直接接到可执行工具的 agent，而应先补 Gateway audit、agent replyBuilder 边界和 rich card。
+
+Phase 1.4 MyClaw 结论：
+
+- Gateway mutation audit 已落地，写操作会记录 action、状态码、actor 类型和资源类型，但不保存请求正文或 token。
+- Dashboard health strip 已落地，用户能从第一屏判断 Control API、state、HTML Center、Feishu adapter 和 mutation auth 是否健康。
+- 下一步应补 event stream、scoped token 和 review drawer，然后再进入 Agent runtime skeleton。
 
 - 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
 - `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。

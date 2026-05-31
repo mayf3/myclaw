@@ -50,11 +50,11 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
 
     const milestones = await fetch(`${gateway.url}/api/milestones`).then((response) => response.json());
-    assert.equal(milestones.milestones.currentPhase, "1.3");
-    assert.equal(milestones.milestones.currentMilestone, "M7");
+    assert.equal(milestones.milestones.currentPhase, "1.4");
+    assert.equal(milestones.milestones.currentMilestone, "M1");
 
     const experiments = await fetch(`${gateway.url}/api/experiments`).then((response) => response.json());
-    assert.equal(experiments.experiments.currentPhase, "1.3");
+    assert.equal(experiments.experiments.currentPhase, "1.4");
     assert.deepEqual(experiments.experiments.layerRoadmap.map((item) => item.id), ["L0", "L1", "L2", "L3", "L4", "L5", "L6"]);
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E4"), true);
 
@@ -141,6 +141,62 @@ test("gateway protects mutations with tokens when configured", async () => {
     const envelope = await allowed.json();
     assert.equal(allowed.status, 200);
     assert.equal(envelope.ok, true);
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway writes mutation audit records without request bodies or tokens", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-gateway-audit-"));
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: stateDir, token: "secret" });
+  try {
+    const denied = await fetch(`${gateway.url}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "audit body must not leak" }),
+    });
+    assert.equal(denied.status, 401);
+
+    const allowed = await fetch(`${gateway.url}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-myclaw-token": "secret" },
+      body: JSON.stringify({ text: "allowed audit body must not leak" }),
+    });
+    assert.equal(allowed.status, 200);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const payload = await fetch(`${gateway.url}/api/audit`).then((response) => response.json());
+    assert.equal(payload.ok, true);
+    assert.equal(payload.audit.length, 2);
+    assert.equal(payload.audit.some((item) => item.status === 401 && item.outcome === "blocked"), true);
+    assert.equal(payload.audit.some((item) => item.status === 200 && item.outcome === "allowed"), true);
+    assert.equal(payload.audit.some((item) => item.actor.tokenProvided), true);
+    const joined = JSON.stringify(payload);
+    assert.equal(joined.includes("secret"), false);
+    assert.equal(joined.includes("audit body must not leak"), false);
+  } finally {
+    await new Promise((resolve) => gateway.server.close(resolve));
+  }
+});
+
+test("gateway audits unknown mutating requests before returning method errors", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-gateway-audit-unknown-"));
+  const gateway = await startGateway({ port: 0, stateDir, openclawSource: stateDir });
+  try {
+    const response = await fetch(`${gateway.url}/api/not-a-route`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "unknown body must not leak" }),
+    });
+    assert.equal(response.status, 405);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const payload = await fetch(`${gateway.url}/api/audit`).then((auditResponse) => auditResponse.json());
+    assert.equal(payload.audit.length, 1);
+    assert.equal(payload.audit[0].action, "gateway.mutation.unknown");
+    assert.equal(payload.audit[0].status, 405);
+    assert.equal(payload.audit[0].outcome, "blocked");
+    assert.equal(JSON.stringify(payload).includes("unknown body must not leak"), false);
   } finally {
     await new Promise((resolve) => gateway.server.close(resolve));
   }

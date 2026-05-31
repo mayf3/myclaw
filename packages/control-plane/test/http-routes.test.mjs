@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { createEvent, okEnvelope } from "../../core/src/envelope.mjs";
 import { createApprovalRequest } from "../../core/src/approvals.mjs";
+import { recordAuditEvent } from "../../core/src/audit.mjs";
 import { recordRun } from "../../core/src/state.mjs";
 import { resolveControlGetRoute } from "../src/http-routes.mjs";
 
@@ -22,6 +23,14 @@ test("control get route adapter resolves shared read routes", async () => {
   const approval = await createApprovalRequest(stateDir, {
     title: "Route approval",
     subject: { type: "test" },
+  });
+  await recordAuditEvent(stateDir, {
+    action: "gateway.message.receive",
+    method: "POST",
+    path: "/messages",
+    status: 200,
+    actor: { kind: "loopback", local: true },
+    resource: { type: "message" },
   });
   const context = { stateDir, openclawSource: stateDir, service: "route-test" };
 
@@ -43,7 +52,7 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.3");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.4");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
@@ -52,6 +61,10 @@ test("control get route adapter resolves shared read routes", async () => {
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);
   assert.equal(approvals.payload.approvals[0].approvalId, approval.approvalId);
+
+  const audit = await resolveControlGetRoute(url("/api/audit"), context);
+  assert.equal(audit.status, 200);
+  assert.equal(audit.payload.audit[0].action, "gateway.message.receive");
 
   const approvalDetail = await resolveControlGetRoute(url(`/api/approvals/${approval.approvalId}`), context);
   assert.equal(approvalDetail.status, 200);

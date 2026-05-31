@@ -3,13 +3,13 @@ export function buildMilestonesPayload() {
     schemaVersion: 1,
     computed: false,
     source: "static-roadmap",
-    currentPhase: "1.3",
-    currentMilestone: "M7",
+    currentPhase: "1.4",
+    currentMilestone: "M1",
     summary:
-      "Phase 1.3 now hardens the plugin-scoped Feishu WebSocket bot with direct group replies, default-closed ingress, persistent replay, local policy files, and redacted control reads.",
+      "Phase 1.4 adds Gateway mutation audit and a Dashboard health strip on top of the default-closed Feishu bot.",
     milestones: [
       m("M0", "本地消息闭环", "done", 100, "CLI send/receive、state、channel registry 已可用"),
-      m("M1", "Gateway 与 Dashboard", "partial", 82, "共享 control route adapter、run detail、reference matrix、人类实验路线已可用，缺 event stream"),
+      m("M1", "Gateway 与 Dashboard", "partial", 88, "共享 control route adapter、run detail、reference matrix、人类实验路线、health strip 和 mutation audit 已可用，缺 event stream"),
       m(
         "M2",
         "Feishu/Lark 边界",
