@@ -8,7 +8,8 @@ import {
   sendFeishuAppText,
 } from "../../feishu-adapter/src/index.mjs";
 import { buildDefaultFeishuReply } from "./reply-policy.mjs";
-import { buildFeishuIngressPolicy, evaluateFeishuIngressPolicy, isSupportedTextEvent } from "./ingress-policy.mjs";
+import { evaluateFeishuIngressPolicy, isSupportedTextEvent, loadFeishuIngressPolicy } from "./ingress-policy.mjs";
+import { createFeishuReplayStore } from "./replay-store.mjs";
 import { loadFeishuSdkRuntime } from "./sdk-runtime.mjs";
 
 export async function startFeishuBot(options = {}) {
@@ -22,6 +23,8 @@ export async function startFeishuBot(options = {}) {
   }
 
   const replyMode = normalizeReplyMode(options.replyMode);
+  const stateDir = resolveStateDir(options.stateDir);
+  const ingressPolicy = await loadFeishuIngressPolicy(options.ingressPolicy);
   const sdkRuntime = options.sdkRuntime ?? (await loadFeishuSdkRuntime());
   const client = sdkRuntime.createClient(config);
   const eventDispatcher = sdkRuntime.createEventDispatcher(config);
@@ -31,9 +34,10 @@ export async function startFeishuBot(options = {}) {
     config,
     logger: options.logger ?? console,
     replyBuilder: options.replyBuilder ?? ((input) => buildDefaultFeishuReply(input)),
-    ingressPolicy: buildFeishuIngressPolicy(options.ingressPolicy),
+    ingressPolicy,
     replyMode,
-    stateDir: resolveStateDir(options.stateDir),
+    replayStore: options.replayStore ?? createFeishuReplayStore({ stateDir, staleMs: options.replayStaleMs }),
+    stateDir,
     processed,
   };
 
@@ -71,17 +75,22 @@ export async function handleFeishuMessageEvent(event, context) {
   const runId = createRunId("fb");
   const events = [createEvent("feishu.bot.message.received", { eventId: eventId || null })];
   try {
+    const reservation = eventId && context.replayStore ? await context.replayStore.reserve(eventId) : { duplicate: false };
+    if (reservation.duplicate) {
+      context.processed.delete(eventId);
+      return { ok: true, duplicate: true, eventId, status: reservation.status || "seen" };
+    }
     if (event?.sender?.sender_type === "app") {
-      return await recordSkipped(context.stateDir, runId, events, "bot_sender");
+      return await recordSkipped(context, runId, events, eventId, "bot_sender");
     }
     if (!isSupportedTextEvent(event)) {
-      return await recordSkipped(context.stateDir, runId, events, "unsupported_message_type");
+      return await recordSkipped(context, runId, events, eventId, "unsupported_message_type");
     }
 
     const inbound = normalizeFeishuEvent(event);
     const policyDecision = evaluateFeishuIngressPolicy({ event, inbound, policy: context.ingressPolicy });
     if (!policyDecision.ok) {
-      return await recordSkipped(context.stateDir, runId, events, policyDecision.reason);
+      return await recordSkipped(context, runId, events, eventId, policyDecision.reason);
     }
 
     const replyText = String(await context.replyBuilder({ inbound, event })).trim();
@@ -115,11 +124,13 @@ export async function handleFeishuMessageEvent(event, context) {
     );
     const envelope = okEnvelope({ runId, result: { inbound, reply }, events });
     await recordRun(context.stateDir, runId, envelope);
+    await context.replayStore?.complete(eventId, { status: "completed", runId });
     return envelope;
   } catch (error) {
     if (eventId) {
       context.processed.delete(eventId);
     }
+    await context.replayStore?.fail(eventId, { runId, message: redactError(error) });
     events.push(createEvent("feishu.bot.reply.failed", { message: redactError(error) }));
     const envelope = errorEnvelope({
       runId,
@@ -133,10 +144,11 @@ export async function handleFeishuMessageEvent(event, context) {
   }
 }
 
-async function recordSkipped(stateDir, runId, events, reason) {
+async function recordSkipped(context, runId, events, eventId, reason) {
   events.push(createEvent("feishu.bot.message.skipped", { reason }));
   const envelope = okEnvelope({ runId, result: { skipped: true, reason }, events });
-  await recordRun(stateDir, runId, envelope);
+  await recordRun(context.stateDir, runId, envelope);
+  await context.replayStore?.complete(eventId, { status: "skipped", runId, reason });
   return envelope;
 }
 

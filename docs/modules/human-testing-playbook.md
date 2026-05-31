@@ -29,8 +29,8 @@ Review 观察：
 
 | 层 | 当前状态 | 你能否参与 | 当前入口 | 下一步 |
 |---|---|---|---|---|
-| L0 接入层 | partial | 可以 | E0、E2A、E2B，E2/E3 配置后 | 补 Feishu allowlist/requireMention |
-| L1 Gateway | partial | 可以 | E1、E2A、E2B、E3、E5 | 补 mutation audit 和 health strip |
+| L0 接入层 | partial | 可以 | E0、E2A、E2B、E2C，E2/E3 配置后 | rich card 和 agent replyBuilder |
+| L1 Gateway | partial | 可以 | E1、E2A、E2B、E2C、E3、E5 | 补 mutation audit 和 health strip |
 | L2 Workflow / 审批 | partial | 可以 | E4，E5 | 把 approval 接到真实 tool action |
 | L3 单 Agent | planned | 暂不能 | E6 占位 | 最小 run/resume/tool loop |
 | L4 Session Search / Provenance | planned | 暂不能 | E8 占位 | run/step/tool result 可检索 |
@@ -44,7 +44,8 @@ Review 观察：
 | E0 本地消息闭环 | L0 | 现在就测 | `npm run myclaw -- send --text "hello from human" --json` | 返回 ok envelope，记录 runId |
 | E1 Dashboard | L1 | 现在就测 | `npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE`；打开 `http://127.0.0.1:4321` | 能看到 Phase、L0-L6、Approvals、Runs |
 | E2A Openduck Feishu credential presence | L0/L1 | 现在就测 | `npm run import:openduck -- --json`；`set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE` | 输出不含 secret 值，Dashboard 显示 app credentials ready、websocket runtime ready、app-token outbound ready，`.myclaw/` 仍 ignored |
-| E2B Feishu WebSocket 群回复 | L0/L1 | 现在就测 | `set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct`；在备份群发文本 | 群里直接收到自动回复，不是话题回复；Dashboard 最近 Runs 有 `fb_*` |
+| E2B Feishu WebSocket 群回复 | L0/L1 | 现在就测 | `set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct`；在备份群发文本 | 群里直接收到自动回复，不是话题回复；Dashboard 最近 Runs 有脱敏 `fb_*` |
+| E2C Feishu hardening | L0/L1 | 现在就测 | `node --test packages/feishu-bot/test/feishu-bot.test.mjs packages/control-plane/test/http-routes.test.mjs`；可选写 `.myclaw/feishu-policy.json` | 重复 event 只回复一次；policy 文件 ignored；API 中正文、chat_id、sender_id 脱敏 |
 | E4 OpenClaw stage | L2 | 现在就测 | `npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage --json` | stage 是 review-only，记录 stageId 和 approvalId |
 | E5 审批队列 | L1/L2 | 现在就测 | `MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE`；POST `/api/openclaw-migration/stage`；GET `/api/approvals`；POST `/api/approvals/<approvalId>/decision` | pending 变 approved/rejected，event 有记录 |
 | E7 工程约束 | 全局 | 现在就测 | `npm run check` | 生成物 up to date，结构红线通过 |
@@ -80,7 +81,7 @@ Review 观察：
 
 - 每次测试先跑 `npm run check`，保证文档和代码不是 stale。
 - Dashboard 是你观察状态的主入口，不只是装饰 UI。
-- E2B 当前只做文本自动回复，还缺 allowlist、requireMention、持久 replay 和 agent replyBuilder。
+- E2B 当前只做文本自动回复；default-closed ingress 和 persistent replay 已有，还缺 rich card 和 agent replyBuilder。
 - E4/E5 是后续 agent 写操作的安全前置。
 - L0/L1 smoke 没过，不进入 L3 agent。
 - 测试反馈必须回到文档或 issue，不能只留在对话里。
@@ -93,6 +94,7 @@ Review 观察：
 | E1 Dashboard | 页面可打开，L0-L6 和 E0-E10 可见 | 必须通过 |
 | E2A Openduck Feishu credential presence | `.myclaw/openduck-feishu.env` ignored 且 Dashboard 显示 credentials ready/runtime ready | 必须通过 |
 | E2B Feishu WebSocket 群回复 | websocket ready、群内直接回复、`fb_*` run | 必须通过 |
+| E2C Feishu hardening | persistent replay、policy 文件、read redaction 测试 | 必须通过 |
 | E2 Feishu outbound | 飞书群消息截图或 result code | 配置后必须通过 |
 | E3 Feishu callback | challenge 回显、签名错误被拒绝 | 配置后必须通过 |
 | Gateway token | 无 token 拒绝，有 token 放行 | 必须通过 |
@@ -137,7 +139,7 @@ issue 或 commit：
 
 下一轮建议仍然留在 L0/L1，不直接做 agent：
 
-1. Feishu allowlist/requireMention 和持久 replay。
+1. Feishu rich card 和 agent replyBuilder 安全边界。
 2. Gateway mutation audit。
 3. Dashboard 顶部 health strip。
 4. 保持 E0/E1/E4/E5/E7 作为回归测试。

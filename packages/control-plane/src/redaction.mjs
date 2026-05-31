@@ -1,0 +1,90 @@
+const REDACTED = "[redacted]";
+
+export function redactRunRecord(record) {
+  const copy = cloneJson(record);
+  if (!isFeishuRun(copy)) {
+    return copy;
+  }
+  copy.summary = redactSummary(copy.summary);
+  if (copy.envelope) {
+    redactEnvelope(copy.envelope);
+  }
+  return copy;
+}
+
+export function redactRunDetail(run) {
+  const copy = cloneJson(run);
+  if (!isFeishuRun(copy)) {
+    return copy;
+  }
+  copy.summary = redactSummary(copy.summary);
+  copy.events = redactEvents(copy.events);
+  if (copy.envelope) {
+    redactEnvelope(copy.envelope);
+  }
+  return copy;
+}
+
+export function redactEvents(events = []) {
+  return events.map((event) => (isFeishuEvent(event) ? redactEvent(event) : event));
+}
+
+function redactEnvelope(envelope) {
+  if (envelope.result?.inbound?.channel === "feishu-event") {
+    const inbound = envelope.result.inbound;
+    inbound.textPreview = summarizeRedactedText(inbound.text);
+    inbound.text = REDACTED;
+    inbound.conversationId = REDACTED;
+    inbound.sender = { ...(inbound.sender || {}), id: REDACTED };
+    delete inbound.raw;
+  }
+  if (envelope.result?.reply?.provider === "feishu") {
+    envelope.result.reply.target = REDACTED;
+    envelope.result.reply.replyToMessageId = envelope.result.reply.replyToMessageId ? REDACTED : null;
+    delete envelope.result.reply.raw;
+  }
+  envelope.events = redactEvents(envelope.events);
+}
+
+function redactEvent(event) {
+  const copy = { ...event };
+  for (const key of ["eventId", "conversationId", "senderId", "target", "replyToMessageId"]) {
+    if (copy[key]) {
+      copy[key] = REDACTED;
+    }
+  }
+  return copy;
+}
+
+function isFeishuRun(record = {}) {
+  const envelope = record.envelope ?? record;
+  return (
+    String(record.runId || envelope.runId || "").startsWith("fb_") ||
+    envelope.result?.inbound?.channel === "feishu-event" ||
+    (envelope.events || record.events || []).some((event) => isFeishuEvent(event))
+  );
+}
+
+function isFeishuEvent(event = {}) {
+  return (
+    String(event.runId || "").startsWith("fb_") ||
+    String(event.type || "").startsWith("feishu.bot.") ||
+    event.channel === "feishu-event"
+  );
+}
+
+function redactSummary(summary) {
+  return String(summary || "").replace(/feishu-event inbound:.*/i, "feishu-event inbound: [redacted]");
+}
+
+function summarizeRedactedText(text) {
+  const value = String(text || "").trim();
+  if (!value) {
+    return "";
+  }
+  return `[redacted ${value.length} chars]`;
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}

@@ -205,6 +205,8 @@ async function runFeishuBot(args) {
       requireMention: parseBooleanArg(args.requireMention || process.env.MYCLAW_FEISHU_REQUIRE_MENTION),
       mentionNames: parseListArg(args.mentionNames || args.mentionName || process.env.MYCLAW_FEISHU_MENTION_NAMES),
       mentionIds: parseListArg(args.mentionIds || args.mentionId || process.env.MYCLAW_FEISHU_MENTION_IDS),
+      unsafeOpenIngress: parseBooleanArg(args.unsafeOpenIngress || process.env.MYCLAW_FEISHU_UNSAFE_OPEN_INGRESS),
+      policyFile: args.policyFile || process.env.MYCLAW_FEISHU_POLICY_FILE,
     },
     replyMode: args.replyMode || process.env.MYCLAW_FEISHU_REPLY_MODE,
     replyBuilder: args.replyPrefix
@@ -223,13 +225,17 @@ async function runFeishuBot(args) {
 }
 
 function parseListArg(value) {
-  return String(value || "")
+  const list = String(value || "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+  return list.length ? list : undefined;
 }
 
 function parseBooleanArg(value) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
   return ["1", "true", "yes", "on"].includes(String(value || "").toLowerCase());
 }
 
@@ -362,7 +368,7 @@ Usage:
   myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
   myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
   myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>] [--token <token>] [--feishu-verify-token <token>] [--feishu-encrypt-key <key>]
-  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--reply-mode direct|thread] [--allowed-chat-ids <ids>] [--require-mention] [--json]
+  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--reply-mode direct|thread] [--policy-file <path>] [--allowed-chat-ids <ids>] [--require-mention] [--unsafe-open-ingress] [--json]
   myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--json]
 
 Examples:
@@ -370,7 +376,7 @@ Examples:
   myclaw receive --from local-user --conversation local-thread --text "hello" --reply "received"
   myclaw dashboard --port 4321
   myclaw gateway --port 4321
-  myclaw feishu-bot --reply-prefix "MyClaw 收到了"
+  myclaw feishu-bot --reply-prefix "MyClaw 收到了" --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS"
   myclaw feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct
   myclaw feishu-bot --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS" --require-mention
   myclaw migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --json

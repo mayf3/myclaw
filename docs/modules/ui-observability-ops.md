@@ -105,9 +105,17 @@ Phase 1.2.1 Feishu 配置安全新增：
 Phase 1.3 Feishu WebSocket bot 新增：
 
 - `packages/feishu-bot` 独立封装 Feishu SDK，不让 core/runtime/gateway 直接依赖飞书 SDK。
-- `myclaw feishu-bot` 启动长连接，收到 `im.message.receive_v1` 后用 app-token reply API 回复原消息。
-- bot run 写入 state，Dashboard 最近 Runs 可以看到 `fb_*` 和 `feishu.bot.reply.completed`。
-- 当前只做文本自动回复；allowlist、requireMention、持久 replay、rich card 和 agent replyBuilder 仍是下一步。
+- `myclaw feishu-bot` 启动长连接，收到 `im.message.receive_v1` 后默认用 app-token create API 直接发群消息。
+- bot run 写入 state，Dashboard 最近 Runs 可以看到脱敏后的 `fb_*` 和 `feishu.bot.reply.completed`。
+- `.myclaw/feishu-policy.json` 是本地 ignored policy 入口，支持 allowed chat、allowed sender 和 require mention。
+- `packages/feishu-bot/src/replay-store.mjs` 持久记录 event id，重启后同一 Feishu event 不重复回复。
+- 当前只做文本自动回复；ingress 默认封闭，rich card 和 agent replyBuilder 仍是下一步。
+
+Phase 1.3 hardening 新增：
+
+- Feishu run 在 `/api/status`、`/api/runs`、`/api/events` 中默认脱敏正文、chat_id、sender_id 和 reply raw。
+- Dashboard 仍可看到 `fb_*` run、状态、事件类型和 reply mode，但不显示飞书群的原始消息正文。
+- 下一步要把 raw JSON 面板拆成“可读摘要 + gated debug view”，避免后续 Agent 输入误暴露。
 
 下一步应补：
 

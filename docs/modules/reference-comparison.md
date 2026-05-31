@@ -11,13 +11,13 @@ Phase 1.3 在 Human Experiments、共享 route adapter、migration approval queu
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
 | Gateway / 控制面 | 65 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter 和 approval decision mutation，仍缺 WS/SSE、scoped token |
-| Feishu/Lark 接入 | 60 | 92 | 42 | 35 | 有 encrypted challenge/custom-bot outbound facade，缺 WebSocket/policy/app token |
+| Feishu/Lark 接入 | 64 | 92 | 42 | 35 | 有 WebSocket app-token direct text、default-closed policy、replay 和 redaction，缺 rich card/agent replyBuilder |
 | Dashboard / 观测 | 73 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/human experiments，缺实时事件 |
 | OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
 | Agent Runtime | 8 | 76 | 92 | 90 | 还没有 agent turn、tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
 | Tools / Security | 32 | 88 | 74 | 84 | 有 migration approval seed，缺 tool schema、tool approval、policy snapshot、sandbox |
-| Plugins / Skills | 18 | 92 | 88 | 78 | 仅 channel registry，没有 plugin manifest/skill loader |
+| Plugins / Skills | 26 | 92 | 88 | 78 | 有 Feishu plugin manifest 草案，但还没有通用 loader/skill loader |
 | Engineering Guardrails | 100 | 80 | 70 | 75 | `npm run check` 已强制生成物新鲜度、文件行数、目录文件数、目录深度 |
 
 ## Hermes Agent 观察
@@ -76,7 +76,7 @@ Phase 0.9 MyClaw 结论：
 - 仍然只参考，不直接加载。
 - `packages/feishu-adapter` 已承接 config readiness、x-lark signature、AES-256-CBC decrypt、verification token、replay guard、event normalize 和 outbound text/card facade。
 - encrypted challenge 已可通过 gateway；encrypted message event 仍只是有解密入口，事件语义覆盖还很窄。
-- outbound 当前仍是 custom-bot webhook 契约，不是 app-token rich card API；下一阶段要补 policy、app token client 和持久 replay。
+- outbound 已有 custom-bot webhook 契约和 app-token direct text；ingress 已默认封闭，下一阶段要补 rich card API 和 agent replyBuilder。
 
 Phase 1.0 MyClaw 结论：
 
@@ -92,9 +92,9 @@ Phase 1.1 MyClaw 结论：
 
 Phase 1.3 MyClaw 结论：
 
-- Feishu 接入从 credential presence 进入真实群消息回复，默认直接发群消息而不是话题回复；但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
+- Feishu 接入从 credential presence 进入真实群消息回复，默认直接发群消息而不是话题回复；已补 default-closed local policy、persistent replay 和 read redaction，但仍只是文本自动回复，不是完整 OpenClaw Feishu 插件。
 - `packages/feishu-bot` 把 Feishu SDK 隔离成插件包，主线 core/runtime/gateway 仍保持干净。
-- 下一步不应直接进入 agent，而应先补 allowlist、requireMention、持久 replay 和 agent replyBuilder 边界。
+- 下一步不应把飞书群直接接到可执行工具的 agent，而应先补 Gateway audit、agent replyBuilder 边界和 rich card。
 
 - 结构红线和生成 HTML 新鲜度已经进入 `npm run check`，不再只靠文档提醒。
 - `docs/modules` 只保留源 Markdown，生成 HTML 已移到 `docs/rendered/modules`。

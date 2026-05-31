@@ -61,6 +61,55 @@ test("control get route adapter resolves shared read routes", async () => {
   assert.equal(missing.handled, false);
 });
 
+test("control read routes redact Feishu message payloads", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-control-route-"));
+  await recordRun(
+    stateDir,
+    "fb_secret",
+    okEnvelope({
+      runId: "fb_secret",
+      result: {
+        inbound: {
+          channel: "feishu-event",
+          id: "om_secret",
+          text: "private feishu message",
+          conversationId: "oc_secret",
+          sender: { id: "ou_secret" },
+        },
+        reply: {
+          provider: "feishu",
+          mode: "app",
+          ok: true,
+          target: "oc_secret",
+          raw: { token: "not-for-api" },
+        },
+      },
+      events: [
+        createEvent("feishu.bot.reply.completed", {
+          conversationId: "oc_secret",
+          senderId: "ou_secret",
+          target: "oc_secret",
+        }),
+      ],
+    }),
+  );
+  const context = { stateDir, openclawSource: stateDir, service: "route-test" };
+
+  const status = await resolveControlGetRoute(url("/api/status"), context);
+  const run = await resolveControlGetRoute(url("/api/runs/fb_secret"), context);
+  const events = await resolveControlGetRoute(url("/api/events"), context);
+  const joined = JSON.stringify({ status: status.payload, run: run.payload, events: events.payload });
+
+  assert.equal(status.payload.runs[0].envelope.result.inbound.text, "[redacted]");
+  assert.equal(status.payload.runs[0].envelope.result.inbound.textPreview, "[redacted 22 chars]");
+  assert.equal(run.payload.run.envelope.result.reply.raw, undefined);
+  assert.equal(joined.includes("private feishu message"), false);
+  assert.equal(joined.includes("private"), false);
+  assert.equal(joined.includes("oc_secret"), false);
+  assert.equal(joined.includes("ou_secret"), false);
+  assert.equal(joined.includes("not-for-api"), false);
+});
+
 function url(pathname) {
   return new URL(pathname, "http://127.0.0.1");
 }

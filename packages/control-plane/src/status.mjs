@@ -8,6 +8,7 @@ import { buildHumanExperimentsPayload } from "./experiments.mjs";
 import { buildMilestonesPayload } from "./milestones.mjs";
 import { buildOpenClawStageReview } from "./openclaw-diff.mjs";
 import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
+import { redactEvents, redactRunDetail, redactRunRecord } from "./redaction.mjs";
 
 const MIGRATION_PLAN_CACHE_MS = 5000;
 const migrationPlanCache = new Map();
@@ -31,8 +32,8 @@ export async function buildStatusPayload(context) {
     milestones: buildMilestonesPayload(),
     experiments: buildHumanExperimentsPayload(),
     approvals,
-    runs,
-    events,
+    runs: runs.map(redactRunRecord),
+    events: redactEvents(events),
     openclawMigration: migrationPlan,
     openclawStage: migrationStage,
     openclawStageSummary: stageSummary,
@@ -44,7 +45,7 @@ export async function buildStatusPayload(context) {
 export async function buildRunsPayload(context, options = {}) {
   return {
     ok: true,
-    runs: await listRuns(context.stateDir, { limit: options.limit || 50 }),
+    runs: (await listRuns(context.stateDir, { limit: options.limit || 50 })).map(redactRunRecord),
   };
 }
 
@@ -59,14 +60,14 @@ export async function buildRunPayload(context, options = {}) {
   }
   return {
     ok: true,
-    run,
+    run: redactRunDetail(run),
   };
 }
 
 export async function buildEventsPayload(context, options = {}) {
   return {
     ok: true,
-    events: await readEvents(context.stateDir, { limit: options.limit || 100 }),
+    events: redactEvents(await readEvents(context.stateDir, { limit: options.limit || 100 })),
   };
 }
 
