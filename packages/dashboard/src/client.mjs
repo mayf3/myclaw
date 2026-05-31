@@ -1,7 +1,9 @@
 export const dashboardClientJs = `
 const $ = (id) => document.getElementById(id);
+let streamRefreshAt = 0;
 
 $("refresh").addEventListener("click", loadStatus);
+initEventStream();
 loadStatus();
 
 async function loadStatus() {
@@ -195,6 +197,35 @@ function renderHealth(health) {
 
 function healthTone(status) {
   return status === "ok" ? "ok" : status === "fail" ? "fail" : "warn";
+}
+
+function initEventStream() {
+  if (!window.EventSource || !$("streamStatus")) {
+    return;
+  }
+  const source = new EventSource("/api/events/stream");
+  source.addEventListener("snapshot", () => {
+    $("streamStatus").className = "pill ok";
+    $("streamStatus").textContent = "stream snapshot";
+    loadStatus();
+  });
+  source.addEventListener("heartbeat", () => {
+    $("streamStatus").className = "pill ok";
+    $("streamStatus").textContent = "stream heartbeat";
+    refreshFromStream();
+  });
+  source.onerror = () => {
+    $("streamStatus").className = "pill warn";
+    $("streamStatus").textContent = "stream reconnecting";
+  };
+}
+
+function refreshFromStream() {
+  if (Date.now() - streamRefreshAt < 2000) {
+    return;
+  }
+  streamRefreshAt = Date.now();
+  loadStatus();
 }
 
 function renderReferenceCompletion(payload) {

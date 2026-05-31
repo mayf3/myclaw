@@ -1,7 +1,8 @@
 import http from "node:http";
 import { URL } from "node:url";
+import { handleControlEventStream } from "../../control-plane/src/event-stream.mjs";
 import { resolveStateDir } from "../../core/src/state.mjs";
-import { authorizeGatewayMutation, authorizeGatewayToken } from "./auth.mjs";
+import { authorizeGatewayMutation, authorizeGatewayRead, authorizeGatewayToken } from "./auth.mjs";
 import { attachGatewayAudit, classifyGatewayMutation, shouldAuditGatewayRequest } from "./audit.mjs";
 import { sendJson } from "./http.mjs";
 import { handlePostApprovalDecision, parseApprovalDecisionPath } from "./routes/approvals.mjs";
@@ -19,6 +20,7 @@ export async function startGateway(options = {}) {
     openclawSource: options.openclawSource,
     host,
     token: options.token ?? process.env.MYCLAW_GATEWAY_TOKEN ?? "",
+    scopedTokens: options.scopedTokens ?? process.env.MYCLAW_GATEWAY_SCOPED_TOKENS ?? "",
     logger: options.logger ?? console,
     feishuVerifyToken: options.feishuVerifyToken ?? process.env.MYCLAW_FEISHU_VERIFY_TOKEN ?? "",
     feishuEncryptKey: options.feishuEncryptKey ?? process.env.MYCLAW_FEISHU_ENCRYPT_KEY ?? "",
@@ -63,14 +65,14 @@ export async function handleGatewayRequest(request, response, context) {
     return;
   }
   if (request.method === "POST" && (url.pathname === "/messages" || url.pathname === "/api/messages")) {
-    if (!authorizeMutation(request, response, context)) {
+    if (!authorizeMutation(request, response, context, ["mutation", "message:write"])) {
       return;
     }
     await handlePostMessage(request, response, context);
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/openclaw-migration/stage") {
-    if (!authorizeMutation(request, response, context)) {
+    if (!authorizeMutation(request, response, context, ["mutation", "migration:stage"])) {
       return;
     }
     await handlePostOpenClawMigrationStage(request, response, context);
@@ -83,9 +85,25 @@ export async function handleGatewayRequest(request, response, context) {
     await handlePostApprovalDecision(request, response, context, approvalDecisionId);
     return;
   }
-
-  if (request.method === "GET" && (await handleGetRequest(url, response, context))) {
+  if (request.method === "GET" && url.pathname === "/api/health") {
+    await handleGetRequest(url, response, context);
     return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/events/stream") {
+    if (!authorizeRead(request, response, context, ["read", "events:read"])) {
+      return;
+    }
+    await handleControlEventStream(request, response, context);
+    return;
+  }
+
+  if (request.method === "GET") {
+    if (!authorizeRead(request, response, context, ["read", "control:read"])) {
+      return;
+    }
+    if (await handleGetRequest(url, response, context)) {
+      return;
+    }
   }
 
   sendJson(response, request.method === "GET" ? 404 : 405, {
@@ -94,8 +112,17 @@ export async function handleGatewayRequest(request, response, context) {
   });
 }
 
-function authorizeMutation(request, response, context) {
-  const auth = authorizeGatewayMutation(request, context);
+function authorizeMutation(request, response, context, scopes) {
+  const auth = authorizeGatewayMutation(request, context, { scopes });
+  if (!auth.ok) {
+    sendJson(response, auth.status, auth.payload);
+    return false;
+  }
+  return true;
+}
+
+function authorizeRead(request, response, context, scopes) {
+  const auth = authorizeGatewayRead(request, context, { scopes });
   if (!auth.ok) {
     sendJson(response, auth.status, auth.payload);
     return false;
@@ -107,6 +134,7 @@ function authorizeApprovalDecision(request, response, context) {
   const auth = authorizeGatewayToken(request, context, {
     code: "approval_token_required",
     message: "Set MYCLAW_GATEWAY_TOKEN before recording approval decisions.",
+    scopes: ["mutation", "approval:decide"],
   });
   if (!auth.ok) {
     sendJson(response, auth.status, auth.payload);

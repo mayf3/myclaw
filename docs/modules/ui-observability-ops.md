@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.4 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条和 Gateway mutation audit。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.5 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、Gateway mutation audit 和 SSE stream 状态。
 
 ## 参考项目观察
 
@@ -125,10 +125,17 @@ Phase 1.4 Gateway/Dashboard 新增：
 - Dashboard 顶部 health strip 汇总 Control API、state、HTML Center、Feishu adapter 和 mutation auth。
 - Dashboard 新增 Gateway Mutation Audit 表，不展示 request body、token 或 secret。
 
+Phase 1.5 Gateway/Dashboard 新增：
+
+- `/api/events/stream` 提供 SSE snapshot/heartbeat，snapshot 复用 control-plane Feishu redaction。
+- Dashboard 通过同源 EventSource 连接 stream，显示 snapshot/heartbeat，并随 heartbeat 触发状态刷新。
+- Gateway 非 loopback 的 read plane 已统一鉴权，`events:read` 和 `control:read` 可以分别授权 stream 和控制面。
+- Dashboard 仍默认通过本地 dashboard proxy 访问 stream；浏览器直连 Gateway 的 header token 形态后续再设计。
+
 下一步应补：
 
 - run detail drawer 或独立详情页。
-- event stream 和 Dashboard 实时刷新。
+- event stream seq/replay 和更精确的 delta 更新。
 - stage snapshot 可操作 review drawer 和后续真实 schema diff。
 - `apply --module feishu` 人工确认入口。
 - 事件 stream 或轮询刷新。

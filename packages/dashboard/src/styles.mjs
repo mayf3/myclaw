@@ -102,6 +102,7 @@ section{margin-bottom:16px}
 }
 .health-head h3{margin:0 0 4px;font-size:17px}
 .health-head p{margin:0;color:var(--muted)}
+.status-pills{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .health-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 .health-item{
   min-height:84px;

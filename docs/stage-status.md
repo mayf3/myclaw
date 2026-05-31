@@ -4,9 +4,9 @@
 
 ## 当前阶段
 
-Phase 1.4: Gateway Audit And Dashboard Health。
+Phase 1.5: Gateway Event Stream And Scoped Token。
 
-当前进度：M0 本地消息闭环完成；M1 Gateway/Dashboard 已补 health strip、mutation audit 和 `/api/audit`；M2 Feishu/Lark 已从 credential presence 推进到 WebSocket 长连接群消息自动回复，并补了默认封闭 ingress、本地 policy 文件、persistent replay 和 Dashboard/API 脱敏；M3 OpenClaw 迁移有 review-only stage review；M4 有 migration approval queue；M6 工程约束已落地到 `npm run check`；M7 已把路线改成分层人类测试图，但不把 planned 的 agent/记忆能力伪装成 ready。
+当前进度：M0 本地消息闭环完成；M1 Gateway/Dashboard 已补 health strip、mutation audit、`/api/audit`、`/api/events/stream` 和 scoped token；M2 Feishu/Lark 已从 credential presence 推进到 WebSocket 长连接群消息自动回复，并补了默认封闭 ingress、本地 policy 文件、persistent replay 和 Dashboard/API/SSE 脱敏；M3 OpenClaw 迁移有 review-only stage review；M4 有 migration approval queue；M6 工程约束已落地到 `npm run check`；M7 已把路线改成分层人类测试图，但不把 planned 的 agent/记忆能力伪装成 ready。
 
 本轮运行态：`~/.openduck/openclaw.json` 已只读转换为 `.myclaw/openduck-feishu.env`，该目录被 git ignore 且文件权限为 `600`；只输出变量名，不输出 secret 值。`myclaw-feishu-bot` tmux session 已启动，SDK 日志显示 websocket ready。openduck 对应的 `ai.openclaw.gateway.second` 已停掉，当前仍保留正在使用的 `ai.openclaw.gateway`。
 
@@ -17,7 +17,7 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 | Milestone | 状态 | 完成度 | 你可以怎么测 |
 |---|---|---:|---|
 | M0 本地消息闭环 | done | 100 | 跑 E0，确认 CLI send 写入 run/event |
-| M1 Gateway 与 Dashboard | partial | 88 | 跑 E1/E1B，打开 Dashboard 看阶段、健康、audit、run、实验路线、审批 |
+| M1 Gateway 与 Dashboard | partial | 92 | 跑 E1/E1B/E1C，打开 Dashboard 看阶段、健康、audit、stream、run、实验路线、审批 |
 | M2 Feishu/Lark 边界 | partial | 88 | 跑 E2B/E2C：在备份飞书群发消息，看自动回复和脱敏 run |
 | M3 OpenClaw 迁移 | partial | 65 | 跑 E4，确认 stage review 是 review-only |
 | M4 Agent Runtime 与审批 | partial | 25 | 跑 E5，确认 approval pending 和 decision audit |
@@ -30,7 +30,7 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 | 层 | 重点 | 当前状态 | 你可以测什么 |
 |---|---|---|---|
 | L0 接入层 | CLI、webhook、Feishu/Lark inbound/outbound 归一化 | partial | E0/E2A/E2B/E2C 现在可测；E2/E3 配置后可测 |
-| L1 Gateway | HTTP 控制面、鉴权、状态查询、事件进入和 mutation audit | partial | E1 Dashboard、E1B health/audit、E2A/E2B/E2C adapter readiness、E3 callback、E5 token mutation |
+| L1 Gateway | HTTP 控制面、鉴权、状态查询、事件进入、SSE 事件流和 mutation audit | partial | E1 Dashboard、E1B health/audit、E1C stream/scoped token、E2A/E2B/E2C adapter readiness、E3 callback、E5 token mutation |
 | L2 Workflow 与审批 | 迁移和后续工具调用进入 review/approval | partial | E4 OpenClaw stage、E5 approval decision；真实 tool action 待补 |
 | L3 单 Agent Runtime | 任务拆解、工具调用、失败重试、人工确认 | planned | E6 后续开放 |
 | L4 Session Search / Provenance | run、step、tool result 可检索，召回来源可解释 | planned | E8 后续开放 |
@@ -42,8 +42,9 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 | 实验 | 状态 | 角色 | 命令或入口 | 成功信号 |
 |---|---|---|---|---|
 | E0 本地消息闭环 | ready | 本机使用者 | `npm run myclaw -- send --text "hello from human" --json` | 返回 ok envelope，Dashboard 最近 Runs 有记录 |
-| E1 Dashboard 可读性 | ready | 产品试用者 | `npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE` 后打开 `http://127.0.0.1:4321` | Phase 1.4、Human Experiments、Approvals 可见 |
+| E1 Dashboard 可读性 | ready | 产品试用者 | `npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE` 后打开 `http://127.0.0.1:4321` | Phase 1.5、Human Experiments、Approvals 可见 |
 | E1B Dashboard health 与 Gateway audit | ready | 本地运维观察者 | 启动 gateway 后 POST `/messages`，再打开 Dashboard 或 GET `/api/audit` | 顶部健康条显示 ok/warn/fail；Gateway Mutation Audit 有记录；audit 不含正文或 token |
+| E1C Gateway event stream 与 scoped token | ready | 本地接入层验证者 | 启动带 `MYCLAW_GATEWAY_SCOPED_TOKENS` 的非 loopback gateway，分别用 message/control/events token 测 `/messages`、`/api/status`、`/api/events/stream` | 错 scope 返回 `insufficient_scope`；events token 只能读 stream；control token 读控制面；SSE snapshot 不含 Feishu 明文或 token |
 | E2 Feishu custom-bot outbound | needs_config | 飞书群机器人配置者 | `npm run myclaw -- send --channel feishu-webhook --webhook-url "$MYCLAW_FEISHU_WEBHOOK_URL" --text "hello" --json` | 飞书群收到消息，result code 为 0 |
 | E2A Openduck Feishu credential presence | ready | 飞书测试群配置验证者 | `npm run import:openduck -- --json`；`set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE` | 导入输出不含 secret 值；Dashboard 显示 app credentials ready、websocket runtime ready、app-token outbound ready；`.myclaw/` 仍 ignored |
 | E2B Feishu WebSocket 群消息自动回复 | ready | 飞书测试群使用者 | 先确认 `.myclaw/feishu-policy.json` 有 allowedChatIds，再 `set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct`；在群里发文本 | 群里直接收到 `MyClaw 收到了：...`，不是话题回复；Dashboard 最近 Runs 出现脱敏后的 `fb_*` |
@@ -66,12 +67,15 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 - 新增 `scripts/check-generated-docs.mjs`，`npm run check` 会重建 HTML 并在生成物 stale 或缺失时失败。
 - `docs/modules` 只保留 Markdown 源文档；生成 HTML 移到 `docs/rendered/modules`。
 - `docs/build-review-html.mjs` 改为从 `docs/modules` 读取源文档、向 `docs/rendered/modules` 写 HTML。
-- Dashboard/Control payload 的 phase 更新到 1.4，新增 E1B health/audit 实验。
+- Dashboard/Control payload 的 phase 更新到 1.5，新增 E1C stream/scoped token 实验。
 - 新增 `packages/core/src/audit.mjs`，用本地 JSONL 记录 Gateway mutation audit。
 - Gateway 对 `/messages`、`/api/openclaw-migration/stage`、approval decision 和 Feishu callback 写 audit，不保存请求正文或 token 值。
 - Control-plane 新增 `/api/audit`，`/api/status` 内联 health 与 audit。
 - Dashboard 顶部新增运行健康条，覆盖 Control API、state、HTML Center、Feishu adapter 和 mutation auth。
 - Dashboard 新增 Gateway Mutation Audit 面板，用于查看最近写操作、状态码和 actor 类型。
+- Control-plane 新增 `packages/control-plane/src/event-stream.mjs`，`GET /api/events/stream` 发送脱敏 snapshot 和 heartbeat。
+- Gateway 非 loopback 控制面 GET 统一走 read auth；`events:read` 只读 stream，`control:read` 读状态控制面，legacy gateway token 仍是 `*`。
+- Dashboard 通过同源 `EventSource("/api/events/stream")` 显示 stream snapshot/heartbeat，并随 heartbeat 自动刷新状态。
 - Dashboard/Control payload 新增 L0-L6 分层路线，并新增 E8/E9/E10 作为后续 session provenance、agent 协作和长期记忆实验占位。
 - 新增 control-plane invariant test，约束 layer 顺序、实验引用和 ready 状态，避免路线状态漂移。
 - 新增本地人类测试手册 `docs/modules/human-testing-playbook.md`，把大方向、参与阶段、全流程测试路径和反馈格式固定下来。
@@ -101,6 +105,8 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 | Feishu WebSocket bot | 已可用 | 默认直接群消息回复；无 policy 时默认跳过；已支持本地 policy 文件、persistent replay 和 read redaction；缺 rich card 和 agent replyBuilder |
 | Gateway mutation audit | 已可用 | 记录动作、状态码、actor 类型和资源类型；不保存 request body、token 或 secret |
 | Dashboard health strip | 已可用 | 读取 `/api/status` 的 health payload；HTML Center 失败会显示 warn，不阻断 Dashboard |
+| Gateway event stream | 已可用 | SSE snapshot/heartbeat，可驱动 Dashboard 自动刷新；还没有 seq/replay/delta |
+| Gateway scoped token | 已可用 | 支持 `message:write`、`events:read`、`control:read` 和 legacy `*`；非 loopback 控制面 GET 需要 read scope |
 
 ## 你现在可以测试什么
 
@@ -109,6 +115,7 @@ Phase 1.4: Gateway Audit And Dashboard Health。
 | E0 本地消息闭环 | 现在就测 | 确认最小消息管线没坏 |
 | E1 Dashboard | 现在就测 | 看当前阶段、审批队列、实验路线 |
 | E1B Dashboard health/audit | 现在就测 | 看服务健康、Gateway 写操作审计、token/正文不泄露 |
+| E1C Gateway stream/scoped token | 现在就测 | 看 stream 连接、Dashboard 自动刷新、非 loopback read plane 鉴权 |
 | E2A Openduck Feishu credential presence | 现在就测 | 验证备份飞书群 app credentials 能被 MyClaw 识别 |
 | E2B Feishu WebSocket 群回复 | 现在就测 | 你在备份飞书群发文本，确认 MyClaw 自动回复 |
 | E2C Feishu hardening | 现在就测 | 确认重复事件、policy 文件和 Dashboard/API 脱敏 |
@@ -135,19 +142,21 @@ node --test packages/feishu-bot/test/feishu-bot.test.mjs packages/control-plane/
 npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage --json
 npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE
 MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE
+MYCLAW_GATEWAY_SCOPED_TOKENS='[{"token":"message-token","scopes":["message:write"]},{"token":"events-token","scopes":["events:read"]},{"token":"control-token","scopes":["control:read"]}]' npm run myclaw -- gateway --host 0.0.0.0 --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE
 set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- dashboard --port 4321 --openclaw-source $MYCLAW_OPENCLAW_SOURCE
 set -a; source .myclaw/openduck-feishu.env; set +a; npm run myclaw -- feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct
 curl -s http://127.0.0.1:4322/api/approvals
 curl -s http://127.0.0.1:4322/api/audit
+curl -N http://127.0.0.1:4322/api/events/stream -H "x-myclaw-token: events-token"
 ```
 
 ## 下一步
 
-1. 先补 L1/L2：event stream、scoped token、approval 接真实 tool action。
+1. 先补 L2：approval 接真实 tool action，但默认仍需要人工确认。
 2. 再补 Feishu rich card 和 agent replyBuilder 安全边界。
-3. 再补 L3：Agent runtime 最小 run/resume/tool loop。
-4. 再补 L4：Session Search / Provenance，确保 run/step/tool result 可追溯。
-5. 最后进入 L5/L6：Agent-to-Agent 协作和 Long Memory/Search。
+3. 拆 Dashboard renderer 和 docs builder，避免接近 450 行。
+4. 再补 L3：Agent runtime 最小 run/resume/tool loop。
+5. 再补 L4：Session Search / Provenance，确保 run/step/tool result 可追溯。
 
 ## 验证记录
 
@@ -158,6 +167,6 @@ npm test
 
 验证结果：
 
-- `npm run check` 通过，输出 `Generated docs are up to date.`、`Structure check passed: 124 files, max 500 lines, 20 files/dir, depth 4.`、`Doc phase sync check passed.` 与 `Local secret leak check passed.`
-- `npm test` 通过 59 个测试，新增覆盖 Gateway mutation audit、unknown mutating request audit、Dashboard health strip、Feishu 默认封闭 ingress、persistent replay、本地 policy 文件和 control-plane Feishu read redaction。
+- `npm run check` 通过，输出 `Generated docs are up to date.`、`Structure check passed: 127 files, max 500 lines, 20 files/dir, depth 4.`、`Doc phase sync check passed.` 与 `Local secret leak check passed.`
+- `npm test` 通过 61 个测试，新增覆盖 Gateway scoped token、非 loopback read auth、SSE snapshot、Dashboard stream 和 control-plane SSE Feishu redaction。
 - 结构快照：当前最大目录文件数仍低于 20；当前最大目录深度仍为 4。
