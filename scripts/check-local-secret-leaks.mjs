@@ -9,7 +9,7 @@ const secrets = readLocalSecrets();
 const leaks = [];
 
 if (secrets.length) {
-  for (const file of listTrackedFiles()) {
+  for (const file of listScanFiles()) {
     const filePath = path.join(root, file);
     if (!isTextFile(filePath)) {
       continue;
@@ -24,7 +24,7 @@ if (secrets.length) {
 }
 
 if (leaks.length) {
-  console.error("Local secret leak check failed. Secret values are present in tracked files:");
+  console.error("Local secret leak check failed. Secret values are present in tracked or untracked files:");
   for (const leak of leaks) {
     console.error(`  ${leak.key}\t${leak.file}`);
   }
@@ -57,10 +57,14 @@ function readLocalSecrets() {
   return values;
 }
 
-function listTrackedFiles() {
-  const result = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
+function listScanFiles() {
+  return [...new Set([...listGitFiles(["ls-files", "-z"]), ...listGitFiles(["ls-files", "--others", "--exclude-standard", "-z"])])];
+}
+
+function listGitFiles(args) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
   if (result.status !== 0) {
-    throw new Error("Failed to list tracked files.");
+    throw new Error("Failed to list files for local secret leak check.");
   }
   return result.stdout.split("\0").filter(Boolean);
 }

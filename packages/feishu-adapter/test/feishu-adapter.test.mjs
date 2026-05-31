@@ -3,11 +3,13 @@ import { createCipheriv, createHash } from "node:crypto";
 import { test } from "node:test";
 import {
   buildFeishuAdapterConfig,
+  buildFeishuAppTextPayload,
   buildFeishuOutboundPayload,
   buildFeishuWebhookSignature,
   createFeishuReplayGuard,
   decryptFeishuPayload,
   describeFeishuAdapterReadiness,
+  sendFeishuAppText,
   normalizeFeishuEvent,
   normalizeFeishuSendResult,
   validateFeishuVerificationToken,
@@ -49,6 +51,41 @@ test("adapter builds Feishu outbound text and card payloads", () => {
   assert.throws(() => buildFeishuOutboundPayload({ text: " " }), /missing text/);
 });
 
+test("adapter sends Feishu app text replies through the app client facade", async () => {
+  const calls = [];
+  const client = {
+    im: {
+      message: {
+        async reply(input) {
+          calls.push(input);
+          return { code: 0, data: { message_id: "om_reply" } };
+        },
+      },
+    },
+  };
+  const result = await sendFeishuAppText({
+    client,
+    text: "hello",
+    chatId: "oc_group",
+    replyToMessageId: "om_source",
+  });
+
+  assert.deepEqual(calls[0], {
+    path: { message_id: "om_source" },
+    data: { msg_type: "text", content: JSON.stringify({ text: "hello" }), reply_in_thread: true },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.mode, "app");
+  assert.equal(result.messageId, "om_reply");
+});
+
+test("adapter builds Feishu app direct send payloads without thread flag", () => {
+  assert.deepEqual(buildFeishuAppTextPayload({ text: " hi ", replyInThread: false }), {
+    msg_type: "text",
+    content: JSON.stringify({ text: "hi" }),
+  });
+});
+
 test("adapter normalizes Feishu outbound send results", () => {
   const result = normalizeFeishuSendResult({
     status: 200,
@@ -71,7 +108,7 @@ test("adapter reports token-only webhook mode as blocked", () => {
   assert.match(readiness.issues[0], /encryptKey/);
 });
 
-test("adapter reports websocket credentials without claiming runtime readiness", () => {
+test("adapter reports websocket credentials as app runtime ready", () => {
   const config = buildFeishuAdapterConfig({
     env: {},
     connectionMode: "websocket",
@@ -81,12 +118,12 @@ test("adapter reports websocket credentials without claiming runtime readiness",
   const readiness = describeFeishuAdapterReadiness(config);
 
   assert.equal(readiness.ok, true);
-  assert.equal(readiness.level, "partial");
+  assert.equal(readiness.level, "ready");
   assert.equal(readiness.appCredentialsReady, true);
-  assert.equal(readiness.websocketRuntimeReady, false);
-  assert.equal(readiness.appTokenOutboundReady, false);
-  assert.equal(readiness.outboundReady, false);
-  assert.match(readiness.warnings[0], /runtime is not implemented/);
+  assert.equal(readiness.websocketRuntimeReady, true);
+  assert.equal(readiness.appTokenOutboundReady, true);
+  assert.equal(readiness.outboundReady, true);
+  assert.equal(readiness.warnings.length, 0);
 });
 
 function encryptFeishuPayload(encryptKey, payload) {

@@ -89,7 +89,9 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <p>Phase 1.2 工程约束新增：</p>
 <ul><li><code>npm run check</code> 强制生成 HTML 新鲜度、500 行、20 文件/目录、4 层目录深度。</li><li><code>npm run html-center</code> 和 <code>npm run publish:review</code> 固化 HTML Center 检查与发布。</li><li><code>myclaw doctor</code> 会报告 HTML Center health。</li><li>生成 HTML 模块页移到 <code>docs/rendered/modules</code>，避免源文档目录被生成物撑爆。</li><li>Dashboard client 仍在 357 行，下一阶段必须拆 section renderer。</li></ul>
 <p>Phase 1.2.1 Feishu 配置安全新增：</p>
-<ul><li><code>npm run import:openduck</code> 从本机 openduck 备份配置生成 <code>.myclaw/openduck-feishu.env</code>。</li><li><code>/api/feishu-adoption</code> 和 Dashboard readiness 可以在加载该 env 后显示 app credential presence，同时明确 WebSocket runtime/app-token outbound 仍缺失。</li><li>报告、日志和 JSON 输出只展示变量名、缺失项和 readiness，不展示 secret 值。</li><li><code>npm run check</code> 会运行本地 secret leak scan，防止 <code>.myclaw/*.env</code> 中的敏感值进入 git tracked 文件。</li></ul>
+<ul><li><code>npm run import:openduck</code> 从本机 openduck 备份配置生成 <code>.myclaw/openduck-feishu.env</code>。</li><li><code>/api/feishu-adoption</code> 和 Dashboard readiness 可以在加载该 env 后显示 app credential presence。</li><li>报告、日志和 JSON 输出只展示变量名、缺失项和 readiness，不展示 secret 值。</li><li><code>npm run check</code> 会运行本地 secret leak scan，防止 <code>.myclaw/*.env</code> 中的敏感值进入 git tracked 文件。</li></ul>
+<p>Phase 1.3 Feishu WebSocket bot 新增：</p>
+<ul><li><code>packages/feishu-bot</code> 独立封装 Feishu SDK，不让 core/runtime/gateway 直接依赖飞书 SDK。</li><li><code>myclaw feishu-bot</code> 启动长连接，收到 <code>im.message.receive_v1</code> 后用 app-token reply API 回复原消息。</li><li>bot run 写入 state，Dashboard 最近 Runs 可以看到 <code>fb_*</code> 和 <code>feishu.bot.reply.completed</code>。</li><li>当前只做文本自动回复；allowlist、requireMention、持久 replay、rich card 和 agent replyBuilder 仍是下一步。</li></ul>
 <p>下一步应补：</p>
 <ul><li>run detail drawer 或独立详情页。</li><li>stage snapshot 可操作 review drawer 和后续真实 schema diff。</li><li><code>apply --module feishu</code> 人工确认入口。</li><li>事件 stream 或轮询刷新。</li><li>Human Experiments 和自动化 test/check 结果的映射。</li></ul>
 <h2 id="html-control-ui-信息架构">HTML/Control UI 信息架构</h2>

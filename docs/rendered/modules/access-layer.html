@@ -93,7 +93,7 @@ listRuns(filter): Promise&lt;RunSummary[]&gt;</code></pre>
 <p>CLI 和 Gateway 只是在这层外面套不同 transport。</p>
 <h2 id="mvp-边界">MVP 边界</h2>
 <p>Phase 0/1：</p>
-<ul><li>只实现 CLI。</li><li>CLI 直接调用 core，不走 HTTP。</li><li><code>--json</code> 输出完整 envelope。</li><li>默认输出面向人读，但不隐藏 runId/approvalId。</li><li><code>npm run import:openduck</code> 只做本地 Feishu app credential presence，不代表 Feishu WebSocket runtime 或 app-token outbound 已完成。</li></ul>
+<ul><li>只实现 CLI。</li><li>CLI 直接调用 core，不走 HTTP。</li><li><code>--json</code> 输出完整 envelope。</li><li>默认输出面向人读，但不隐藏 runId/approvalId。</li><li><code>npm run import:openduck</code> 只导入本地 Feishu app credential；<code>myclaw feishu-bot</code> 作为独立插件包启动 WebSocket/app-token 文本回复，不把 Feishu SDK 接进 core/runtime 主线。</li></ul>
 <p>Phase 4：</p>
 <ul><li>CLI 增加 <code>--gateway</code> 模式。</li><li>Gateway 提供 HTTP/WS。</li><li>CLI 可以本地 direct 或 remote gateway 两种执行。</li></ul>
 <h2 id="不建议第一阶段做">不建议第一阶段做</h2>

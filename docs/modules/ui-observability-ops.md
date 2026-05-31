@@ -98,9 +98,16 @@ Phase 1.2 工程约束新增：
 Phase 1.2.1 Feishu 配置安全新增：
 
 - `npm run import:openduck` 从本机 openduck 备份配置生成 `.myclaw/openduck-feishu.env`。
-- `/api/feishu-adoption` 和 Dashboard readiness 可以在加载该 env 后显示 app credential presence，同时明确 WebSocket runtime/app-token outbound 仍缺失。
+- `/api/feishu-adoption` 和 Dashboard readiness 可以在加载该 env 后显示 app credential presence。
 - 报告、日志和 JSON 输出只展示变量名、缺失项和 readiness，不展示 secret 值。
 - `npm run check` 会运行本地 secret leak scan，防止 `.myclaw/*.env` 中的敏感值进入 git tracked 文件。
+
+Phase 1.3 Feishu WebSocket bot 新增：
+
+- `packages/feishu-bot` 独立封装 Feishu SDK，不让 core/runtime/gateway 直接依赖飞书 SDK。
+- `myclaw feishu-bot` 启动长连接，收到 `im.message.receive_v1` 后用 app-token reply API 回复原消息。
+- bot run 写入 state，Dashboard 最近 Runs 可以看到 `fb_*` 和 `feishu.bot.reply.completed`。
+- 当前只做文本自动回复；allowlist、requireMention、持久 replay、rich card 和 agent replyBuilder 仍是下一步。
 
 下一步应补：
 

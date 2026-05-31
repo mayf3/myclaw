@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.2 已把 gateway 主文件拆成 auth/http/routes，把 dashboard/gateway 的只读控制面 GET route 收敛到 `packages/control-plane/src/http-routes.mjs`，新增 approval decision mutation，并让结构红线、生成物新鲜度和 HTML Center health 进入 `npm run check`/`doctor`。Feishu callback route 仍只依赖 MyClaw 自己的 `packages/feishu-adapter` facade。Gateway 仍然不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.3 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，而不是塞进 gateway 主线。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -214,7 +214,7 @@ Phase 1.1：
 - `POST /api/approvals/:id/decision` 记录 approved/rejected，仍受 mutation token guard 保护。
 - OpenClaw migration stage 自动生成 pending approval，但 decision 不触发 apply。
 
-Phase 1.2：
+Phase 1.3：
 
 - `npm run check` 会阻止目录文件数超过 20、目录深度超过 4、文件超过 500 行。
 - `npm run check` 会重建 HTML 并在生成物 stale、缺失或多余时失败。
@@ -262,7 +262,7 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.2 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.3 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。

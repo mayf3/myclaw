@@ -3,10 +3,10 @@ export function buildMilestonesPayload() {
     schemaVersion: 1,
     computed: false,
     source: "static-roadmap",
-    currentPhase: "1.2.1",
+    currentPhase: "1.3",
     currentMilestone: "M7",
     summary:
-      "Phase 1.2.1 adds enforceable structure guardrails, layered human testing, and safe local openduck Feishu credential import.",
+      "Phase 1.3 adds a plugin-scoped Feishu WebSocket bot so backup group messages can receive MyClaw text replies.",
     milestones: [
       m("M0", "本地消息闭环", "done", 100, "CLI send/receive、state、channel registry 已可用"),
       m("M1", "Gateway 与 Dashboard", "partial", 82, "共享 control route adapter、run detail、reference matrix、人类实验路线已可用，缺 event stream"),
@@ -14,8 +14,8 @@ export function buildMilestonesPayload() {
         "M2",
         "Feishu/Lark 边界",
         "partial",
-        68,
-        "signed encrypted challenge、custom-bot outbound facade 和 openduck app credential presence import 已有，缺 WebSocket runtime/policy/app-token send",
+        78,
+        "signed encrypted challenge、custom-bot outbound facade、openduck credential import 和 WebSocket app-token 群回复已可用，缺 policy/rich card/持久 replay",
       ),
       m("M3", "OpenClaw 迁移", "partial", 65, "plan/stage/review summary 与 stage review 已有，缺 apply/rollback"),
       m("M4", "Agent Runtime 与审批", "partial", 25, "已有 migration approval queue，缺 tool approval、LLM loop 和 scoped token"),
