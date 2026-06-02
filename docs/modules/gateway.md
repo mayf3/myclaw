@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.5 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot 和 scoped token。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.6 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token 和 safe tool request 入口。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -39,10 +39,12 @@ HTTP
   GET  /api/milestones
   GET  /api/experiments
   GET  /api/approvals
+  GET  /api/tool-requests
   POST /messages
   POST /feishu/events
   POST /api/openclaw-migration/stage
   POST /api/approvals/:id/decision
+  POST /api/tool-requests/smoke-note
 ```
 
 它只做 message ingress、Feishu event normalize 和 dashboard 状态读取，尚未做 workflow run/resume。
@@ -68,6 +70,17 @@ POST /api/openclaw-migration/stage
   -> stageOpenClawMigration
   -> state/migrations/openclaw/<stageId>.json
   -> latest.json pointer
+```
+
+Tool approval smoke 路径：
+
+```text
+POST /api/tool-requests/smoke-note
+  -> gateway mutation token guard with tool:request
+  -> tools/smoke-note create pending approval
+  -> state/tool-requests/<toolRequestId>.json
+  -> user approves or rejects /api/approvals/:id/decision
+  -> approved writes state/tool-runs/<toolRunId>.json
 ```
 
 Phase 4 的完整 gateway：
@@ -124,6 +137,7 @@ type GatewayFrame =
 - auth: local loopback 可无 token；配置 `MYCLAW_GATEWAY_TOKEN` 或 `--token` 后所有 mutation 必须带 token。
 - 非 loopback mutation 禁止无 token。
 - token 支持 `Authorization: Bearer <token>` 和 `x-myclaw-token`。
+- tool request mutation 需要 legacy `mutation` 或更窄的 `tool:request` scope。
 - Feishu endpoint 支持 `MYCLAW_FEISHU_VERIFY_TOKEN`，正式暴露前必须配置。
 
 后续再加：
@@ -135,7 +149,7 @@ type GatewayFrame =
 ## Gateway 不负责
 
 - 不解析 workflow 语法。
-- 不执行 tool。
+- 不直接执行通用 tool；Phase 1.6 只触发 safe smoke tool 的 approval-to-effect bridge。
 - 不决定 approval policy。
 - 不直接写 plugin runtime 逻辑。
 
@@ -218,6 +232,12 @@ Phase 1.3：
 
 - `npm run check` 会阻止目录文件数超过 20、目录深度超过 4、文件超过 500 行。
 - `npm run check` 会重建 HTML 并在生成物 stale、缺失或多余时失败。
+
+Phase 1.6：
+
+- `POST /api/tool-requests/smoke-note` 生成 safe local tool request 和 `tool-action` approval。
+- `GET /api/tool-requests` 读取 pending/completed/rejected 工具请求。
+- approval decision 触发 smoke tool settlement：approved 写本地相对 artifact，rejected 不执行。
 - `myclaw doctor` 会报告 HTML Center health，避免报告链接坏了却没人知道。
 - 生成的模块 HTML 从 `docs/modules` 移到 `docs/rendered/modules`，避免源文档目录超过 20 个文件。
 - `packages/feishu-bot` 在 Gateway 外独立持有 Feishu SDK、default-closed policy 和 persistent replay。
@@ -266,7 +286,7 @@ Phase 4：
 - scoped token 已有最小实现，但还不是用户/角色/租户权限系统。
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 - Human Experiments 当前是静态 payload，不能被当作自动验收结果；但已按 L0-L6 分层暴露测试路线。
-- approval decision 只是 audit record，不是完整 authorization framework。
+- approval decision 现在可触发 safe smoke tool settlement，但还不是完整 authorization framework。
 
 ## 验收标准
 
@@ -278,11 +298,13 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.5 的 L0-L6、E0-E10 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.6 的 L0-L6、E0-E10/E5B 路线，并和 Dashboard 展示一致。
 - `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
 - `GET /api/events/stream` 能返回脱敏 snapshot；非 loopback 时必须有 `events:read` 或 `read` scope。
 - 非 loopback 的 `/api/status`、`/api/events`、`/api/audit`、`/api/approvals`、Dashboard HTML 都必须有 `control:read` 或 `read` scope。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
+- `POST /api/tool-requests/smoke-note` 配置 token 后生成 pending approval，approved 才写 `tool-runs/...`。
+- `GET /api/tool-requests` 能返回 pending/completed/rejected，且 artifact 不暴露绝对路径。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
 - Gateway 重启后能从 state store 读历史 run。

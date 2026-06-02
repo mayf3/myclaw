@@ -66,6 +66,14 @@ Phase 1.1 已落地的最小种子：
 - decision 只记录 approved/rejected，不执行 tool、apply 或 runtime mutation。
 - 当前还不是完整 tool approval，只是给后续危险动作审批铺 state/API/UI。
 
+Phase 1.6 已落地的 safe tool approval smoke：
+
+- `packages/tools/src/smoke-note.mjs` 提供一个本地安全工具 `smoke.note.write`。
+- `POST /api/tool-requests/smoke-note` 只创建 tool request 和 pending approval，不执行副作用。
+- `POST /api/approvals/:id/decision` 在 approved 后写 `state/tool-runs/<toolRunId>.json`，rejected 时不执行。
+- `GET /api/tool-requests` 可查看 pending/completed/rejected；artifact 只暴露相对路径 `tool-runs/...`。
+- 当前仍不是通用 tool registry，没有任意 shell、文件写入、网络或 LLM tool。
+
 ## 第一批工具
 
 Phase 2：
@@ -121,11 +129,12 @@ MyClaw v0 明确采用：
 - allow/deny 只影响 UI，不影响 dispatch。
 - approval 只靠终端交互，不落盘，无法 resume。
 - `exec` 支持 shell interpolation 时没有清楚的风险提示。
+- smoke tool 直接绑在 approval settlement 上，后续必须抽成 ToolDescriptor dispatch，避免新增工具都改 approval route。
 
 ## 验收标准
 
 - 未 allow 的 tool 不出现在 agent schema，且 dispatch 也拒绝。
-- `write` 和高风险 `exec` 会生成 approvalId。
+- `write` 和高风险 `exec` 会生成 approvalId；Phase 1.6 先要求 smoke tool approved 才执行。
 - approvalId 能被 `myclaw resume` 恢复。
 - cwd escape、absolute path、`..` escape 都有测试。
 - stdout/stderr cap 和 timeout 有测试。

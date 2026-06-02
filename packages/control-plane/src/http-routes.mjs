@@ -11,6 +11,7 @@ import {
   buildRunPayload,
   buildRunsPayload,
   buildStatusPayload,
+  buildToolRequestsPayload,
 } from "./status.mjs";
 
 export async function resolveControlGetRoute(url, context = {}) {
@@ -35,6 +36,9 @@ export async function resolveControlGetRoute(url, context = {}) {
   }
   if (url.pathname === "/api/approvals") {
     return route(200, await buildApprovalsPayload(context, { limit: numberParam(url, "limit", 50), status: url.searchParams.get("status") || "" }));
+  }
+  if (url.pathname === "/api/tool-requests") {
+    return route(200, await buildToolRequestsPayload(context, { limit: numberParam(url, "limit", 50) }));
   }
   if (url.pathname.startsWith("/api/approvals/")) {
     const approvalId = decodeURIComponent(url.pathname.slice(15));

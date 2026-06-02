@@ -7,6 +7,7 @@ import { createEvent, okEnvelope } from "../../core/src/envelope.mjs";
 import { createApprovalRequest } from "../../core/src/approvals.mjs";
 import { recordAuditEvent } from "../../core/src/audit.mjs";
 import { recordRun } from "../../core/src/state.mjs";
+import { createSmokeNoteToolRequest } from "../../tools/src/smoke-note.mjs";
 import { resolveControlGetRoute } from "../src/http-routes.mjs";
 
 test("control get route adapter resolves shared read routes", async () => {
@@ -32,6 +33,7 @@ test("control get route adapter resolves shared read routes", async () => {
     actor: { kind: "loopback", local: true },
     resource: { type: "message" },
   });
+  const tool = await createSmokeNoteToolRequest(stateDir, { note: "route smoke" });
   const context = { stateDir, openclawSource: stateDir, service: "route-test" };
 
   const health = await resolveControlGetRoute(url("/api/health"), context);
@@ -52,7 +54,7 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.5");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.6");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
@@ -60,7 +62,13 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);
-  assert.equal(approvals.payload.approvals[0].approvalId, approval.approvalId);
+  assert.equal(approvals.payload.approvals.some((item) => item.approvalId === approval.approvalId), true);
+
+  const toolRequests = await resolveControlGetRoute(url("/api/tool-requests"), context);
+  assert.equal(toolRequests.status, 200);
+  assert.equal(toolRequests.payload.toolRequests[0].toolRequestId, tool.request.toolRequestId);
+  assert.equal(toolRequests.payload.toolRequests[0].input.notePreview, "[redacted 11 chars]");
+  assert.equal(JSON.stringify(toolRequests.payload).includes("route smoke"), false);
 
   const audit = await resolveControlGetRoute(url("/api/audit"), context);
   assert.equal(audit.status, 200);
@@ -114,6 +122,8 @@ test("control read routes redact Feishu message payloads", async () => {
   const joined = JSON.stringify({ status: status.payload, run: run.payload, events: events.payload });
 
   assert.equal(status.payload.runs[0].envelope.result.inbound.text, "[redacted]");
+  assert.equal("stateDir" in status.payload, false);
+  assert.equal(status.payload.state.label, "local-state");
   assert.equal(status.payload.runs[0].envelope.result.inbound.textPreview, "[redacted 22 chars]");
   assert.equal(run.payload.run.envelope.result.reply.raw, undefined);
   assert.equal(joined.includes("private feishu message"), false);

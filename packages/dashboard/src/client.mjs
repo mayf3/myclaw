@@ -137,7 +137,7 @@ function renderApprovals(approvals, diff) {
   $("approvalPanel").outerHTML = '<div id="approvalPanel" class="approval-list">' +
     approvals.map((item) => '<div class="approval-row">' +
       '<div><span class="tag ' + approvalTone(item.status) + '">' + esc(item.status) + '</span><p class="mono small">' + esc(item.approvalId) + '</p></div>' +
-      '<div><strong>' + esc(item.title) + '</strong><p>' + esc(item.summary) + '</p><p><span class="small">' + esc(item.subject?.type || "-") + ' · ' + esc(item.subject?.stageId || "-") + '</span></p></div>' +
+      '<div><strong>' + esc(item.title) + '</strong><p>' + esc(item.summary) + '</p><p><span class="small">' + esc(item.subject?.type || "-") + ' · ' + esc(item.subject?.stageId || item.subject?.toolRequestId || "-") + '</span></p></div>' +
       '<div><span class="tag ' + (item.severity === "high" ? "warn" : "info") + '">' + esc(item.severity) + '</span><p class="small">' + esc(item.updatedAt || "-") + '</p></div>' +
     '</div>').join("") +
     renderStageReview(diff) +
@@ -171,7 +171,7 @@ async function fetchRunDetail(runId) {
 }
 
 function renderOverview(payload) {
-  $("subtitle").textContent = "State: " + payload.stateDir + " · " + payload.at;
+  $("subtitle").textContent = "State: " + (payload.state?.label || "local-state") + " · " + payload.at;
   $("completionScore").textContent = (payload.referenceCompletion?.average ?? "-") + "%";
   $("runCount").textContent = (payload.runs || []).length;
   $("eventCount").textContent = (payload.events || []).length;

@@ -16,7 +16,7 @@
 <nav aria-label="评审导航">
 <a href="#summary">总诊断</a>
 <a href="./implementation-architecture.html">当前实现架构</a>
-<a href="#phase-12">Phase 1.2</a>
+<a href="#phase-16">Phase 1.6</a>
 <a href="#modules">模块文档</a>
 <a href="#priority">实现优先级</a>
 <a href="#dependency">依赖关系</a>
@@ -31,8 +31,8 @@
 MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-tool permission。Phase 1.2 已在 Human Experiments、共享 route adapter 和 approval queue 之上，
-补齐强制结构红线、生成物 stale 检查、HTML Center 仓库命令和 L0-L6 分层测试路线；
+tool permission。Phase 1.6 已在 Human Experiments、共享 route adapter、approval queue、Gateway stream/scoped token 之上，
+补齐 safe tool approval smoke、强制结构红线、生成物 stale 检查、HTML Center 仓库命令和 L0-L6 分层测试路线；
 Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
 <div class="quick-actions">
@@ -42,8 +42,8 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <a class="button secondary" href="./rendered/modules/README.html">打开模块索引</a>
 </div>
 </section>
-<section id="phase-12">
-<h2>Phase 1.2 当前焦点</h2>
+<section id="phase-16">
+<h2>Phase 1.6 当前焦点</h2>
 <table>
 <thead>
 <tr>
@@ -60,8 +60,8 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 </tr>
 <tr>
 <td>Dashboard</td>
-<td>显示 Feishu adapter readiness、milestones、Human Experiments、Approvals、stage review 和最新 run detail。</td>
-<td>下一步拆 section renderer，避免 client 继续变大。</td>
+<td>显示 Feishu adapter readiness、milestones、Human Experiments、Approvals、stage review、最新 run detail、health/audit/stream 和 toolRequestId。</td>
+<td>下一步拆 section renderer，再做 tool request drawer。</td>
 </tr>
 <tr>
 <td>Structure Guardrails</td>
@@ -70,18 +70,23 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 </tr>
 <tr>
 <td>HTML Center</td>
-<td><code>npm run html-center</code> 可检查/启动本地 4177 服务，<code>npm run publish:review</code> 可发布报告包。</td>
-<td>下一步把 health 结果放进 Dashboard 顶部状态条。</td>
+<td><code>npm run html-center</code> 可检查/启动本地 4177 服务，<code>npm run publish:review</code> 可发布报告包，Dashboard health 已能提示 unreachable。</td>
+<td>下一步做统一 services status。</td>
 </tr>
 <tr>
 <td>Feishu/Lark</td>
-<td>已有 MyClaw adapter facade、x-lark signature、encrypted challenge decrypt 和 outbound text/card facade。</td>
-<td>补 app-token outbound、持久 replay 和更完整 event 类型。</td>
+<td>已有 WebSocket 群消息 direct reply、默认封闭 policy、persistent replay 和 read redaction。</td>
+<td>补 rich card 和 agent replyBuilder 安全边界。</td>
 </tr>
 <tr>
 <td>Gateway</td>
-<td>主文件从 321 行拆到 90 行，route/auth/http 独立；只读控制 API 共享 <code>resolveControlGetRoute</code>。</td>
-<td>补 scoped token 和 mutation audit。</td>
+<td>route/auth/http 独立；只读控制 API 共享 <code>resolveControlGetRoute</code>；已支持 mutation audit、SSE snapshot、scoped token 和 tool request route。</td>
+<td>补 route schema、event seq/replay 和通用 ToolDescriptor dispatch。</td>
+</tr>
+<tr>
+<td>Tool Approval</td>
+<td>E5B 已可测：safe smoke tool 只有 approved 后才写 <code>tool-runs/...</code>，rejected 不执行。</td>
+<td>下一步抽 policy snapshot、sandbox 和幂等 key。</td>
 </tr>
 </tbody>
 </table>
