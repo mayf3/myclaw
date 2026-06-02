@@ -1,4 +1,5 @@
 import { decideApproval } from "../../../core/src/approvals.mjs";
+import { settleToolApprovalDecision } from "../../../tools/src/smoke-note.mjs";
 import { readJsonBody, sendJson } from "../http.mjs";
 
 export async function handlePostApprovalDecision(request, response, context, approvalId) {
@@ -9,7 +10,8 @@ export async function handlePostApprovalDecision(request, response, context, app
     reason: body.reason,
   });
   if (result.ok) {
-    sendJson(response, 200, result);
+    const tool = await settleToolApprovalDecision(context.stateDir, result.approval);
+    sendJson(response, 200, { ...result, ...(tool ? { tool } : {}) });
     return;
   }
   sendJson(response, decisionStatus(result.status), {

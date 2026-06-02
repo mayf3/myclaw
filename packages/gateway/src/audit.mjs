@@ -43,6 +43,9 @@ export function classifyGatewayMutation(url, options = {}) {
   if (pathname === "/api/openclaw-migration/stage") {
     return { action: "gateway.openclaw.stage", resource: { type: "openclaw-migration" } };
   }
+  if (pathname === "/api/tool-requests/smoke-note") {
+    return { action: "gateway.tool.request", resource: { type: "tool-request", id: "smoke-note" } };
+  }
   if (options.approvalDecisionId) {
     return { action: "gateway.approval.decide", resource: { type: "approval", id: options.approvalDecisionId } };
   }

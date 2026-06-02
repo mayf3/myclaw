@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MyClaw Phase 1.5 实现架构可视化评审 · MyClaw</title>
+    <title>MyClaw Phase 1.6 实现架构可视化评审 · MyClaw</title>
     <style>
 :root{color-scheme:light;--bg:#f6f7f8;--panel:#fff;--ink:#1b1f23;--muted:#66717d;--line:#d8dee4;--accent:#0f766e;--accent-soft:#e0f2ef;--warn:#9a3412;--warn-soft:#ffedd5;--critical:#991b1b;--critical-soft:#fee2e2;--code:#101827}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","Microsoft YaHei",sans-serif;font-size:15px;line-height:1.6}
@@ -30,7 +30,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     <div class="shell">
       <aside>
         <div class="brand">
-          <h1>MyClaw Phase 1.5 实现架构可视化评审</h1>
+          <h1>MyClaw Phase 1.6 实现架构可视化评审</h1>
           <p>当前实现架构与阶段评审</p>
         </div>
         <a class="back" href="./index.html">← 返回全局索引</a>
@@ -60,17 +60,17 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
       <main>
         <section id="module-summary" class="hero">
           <h2>当前实现架构</h2>
-          <p>MyClaw Phase 1.5 的 Gateway audit、Dashboard health、SSE event stream、scoped token、Feishu WebSocket bot、结构约束和当前架构审查。</p>
+          <p>MyClaw Phase 1.6 的 tool approval smoke、Gateway audit、Dashboard health、SSE event stream、scoped token、Feishu WebSocket bot、结构约束和当前架构审查。</p>
           <div class="meta">
             <span class="tag p0">P0</span>
-            <span class="tag phase">Phase 1.5</span>
+            <span class="tag phase">Phase 1.6</span>
             <span class="tag">实现评审</span>
           </div>
         </section>
-        <article class="content"><p>更新时间：2026-05-31</p>
+        <article class="content"><p>更新时间：2026-06-02</p>
 <h2 id="总诊断">总诊断</h2>
-<p>Phase 1.5 把 L1 从“能看健康、能追写操作”推进到“能实时感知连接、能分权读取”：Gateway SSE snapshot/heartbeat 已接入 Dashboard，非 loopback 控制面 GET 统一走 read auth，scoped token 可把 <code>message:write</code>、<code>events:read</code>、<code>control:read</code> 分开。结论：MyClaw 可以继续做 approval-to-tool，但还不能让 agent 直接执行真实工具。</p>
-<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>9/10</td><td>L0-L6 分层测试新增 E1C stream/scoped token</td></tr><tr><td>可扩展性</td><td>8/10</td><td>Gateway read/write scope 开始分离，后续插件可按最小权限接入</td></tr><tr><td>可靠性</td><td>8/10</td><td>Dashboard 可随 SSE heartbeat 自动刷新，但 stream 还没有 seq/replay</td></tr><tr><td>可维护性</td><td>8/10</td><td>结构债务和生成物 stale 进入 <code>npm run check</code>，Dashboard client 已到 432 行</td></tr><tr><td>安全性</td><td>9/10</td><td>非 loopback 控制面 GET 不再裸露；SSE snapshot 复用 Feishu 脱敏</td></tr></tbody></table></div>
+<p>Phase 1.6 把 L2 从“能审批记录”推进到“能审批后执行一个安全本地工具”：<code>POST /api/tool-requests/smoke-note</code> 只创建 pending approval，approved 后才写本地相对 <code>tool-runs/...</code>，rejected 不执行。结论：MyClaw 已具备后续 agent tool loop 的安全前置样本，但还不能开放通用 shell、文件写入、网络或 LLM tool。</p>
+<div class="table-wrap"><table><thead><tr><th>评分项</th><th>当前分</th><th>判断</th></tr></thead><tbody><tr><td>设计清晰度</td><td>9/10</td><td>E5B 明确“工具请求必须先审批”，没有伪装成完整 agent</td></tr><tr><td>可扩展性</td><td>8/10</td><td>side effect 先隔离在 <code>packages/tools</code>，下一步可抽 ToolDescriptor</td></tr><tr><td>可靠性</td><td>8/10</td><td>approved/rejected 都落本地 state 和 event；仍缺通用幂等 key</td></tr><tr><td>可维护性</td><td>8/10</td><td>结构债务和生成物 stale 进入 <code>npm run check</code>，Dashboard client 已到 432 行</td></tr><tr><td>安全性</td><td>9/10</td><td>rejected 不执行，artifact 只暴露相对路径；仍缺通用 policy/sandbox</td></tr></tbody></table></div>
 <h2 id="大规划图">大规划图</h2>
 <p>这张图回答：当前哪些能力已经可由用户亲手测试，哪些还在后续阶段。</p>
 <div class="mermaid">flowchart LR
@@ -81,7 +81,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   E2A --&gt; E2B[E2B Feishu websocket group reply]
   E2B --&gt; E4[E4 OpenClaw stage]
   E4 --&gt; E5[E5 Approval decision]
-  E5 --&gt; E7[E7 工程约束]
+  E5 --&gt; E5B[E5B Tool approval smoke]
+  E5B --&gt; E7[E7 工程约束]
   E7 --&gt; L0[L0 接入层]
   L0 --&gt; L1[L1 Gateway]
   L1 --&gt; L2[L2 Workflow + Approval]
@@ -92,7 +93,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   E2[E2 Feishu outbound] -.配置后.-&gt; E3[E3 callback smoke]
   E2A -.credentials present.-&gt; E2B</div>
 <p>Review 观察：</p>
-<ul><li>优点：E7 把技术债约束变成可执行实验。</li><li>优点：当前可测入口已经覆盖消息、Dashboard health/audit/stream、scoped token、Feishu app credential presence、Feishu 群回复、迁移、审批、结构约束。</li><li>优点：L0-L6 让“先交互基础、后 agent 智能”成为硬路线。</li><li>风险：L3-L6 仍未实现，不能测试 agent runtime、agent 协作 和记忆。</li><li>改进：下一阶段优先补 approval-to-tool、route schema 和 event seq/replay，而不是直接堆能执行真实工具的 agent。</li></ul>
+<ul><li>优点：E7 把技术债约束变成可执行实验。</li><li>优点：当前可测入口已经覆盖消息、Dashboard health/audit/stream、scoped token、Feishu app credential presence、Feishu 群回复、迁移、审批、safe tool approval、结构约束。</li><li>优点：L0-L6 让“先交互基础、后 agent 智能”成为硬路线。</li><li>风险：L3-L6 仍未实现，不能测试 agent runtime、agent 协作 和记忆。</li><li>改进：下一阶段优先把 smoke tool 抽成 ToolDescriptor/policy/sandbox，再补 route schema 和 event seq/replay。</li></ul>
 <h2 id="分层交互架构图">分层交互架构图</h2>
 <p>这张图回答：为什么接入层和 gateway 要排在 agent、agent 协作、记忆之前。</p>
 <div class="mermaid">flowchart TB
@@ -136,10 +137,17 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <p>Review 观察：</p>
 <ul><li>优点：旧链接打不开的根因是服务未运行，已用 <code>ensure_html_center.py</code> 恢复。</li><li>优点：openduck secret 不进入 repo，导入脚本只写 ignored <code>.myclaw/</code>。</li><li>优点：HTML Center 仍依赖 tmux 常驻，但 Dashboard health 能暴露 unreachable。</li><li>风险：Feishu bot 目前只做文本自动回复，已支持默认封闭 policy、persistent replay 和 direct/thread 模式，但还没有 rich card 和 agent replyBuilder。</li><li>改进：后续把 health strip 接到 event stream 或自动刷新，不只靠手动刷新。</li></ul>
 <h2 id="模块架构图">模块架构图</h2>
-<p>这张图回答：Gateway stream/scoped token 如何和结构约束一起进入开发闭环。</p>
+<p>这张图回答：tool approval smoke 如何保持 Gateway 主线干净，并把副作用限制在 tools 模块。</p>
 <div class="mermaid">flowchart TB
   Package[package.json] --&gt; CheckScript[npm run check]
   GatewayIndex[packages/gateway/src/index.mjs] --&gt; Auth[auth.mjs scoped tokens]
+  GatewayIndex --&gt; ToolsRoute[routes/tools.mjs]
+  GatewayIndex --&gt; ApprovalRoute[routes/approvals.mjs]
+  ToolsRoute --&gt; SmokeTool[packages/tools/src/smoke-note.mjs]
+  ApprovalRoute --&gt; SmokeSettle[settleToolApprovalDecision]
+  SmokeTool --&gt; ToolRequests[state/tool-requests]
+  SmokeSettle --&gt; ToolRuns[state/tool-runs]
+  SmokeTool --&gt; Approvals[core approvals]
   GatewayIndex --&gt; EventStream[event-stream.mjs]
   GatewayIndex --&gt; ControlRoutes[control routes]
   EventStream --&gt; Redaction[control-plane redaction]
@@ -159,91 +167,86 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   BuildDocs --&gt; DocsRoot[docs/*.html]
   SecretScan --&gt; NoLeaks[fail if local secrets appear in tracked files]</div>
 <p>Review 观察：</p>
-<ul><li>优点：约束是硬失败，不是 README 建议。</li><li>优点：目录文件数按直接文件计算，能防止一个目录变抽屉。</li><li>优点：本地 secret 泄露扫描进入 <code>npm run check</code>，不是只靠人工纪律。</li><li>优点：Feishu SDK 只在 <code>packages/feishu-bot</code>，core/runtime/gateway 主线保持干净。</li><li>优点：SSE stream、auth、control route 分开，主入口只做分发和权限边界。</li><li>风险：<code>docs/build-review-html.mjs</code> 414 行，仍接近 450 预警。</li><li>改进：下一步拆 Dashboard renderer 和 Markdown parser。</li></ul>
+<ul><li>优点：约束是硬失败，不是 README 建议。</li><li>优点：目录文件数按直接文件计算，能防止一个目录变抽屉。</li><li>优点：tool side effect 在 <code>packages/tools</code>，Gateway route 只做 request/decision bridge。</li><li>优点：Feishu SDK 只在 <code>packages/feishu-bot</code>，core/runtime/gateway 主线保持干净。</li><li>风险：approval route 直接 import smoke tool settlement，下一步应抽 dispatch registry。</li><li>改进：下一步拆 Dashboard renderer、Markdown parser 和 ToolDescriptor registry。</li></ul>
 <h2 id="核心业务流程图">核心业务流程图</h2>
-<p>这张图回答：一次非 loopback Gateway 读请求如何被 scoped token 约束。</p>
+<p>这张图回答：一次工具请求如何先暂停给人审批，再按 decision 执行或放弃。</p>
 <div class="mermaid">flowchart TD
-  Start[GET /api/status 或 /api/events/stream] --&gt; Health{path 是 /api/health?}
-  Health --&gt;|是| Public[公开 health]
-  Health --&gt;|否| Host{Gateway host loopback?}
-  Host --&gt;|是| LocalRead[本地 read 允许]
-  Host --&gt;|否| Token[读取 Bearer 或 x-myclaw-token]
-  Token --&gt; Scope{scope 匹配?}
-  Scope --&gt;|control:read/read| Control[控制面 JSON]
-  Scope --&gt;|events:read/read| Stream[SSE snapshot + heartbeat]
-  Scope --&gt;|否| Deny[401/403]
-  Stream --&gt; Redact[Feishu event redaction]
-  Control --&gt; Redact
-  Redact --&gt; Dashboard[Dashboard 刷新]</div>
+  Start[POST /api/tool-requests/smoke-note] --&gt; Auth{token has mutation/tool:request?}
+  Auth --&gt;|否| Deny[401/403]
+  Auth --&gt;|是| Create[create tool request]
+  Create --&gt; Approval[pending approval subject=tool-action]
+  Approval --&gt; Wait[等待用户 decision]
+  Wait --&gt;|approved| Execute[write local tool-runs artifact]
+  Wait --&gt;|rejected| Reject[mark rejected, result=null]
+  Execute --&gt; Completed[tool request completed]
+  Reject --&gt; Done[tool request rejected]
+  Completed --&gt; Read[GET /api/tool-requests]
+  Done --&gt; Read</div>
 <p>Review 观察：</p>
-<ul><li>优点：非 loopback read plane 不再裸露，<code>events:read</code> 与 <code>control:read</code> 分开。</li><li>优点：legacy gateway token 仍是 <code>*</code>，避免破坏本地脚本。</li><li>风险：SSE 目前是 snapshot/heartbeat，不是有 seq 的增量事件总线。</li><li>改进：下一步补 route schema、event seq/replay 和短期 stream URL。</li></ul>
+<ul><li>优点：副作用前有明确人工介入点，rejected 不执行。</li><li>优点：result artifact 是相对路径，避免 API 泄露本机绝对路径。</li><li>风险：当前只有一个 smoke tool，不能代表完整 tool registry。</li><li>改进：下一步补 ToolDescriptor、policy snapshot、幂等 key 和 sandbox dispatch。</li></ul>
 <h2 id="关键时序图">关键时序图</h2>
-<p>这张图回答：Dashboard 如何通过 SSE 感知状态并刷新。</p>
+<p>这张图回答：审批 decision 如何触发 safe tool settlement。</p>
 <div class="mermaid">sequenceDiagram
   participant U as User
-  participant B as Browser Dashboard
-  participant D as Dashboard server
-  participant S as event-stream
-  participant F as state/audit files
+  participant G as Gateway
+  participant A as core approvals
+  participant T as smoke-note tool
+  participant S as state files
 
-  U-&gt;&gt;B: 打开 http://127.0.0.1:4321
-  B-&gt;&gt;D: GET /api/events/stream
-  D-&gt;&gt;S: handleControlEventStream
-  S-&gt;&gt;F: read events.jsonl + audit.jsonl
-  S--&gt;&gt;B: event:snapshot redacted
-  B-&gt;&gt;D: GET /api/status
-  S--&gt;&gt;B: event:heartbeat every 2s
-  B-&gt;&gt;D: refresh status on heartbeat</div>
+  U-&gt;&gt;G: POST /api/tool-requests/smoke-note
+  G-&gt;&gt;T: createSmokeNoteToolRequest
+  T-&gt;&gt;A: createApprovalRequest
+  T-&gt;&gt;S: write tool-requests/&lt;id&gt;.json
+  U-&gt;&gt;G: POST /api/approvals/&lt;id&gt;/decision approved
+  G-&gt;&gt;A: decideApproval
+  G-&gt;&gt;T: settleToolApprovalDecision
+  T-&gt;&gt;S: write tool-runs/&lt;id&gt;.json
+  T-&gt;&gt;S: update tool request completed</div>
 <p>Review 观察：</p>
-<ul><li>优点：Dashboard 不需要读取本地文件，只通过 HTTP/SSE 控制面。</li><li>优点：stream 先读 snapshot 再发 headers，避免半截 SSE 500。</li><li>风险：heartbeat 刷新是轻量轮询，不是精确 delta。</li><li>改进：下一阶段加 seq/replay 和 changed event。</li></ul>
+<ul><li>优点：approval 状态和 tool request 状态都持久化，Dashboard/API 可复核。</li><li>优点：settlement 在 approval decision 后发生，符合人工确认语义。</li><li>风险：approval route 现在知道 smoke tool，未来多个工具会变成 if 链。</li><li>改进：用 tool registry/hook 订阅 approval.decided，降低 route 耦合。</li></ul>
 <h2 id="状态机图">状态机图</h2>
-<p>这张图回答：Gateway read token 和 SSE 连接的状态如何流转。</p>
+<p>这张图回答：ToolRequest 生命周期如何处理批准、拒绝和重复 settlement。</p>
 <div class="mermaid">stateDiagram-v2
-  [*] --&gt; Request
-  Request --&gt; PublicHealth: /api/health
-  Request --&gt; LoopbackRead: loopback dashboard
-  Request --&gt; TokenMissing: non-loopback no token
-  Request --&gt; TokenInvalid: bad token
-  Request --&gt; ScopeDenied: valid token wrong scope
-  Request --&gt; Snapshot: events:read/control:read
-  Snapshot --&gt; Heartbeat: stream open
-  Heartbeat --&gt; Reconnect: browser/network close
-  Reconnect --&gt; Request
-  TokenMissing --&gt; [*]
-  TokenInvalid --&gt; [*]
-  ScopeDenied --&gt; [*]
-  PublicHealth --&gt; [*]
-  LoopbackRead --&gt; [*]</div>
+  [*] --&gt; PendingApproval
+  PendingApproval --&gt; Completed: approval approved
+  PendingApproval --&gt; Rejected: approval rejected
+  PendingApproval --&gt; PendingApproval: invalid decision / still pending
+  Completed --&gt; AlreadySettled: repeated decision hook
+  Rejected --&gt; AlreadySettled: repeated decision hook
+  AlreadySettled --&gt; [*]
+  Completed --&gt; [*]
+  Rejected --&gt; [*]</div>
 <p>Review 观察：</p>
-<ul><li>优点：401、403、loopback、本地 dashboard 路径有清晰分支。</li><li>风险：EventSource 不能带自定义 header，浏览器直连 Gateway 还没认证形态。</li><li>改进：保持 Dashboard proxy 为默认入口，后续再做短期签名 stream URL。</li></ul>
+<ul><li>优点：rejected 是终态，不写 tool-run。</li><li>优点：重复 settlement 返回 <code>already_settled</code>，避免重复执行 smoke tool。</li><li>风险：还没有 expires/timeout/cancelled 状态。</li><li>改进：通用 tool request 应加入 idempotency key、timeout 和 manual resume。</li></ul>
 <h2 id="数据模型-er-图">数据模型 / ER 图</h2>
-<p>这张图回答：scoped token、SSE snapshot、events 和 audit 的关系。</p>
+<p>这张图回答：approval、tool request、tool run 和 event/audit 的关系。</p>
 <div class="mermaid">erDiagram
-  SCOPED_TOKEN ||--o{ SCOPE : grants
-  SSE_SNAPSHOT ||--o{ EVENT : includes
-  SSE_SNAPSHOT ||--o{ AUDIT_EVENT : includes
-  RUN ||--o{ EVENT : emits
+  APPROVAL ||--|| TOOL_REQUEST : gates
+  TOOL_REQUEST ||--o| TOOL_RUN : produces
+  TOOL_REQUEST ||--o{ EVENT : emits
+  GATEWAY_MUTATION ||--o{ AUDIT_EVENT : records
 
-  SCOPED_TOKEN { string token string source }
-  SCOPE { string name string boundary }
-  SSE_SNAPSHOT { string at int eventLimit int auditLimit }
-  RUN { string runId string status }
-  EVENT { string type string runId string at }
+  APPROVAL { string approvalId string status string subjectType }
+  TOOL_REQUEST { string toolRequestId string toolName string status }
+  TOOL_RUN { string toolRunId string artifact string status }
+  EVENT { string type string toolRequestId string at }
   AUDIT_EVENT { string action int status string outcome }</div>
 <p>Review 观察：</p>
-<ul><li>优点：token 不入 state，snapshot 只携带脱敏运行数据。</li><li>风险：没有 seq/replay 时，snapshot 只能代表“最近状态”。</li><li>改进：为 events/audit 加统一 cursor。</li></ul>
+<ul><li>优点：approval 和 tool request 双记录，方便人从审批追到结果。</li><li>优点：tool run artifact 是相对路径，API 不泄露本机绝对路径。</li><li>风险：tool input/output 还没有 schema versioned validator。</li><li>改进：通用工具前补 ToolDescriptor schema 和 redaction contract。</li></ul>
 <h2 id="数据流图">数据流图</h2>
-<p>这张图回答：Dashboard stream 数据从哪里来，经过哪些处理，最终到哪里去。</p>
+<p>这张图回答：tool approval smoke 数据从哪里来，经过哪些处理，最终到哪里去。</p>
 <div class="mermaid">flowchart LR
-  Runs[events.jsonl] --&gt; EventStream[event-stream.mjs]
-  Audit[audit.jsonl] --&gt; EventStream
-  EventStream --&gt; Redaction[redact Feishu fields]
-  Redaction --&gt; Snapshot[SSE snapshot]
-  Snapshot --&gt; Browser[Dashboard EventSource]
-  Browser --&gt; StatusFetch[GET /api/status refresh]
-  StatusFetch --&gt; Panels[health/audit/runs/events panels]</div>
+  Request[HTTP tool request] --&gt; Auth[mutation/tool:request auth]
+  Auth --&gt; ToolRequest[tool-requests JSON]
+  ToolRequest --&gt; Approval[approvals JSON]
+  Approval --&gt; Decision[approved/rejected]
+  Decision --&gt;|approved| ToolRun[tool-runs JSON artifact]
+  Decision --&gt;|rejected| NoRun[result null]
+  ToolRun --&gt; Status[GET /api/tool-requests]
+  NoRun --&gt; Status
+  Status --&gt; Dashboard[Dashboard approval row/tool id]</div>
 <p>Review 观察：</p>
-<ul><li>优点：SSE 只读 state/audit，不写业务状态。</li><li>风险：heartbeat 触发完整 <code>/api/status</code>，数据规模变大后要缓存和 delta。</li><li>改进：加 cursor 后 Dashboard 只拉增量。</li></ul>
+<ul><li>优点：数据流里没有 shell、网络、LLM provider，适合作为安全烟测。</li><li>风险：Dashboard 目前只显示 toolRequestId，还没有独立 tool panel。</li><li>改进：拆 renderer 后增加 tool request drawer 和 result 摘要。</li></ul>
 <h2 id="部署图">部署图</h2>
 <p>这张图回答：本机服务现在如何运行。</p>
 <div class="mermaid">flowchart TB
@@ -251,9 +254,11 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
     Dashboard[myclaw-dashboard tmux :4321]
     Gateway[myclaw-gateway tmux :4322]
     HtmlCenter[html-center tmux :4177]
+    Tools[packages/tools local side effects]
     Repo[myclaw repo]
     Repo --&gt; Dashboard
     Repo --&gt; Gateway
+    Gateway --&gt; Tools
     Dashboard --&gt; EventSource[/api/events/stream]
     Gateway --&gt; ReadAuth[read auth for non-loopback]
     Repo --&gt; Doctor[myclaw doctor]
@@ -263,25 +268,24 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
   Browser --&gt; Dashboard
   Browser --&gt; HtmlCenter</div>
 <p>Review 观察：</p>
-<ul><li>优点：三个本地服务都回到 tmux 常驻。</li><li>优点：Dashboard 本地 proxy 避免浏览器 EventSource header token 问题。</li><li>风险：没有统一 supervisor。</li><li>改进：doctor 已有 HTML Center health；后续做统一 services status。</li></ul>
+<ul><li>优点：三个本地服务都回到 tmux 常驻。</li><li>优点：Dashboard 本地 proxy 避免浏览器 EventSource header token 问题。</li><li>风险：没有统一 supervisor，tool side effect 也没有独立 worker。</li><li>改进：doctor 已有 HTML Center health；后续做统一 services status 和 worker/queue 边界。</li></ul>
 <h2 id="human-experiments">Human Experiments</h2>
-<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.5、Approvals 可见</td></tr><tr><td>E1B</td><td>ready</td><td>写一次 Gateway mutation</td><td>Dashboard health/audit 可见，audit 不含正文/token</td></tr><tr><td>E1C</td><td>ready</td><td>测非 loopback scoped token 与 SSE</td><td>错 scope 被拒绝，stream snapshot 脱敏，Dashboard heartbeat 刷新</td></tr><tr><td>E2A</td><td>ready</td><td><code>npm run import:openduck</code></td><td>credentials present；runtime/outbound ready</td></tr><tr><td>E2B</td><td>ready</td><td>在备份飞书群发文本</td><td>群内直接收到 <code>MyClaw 收到了：...</code>，出现脱敏 <code>fb_*</code> run</td></tr><tr><td>E2C</td><td>ready</td><td>跑 hardening tests</td><td>persistent replay、policy file、read redaction 通过</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected</td></tr><tr><td>E7</td><td>ready</td><td><code>npm run check</code></td><td>输出 500 行、20 文件/目录、depth 4</td></tr><tr><td>E2/E3</td><td>needs_config</td><td>Feishu webhook/callback</td><td>配置后可测</td></tr><tr><td>E6</td><td>planned</td><td>单 agent run/resume/tool loop</td><td>后续开放</td></tr><tr><td>E8</td><td>planned</td><td>session search + provenance</td><td>后续开放</td></tr><tr><td>E9</td><td>planned</td><td>agent-to-agent review</td><td>后续开放</td></tr><tr><td>E10</td><td>planned</td><td>long memory add/search/delete</td><td>后续开放</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>实验</th><th>状态</th><th>用户动作</th><th>成功信号</th></tr></thead><tbody><tr><td>E0</td><td>ready</td><td><code>send --text</code></td><td>ok envelope，run 可见</td></tr><tr><td>E1</td><td>ready</td><td>打开 Dashboard</td><td>Phase 1.6、Approvals 可见</td></tr><tr><td>E1B</td><td>ready</td><td>写一次 Gateway mutation</td><td>Dashboard health/audit 可见，audit 不含正文/token</td></tr><tr><td>E1C</td><td>ready</td><td>测非 loopback scoped token 与 SSE</td><td>错 scope 被拒绝，stream snapshot 脱敏，Dashboard heartbeat 刷新</td></tr><tr><td>E2A</td><td>ready</td><td><code>npm run import:openduck</code></td><td>credentials present；runtime/outbound ready</td></tr><tr><td>E2B</td><td>ready</td><td>在备份飞书群发文本</td><td>群内直接收到 <code>MyClaw 收到了：...</code>，出现脱敏 <code>fb_*</code> run</td></tr><tr><td>E2C</td><td>ready</td><td>跑 hardening tests</td><td>persistent replay、policy file、read redaction 通过</td></tr><tr><td>E4</td><td>ready</td><td><code>migrate openclaw --stage --json</code></td><td>stage 带 approval，review-only</td></tr><tr><td>E5</td><td>ready</td><td>GET approvals + POST decision</td><td>approval 变 approved/rejected</td></tr><tr><td>E5B</td><td>ready</td><td>POST smoke tool + approve/reject</td><td>approved 才写 tool-run；rejected 不执行</td></tr><tr><td>E7</td><td>ready</td><td><code>npm run check</code></td><td>输出 500 行、20 文件/目录、depth 4</td></tr><tr><td>E2/E3</td><td>needs_config</td><td>Feishu webhook/callback</td><td>配置后可测</td></tr><tr><td>E6</td><td>planned</td><td>单 agent run/resume/tool loop</td><td>后续开放</td></tr><tr><td>E8</td><td>planned</td><td>session search + provenance</td><td>后续开放</td></tr><tr><td>E9</td><td>planned</td><td>agent-to-agent review</td><td>后续开放</td></tr><tr><td>E10</td><td>planned</td><td>long memory add/search/delete</td><td>后续开放</td></tr></tbody></table></div>
 <h2 id="概念解释">概念解释</h2>
-<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Structure guardrail</td><td>机器强制的技术债红线</td><td>500 行、20 文件、4 层深度</td></tr><tr><td>Direct file count</td><td>一个目录下直接文件数</td><td>不递归计入子目录</td></tr><tr><td>Rendered docs</td><td>从 Markdown 生成的 HTML</td><td>位于 <code>docs/rendered/modules</code></td></tr><tr><td>HTML Center</td><td>本机报告中心</td><td>依赖 4177 服务常驻</td></tr><tr><td>Phase sync</td><td>Markdown 与 HTML 阶段一致性</td><td>防止 stale report</td></tr><tr><td>Generated freshness</td><td>生成物新鲜度</td><td><code>check-generated-docs</code> 重建后检测 diff</td></tr><tr><td>Access layer</td><td>接入层</td><td>CLI/webhook/Feishu 等消息入口和出口</td></tr><tr><td>Gateway</td><td>控制面入口</td><td>HTTP route、鉴权、状态和 mutation 边界</td></tr><tr><td>Scoped token</td><td>分权 gateway token</td><td><code>message:write</code>、<code>events:read</code>、<code>control:read</code>，legacy token 是 <code>*</code></td></tr><tr><td>SSE snapshot</td><td>Server-Sent Events 快照</td><td>当前 snapshot + heartbeat，不是 seq/replay delta</td></tr><tr><td>Read plane</td><td>控制面读取面</td><td>非 loopback 需要 <code>control:read</code> 或 <code>read</code></td></tr><tr><td>Mutation audit</td><td>写操作审计</td><td>action、status、actor、resource；不保存 request body/token</td></tr><tr><td>Health strip</td><td>运行健康条</td><td>Control API、state、HTML Center、Feishu adapter、mutation auth</td></tr><tr><td>Session provenance</td><td>session 来源追踪</td><td>run、step、message、tool result 的可检索来源</td></tr><tr><td>Agent-to-Agent</td><td>agent 协作</td><td>多 agent 分工、交接上下文、互相 review</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>概念</th><th>含义</th><th>当前边界</th></tr></thead><tbody><tr><td>Structure guardrail</td><td>机器强制的技术债红线</td><td>500 行、20 文件、4 层深度</td></tr><tr><td>Direct file count</td><td>一个目录下直接文件数</td><td>不递归计入子目录</td></tr><tr><td>Rendered docs</td><td>从 Markdown 生成的 HTML</td><td>位于 <code>docs/rendered/modules</code></td></tr><tr><td>HTML Center</td><td>本机报告中心</td><td>依赖 4177 服务常驻</td></tr><tr><td>Phase sync</td><td>Markdown 与 HTML 阶段一致性</td><td>防止 stale report</td></tr><tr><td>Generated freshness</td><td>生成物新鲜度</td><td><code>check-generated-docs</code> 重建后检测 diff</td></tr><tr><td>Access layer</td><td>接入层</td><td>CLI/webhook/Feishu 等消息入口和出口</td></tr><tr><td>Gateway</td><td>控制面入口</td><td>HTTP route、鉴权、状态和 mutation 边界</td></tr><tr><td>Tool request</td><td>待执行工具请求</td><td>Phase 1.6 只有 <code>smoke.note.write</code></td></tr><tr><td>Tool run</td><td>工具执行结果</td><td>只写本地 <code>tool-runs/...</code> 相对 artifact</td></tr><tr><td>Approval settlement</td><td>审批后的副作用桥</td><td>当前直接 settlement，后续抽 hook/registry</td></tr><tr><td>Scoped token</td><td>分权 gateway token</td><td><code>message:write</code>、<code>events:read</code>、<code>control:read</code>，legacy token 是 <code>*</code></td></tr><tr><td>SSE snapshot</td><td>Server-Sent Events 快照</td><td>当前 snapshot + heartbeat，不是 seq/replay delta</td></tr><tr><td>Read plane</td><td>控制面读取面</td><td>非 loopback 需要 <code>control:read</code> 或 <code>read</code></td></tr><tr><td>Mutation audit</td><td>写操作审计</td><td>action、status、actor、resource；不保存 request body/token</td></tr><tr><td>Health strip</td><td>运行健康条</td><td>Control API、state、HTML Center、Feishu adapter、mutation auth</td></tr><tr><td>Session provenance</td><td>session 来源追踪</td><td>run、step、message、tool result 的可检索来源</td></tr><tr><td>Agent-to-Agent</td><td>agent 协作</td><td>多 agent 分工、交接上下文、互相 review</td></tr></tbody></table></div>
 <h2 id="相似技术比较">相似技术比较</h2>
-<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.5</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>结构约束</td><td>硬性 check 脚本</td><td>大 repo 模块化</td><td>成熟工程分层</td><td>Rust workspace 分层</td></tr><tr><td>Secret 导入</td><td><code>.myclaw/*.env</code> 本地导入，只输出变量名</td><td>schema + credential 边界成熟</td><td><code>.env</code>/session 配置简单</td><td>controller/tool 权限清晰</td></tr><tr><td>文档发布</td><td>HTML Center + rendered docs</td><td>docs/control UI</td><td>README/ops docs</td><td>UI/docs 混合</td></tr><tr><td>审批</td><td>migration approval seed</td><td>成熟 policy/approval</td><td>ops guard</td><td>risk/autonomy policy</td></tr><tr><td>Dashboard</td><td>health strip + audit + stream heartbeat</td><td>control UI</td><td>TUI/ops</td><td>UI-first</td></tr><tr><td>Gateway 权限</td><td>loopback + legacy <code>*</code> + scoped read/write</td><td>pairing/auth 成熟</td><td>ops token/profile</td><td>controller permission/scope</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>MyClaw Phase 1.6</th><th>OpenClaw</th><th>Hermes-agent</th><th>OpenHuman</th></tr></thead><tbody><tr><td>结构约束</td><td>硬性 check 脚本</td><td>大 repo 模块化</td><td>成熟工程分层</td><td>Rust workspace 分层</td></tr><tr><td>Secret 导入</td><td><code>.myclaw/*.env</code> 本地导入，只输出变量名</td><td>schema + credential 边界成熟</td><td><code>.env</code>/session 配置简单</td><td>controller/tool 权限清晰</td></tr><tr><td>文档发布</td><td>HTML Center + rendered docs</td><td>docs/control UI</td><td>README/ops docs</td><td>UI/docs 混合</td></tr><tr><td>审批</td><td>migration approval + smoke tool approval</td><td>成熟 policy/approval</td><td>ops guard</td><td>risk/autonomy policy</td></tr><tr><td>Dashboard</td><td>health strip + audit + stream heartbeat</td><td>control UI</td><td>TUI/ops</td><td>UI-first</td></tr><tr><td>Gateway 权限</td><td>loopback + legacy <code>*</code> + scoped read/write</td><td>pairing/auth 成熟</td><td>ops token/profile</td><td>controller permission/scope</td></tr></tbody></table></div>
 <h2 id="目录结构与文件行数">目录结构与文件行数</h2>
-<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数/文件数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>scripts/check-file-lines.mjs</code></td><td>120 行</td><td>文本文件行数、目录文件数、深度检查</td><td>健康</td></tr><tr><td><code>scripts/check-generated-docs.mjs</code></td><td>63 行</td><td>重建 HTML 并检测 stale 生成物</td><td>健康</td></tr><tr><td><code>scripts/html-center.mjs</code></td><td>121 行</td><td>HTML Center status/start/publish/verify，发布前校验生成物</td><td>健康</td></tr><tr><td><code>scripts/import-openduck-config.mjs</code></td><td>189 行</td><td>openduck Feishu 配置到本地 MyClaw env 的安全导入</td><td>健康，输出不含 secret 值，拒绝非 <code>.myclaw/</code> 输出</td></tr><tr><td><code>scripts/check-local-secret-leaks.mjs</code></td><td>88 行</td><td>扫描本地 <code>.myclaw/*.env</code> 敏感值是否进入 tracked/untracked files</td><td>健康</td></tr><tr><td><code>packages/core/src/audit.mjs</code></td><td>89 行</td><td>本地 mutation audit JSONL 读写</td><td>健康，不保存正文或 token</td></tr><tr><td><code>packages/gateway/src/audit.mjs</code></td><td>77 行</td><td>Gateway response finish 审计 hook</td><td>健康，耦合低</td></tr><tr><td><code>packages/gateway/src/auth.mjs</code></td><td>122 行</td><td>loopback、legacy token、scoped token 和 read/write scope 鉴权</td><td>健康，any-scope 语义需继续文档化</td></tr><tr><td><code>packages/gateway/src/index.mjs</code></td><td>144 行</td><td>Gateway route 分发、read/write 鉴权和 audit hook 挂载</td><td>健康</td></tr><tr><td><code>packages/control-plane/src/event-stream.mjs</code></td><td>37 行</td><td>SSE snapshot/heartbeat，复用 events/audit 和 Feishu redaction</td><td>健康，但缺 seq/replay</td></tr><tr><td><code>packages/control-plane/src/status.mjs</code></td><td>305 行</td><td>status/runs/events/audit/health/迁移 payload</td><td>健康，但继续增长要拆 health/status 子模块</td></tr><tr><td><code>packages/control-plane/src/redaction.mjs</code></td><td>109 行</td><td>Dashboard/API/SSE Feishu 与本地路径脱敏</td><td>健康，read exposure 边界清晰</td></tr><tr><td><code>packages/feishu-bot/myclaw.plugin.json</code></td><td>22 行</td><td>Feishu bot capability contract</td><td>健康，先有 manifest，后续做 loader</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>414 行</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr><tr><td><code>docs/modules</code></td><td>16 文件</td><td>模块 Markdown 源文档，含人类测试手册</td><td>已低于 20</td></tr><tr><td><code>docs/rendered/modules</code></td><td>16 文件</td><td>生成 HTML 模块页</td><td>已低于 20</td></tr><tr><td><code>docs/modules/human-testing-playbook.md</code></td><td>157 行</td><td>人类测试手册、本地参与流程和反馈格式</td><td>健康</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>419 行</td><td>CLI 命令、doctor 与 feishu-bot 启动入口</td><td>健康，但继续增长要拆命令</td></tr><tr><td><code>packages/control-plane/src/experiments.mjs</code></td><td>286 行</td><td>Human Experiments 与分层路线 payload，含 E1B/E1C</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>432 行</td><td>Dashboard client，含 health/audit/stream/分层路线渲染</td><td>已接近 450，下一轮必须拆 renderer</td></tr><tr><td><code>packages/gateway/test/gateway.test.mjs</code></td><td>347 行</td><td>Gateway 主流程、Feishu callback、迁移和 approval 测试</td><td>已拆出 audit/auth 测试，健康</td></tr><tr><td><code>packages/gateway/test/gateway-audit-auth.test.mjs</code></td><td>134 行</td><td>Gateway audit、scoped token、非 loopback read auth 测试</td><td>健康</td></tr><tr><td><code>packages/control-plane/test/event-stream.test.mjs</code></td><td>66 行</td><td>SSE snapshot Feishu/path redaction 测试</td><td>健康</td></tr><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198 行</td><td>approval state</td><td>健康</td></tr></tbody></table></div>
-<p>当前最大目录深度是 4，当前最大目录文件数是 16。</p>
+<div class="table-wrap"><table><thead><tr><th>路径</th><th>行数/文件数</th><th>职责</th><th>评价</th></tr></thead><tbody><tr><td><code>scripts/check-file-lines.mjs</code></td><td>120 行</td><td>文本文件行数、目录文件数、深度检查</td><td>健康</td></tr><tr><td><code>scripts/check-generated-docs.mjs</code></td><td>63 行</td><td>重建 HTML 并检测 stale 生成物</td><td>健康</td></tr><tr><td><code>scripts/html-center.mjs</code></td><td>121 行</td><td>HTML Center status/start/publish/verify，发布前校验生成物</td><td>健康</td></tr><tr><td><code>scripts/import-openduck-config.mjs</code></td><td>189 行</td><td>openduck Feishu 配置到本地 MyClaw env 的安全导入</td><td>健康，输出不含 secret 值，拒绝非 <code>.myclaw/</code> 输出</td></tr><tr><td><code>scripts/check-local-secret-leaks.mjs</code></td><td>88 行</td><td>扫描本地 <code>.myclaw/*.env</code> 敏感值是否进入 tracked/untracked files</td><td>健康</td></tr><tr><td><code>packages/core/src/audit.mjs</code></td><td>89 行</td><td>本地 mutation audit JSONL 读写</td><td>健康，不保存正文或 token</td></tr><tr><td><code>packages/gateway/src/audit.mjs</code></td><td>80 行</td><td>Gateway response finish 审计 hook</td><td>健康，耦合低</td></tr><tr><td><code>packages/gateway/src/auth.mjs</code></td><td>122 行</td><td>loopback、legacy token、scoped token 和 read/write scope 鉴权</td><td>健康，any-scope 语义需继续文档化</td></tr><tr><td><code>packages/gateway/src/index.mjs</code></td><td>152 行</td><td>Gateway route 分发、read/write 鉴权、tool request route 和 audit hook 挂载</td><td>健康</td></tr><tr><td><code>packages/gateway/src/routes/tools.mjs</code></td><td>11 行</td><td>safe smoke tool request HTTP 入口</td><td>健康，保持 thin route</td></tr><tr><td><code>packages/gateway/src/routes/approvals.mjs</code></td><td>47 行</td><td>approval decision route，并触发 smoke tool settlement</td><td>健康，但下一步应抽 hook</td></tr><tr><td><code>packages/control-plane/src/event-stream.mjs</code></td><td>37 行</td><td>SSE snapshot/heartbeat，复用 events/audit 和 Feishu redaction</td><td>健康，但缺 seq/replay</td></tr><tr><td><code>packages/control-plane/src/status.mjs</code></td><td>335 行</td><td>status/runs/events/audit/toolRequests/health/迁移 payload</td><td>健康，但继续增长要拆 health/status 子模块</td></tr><tr><td><code>packages/control-plane/src/redaction.mjs</code></td><td>109 行</td><td>Dashboard/API/SSE Feishu 与本地路径脱敏</td><td>健康，read exposure 边界清晰</td></tr><tr><td><code>packages/tools/src/smoke-note.mjs</code></td><td>195 行</td><td>safe local tool request、approval settlement、tool-run artifact</td><td>健康，但后续要抽 ToolDescriptor</td></tr><tr><td><code>packages/feishu-bot/myclaw.plugin.json</code></td><td>22 行</td><td>Feishu bot capability contract</td><td>健康，先有 manifest，后续做 loader</td></tr><tr><td><code>docs/build-review-html.mjs</code></td><td>414 行</td><td>HTML report builder</td><td>接近 450，下一轮拆</td></tr><tr><td><code>docs/modules</code></td><td>16 文件</td><td>模块 Markdown 源文档，含人类测试手册</td><td>已低于 20</td></tr><tr><td><code>docs/rendered/modules</code></td><td>16 文件</td><td>生成 HTML 模块页</td><td>已低于 20</td></tr><tr><td><code>docs/modules/human-testing-playbook.md</code></td><td>161 行</td><td>人类测试手册、本地参与流程和反馈格式</td><td>健康</td></tr><tr><td><code>packages/cli/src/index.mjs</code></td><td>419 行</td><td>CLI 命令、doctor 与 feishu-bot 启动入口</td><td>健康，但继续增长要拆命令</td></tr><tr><td><code>packages/control-plane/src/experiments.mjs</code></td><td>308 行</td><td>Human Experiments 与分层路线 payload，含 E1B/E1C/E5B</td><td>健康</td></tr><tr><td><code>packages/dashboard/src/client.mjs</code></td><td>432 行</td><td>Dashboard client，含 health/audit/stream/分层路线渲染</td><td>已接近 450，下一轮必须拆 renderer</td></tr><tr><td><code>packages/gateway/test/gateway.test.mjs</code></td><td>347 行</td><td>Gateway 主流程、Feishu callback、迁移和 approval 测试</td><td>已拆出 audit/auth 测试，健康</td></tr><tr><td><code>packages/gateway/test/gateway-audit-auth.test.mjs</code></td><td>134 行</td><td>Gateway audit、scoped token、非 loopback read auth 测试</td><td>健康</td></tr><tr><td><code>packages/gateway/test/tool-approval.test.mjs</code></td><td>67 行</td><td>Gateway smoke tool approval approve/reject 测试</td><td>健康</td></tr><tr><td><code>packages/control-plane/test/event-stream.test.mjs</code></td><td>66 行</td><td>SSE snapshot Feishu/path redaction 测试</td><td>健康</td></tr><tr><td><code>packages/core/src/approvals.mjs</code></td><td>198 行</td><td>approval state</td><td>健康</td></tr></tbody></table></div>
 <h2 id="风险分级">风险分级</h2>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>Medium</td><td>HTML Center 依赖 tmux 常驻</td><td>服务掉了链接就打不开</td><td>doctor 已覆盖，后续纳入 Dashboard health</td></tr><tr><td>High</td><td>Feishu secret 被误写进代码/报告/命令行参数</td><td>appSecret、token、encrypt key 或 webhook URL 泄露会影响测试群</td><td>只允许 ignored <code>.myclaw/</code> 本地 env，脚本和报告只输出变量名，check 扫描 tracked/untracked files</td></tr><tr><td>Medium</td><td>Feishu bot policy 配错会导致测试群收不到回复</td><td>默认封闭避免误触发，但本地 policy 缺失时 E2B 会被跳过</td><td>已支持 <code>.myclaw/feishu-policy.json</code>；当前本机用 ignored policy 绑定备份群</td></tr><tr><td>High</td><td>Feishu replay 不是 exactly-once</td><td>如果发出回复后、标记 completed 前崩溃，stale retry 可能再次发送</td><td>当前明确为 at-least-once；下一步加 outbound operation/delivery record</td></tr><tr><td>High</td><td>Feishu redaction 仍是字段路径式</td><td>新字段可能绕过 read redaction</td><td>已移除正文 preview 明文；下一步做 schema/recursive redaction，并减少写入时 raw</td></tr><tr><td>Medium</td><td>Gateway audit 只记录 response finish</td><td>进程在 response 后、audit 写入前崩溃会漏一条审计</td><td>当前适合本地 L1；真实工具前要加 sync/queue 或 durable command log</td></tr><tr><td>High</td><td>Gateway read plane 曾只保护 SSE</td><td>非 loopback 暴露时 <code>/api/status</code>、<code>/api/audit</code> 等控制面可被读取</td><td>已修：除 <code>/api/health</code> 外，Gateway GET 统一走 read auth</td></tr><tr><td>Medium</td><td>SSE 只有 snapshot/heartbeat</td><td>Dashboard 会刷新，但无法证明没有丢增量事件</td><td>下一阶段补 seq/replay/cursor</td></tr><tr><td>Medium</td><td>EventSource 不能带自定义 header</td><td>浏览器直连 Gateway scoped token 体验不成立</td><td>当前明确只经 Dashboard proxy；后续做短期签名 URL</td></tr><tr><td>Medium</td><td><code>/api/status</code> 会探测 HTML Center</td><td>HTML Center 卡顿会拖慢 Dashboard</td><td>已设置 600ms timeout；后续把 health check 做缓存</td></tr><tr><td>High</td><td>Dashboard client 仍在变大</td><td>已到 432 行，继续加 UI 会逼近 450 预警</td><td>下一轮拆 section renderer registry</td></tr><tr><td>High</td><td>跳过接入层/Gateway 直接做 agent</td><td>后续 agent 和记忆会缺少可信事件边界</td><td>先完成 L0/L1 smoke，再做 L3</td></tr><tr><td>High</td><td>跳过 session provenance 直接做 agent-to-agent</td><td>多 agent 交接无法审计</td><td>L4 最小 search/provenance 必须早于 L5</td></tr><tr><td>Medium</td><td>人类测试手册若不维护会变成静态愿望清单</td><td>用户反馈无法回流到阶段计划</td><td>每轮开始先更新 playbook，再实现</td></tr><tr><td>Medium</td><td>docs build script 414 行</td><td>接近拆分预警</td><td>拆 parser/template/rewrite</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>问题</th><th>影响</th><th>建议</th></tr></thead><tbody><tr><td>Medium</td><td>HTML Center 依赖 tmux 常驻</td><td>服务掉了链接就打不开</td><td>doctor 已覆盖，后续纳入 Dashboard health</td></tr><tr><td>High</td><td>Feishu secret 被误写进代码/报告/命令行参数</td><td>appSecret、token、encrypt key 或 webhook URL 泄露会影响测试群</td><td>只允许 ignored <code>.myclaw/</code> 本地 env，脚本和报告只输出变量名，check 扫描 tracked/untracked files</td></tr><tr><td>Medium</td><td>Gateway audit 只记录 response finish</td><td>进程在 response 后、audit 写入前崩溃会漏一条审计</td><td>当前适合本地 L1；真实工具前要加 sync/queue 或 durable command log</td></tr><tr><td>High</td><td>Gateway read plane 曾只保护 SSE</td><td>非 loopback 暴露时 <code>/api/status</code>、<code>/api/audit</code> 等控制面可被读取</td><td>已修：除 <code>/api/health</code> 外，Gateway GET 统一走 read auth</td></tr><tr><td>Medium</td><td>SSE 只有 snapshot/heartbeat</td><td>Dashboard 会刷新，但无法证明没有丢增量事件</td><td>下一阶段补 seq/replay/cursor</td></tr><tr><td>High</td><td>approval route 直接 import smoke tool settlement</td><td>后续多个工具会把 route 变成不可维护的分发器</td><td>下一阶段抽 ToolDescriptor registry 或 approval.decided hook</td></tr><tr><td>Medium</td><td>smoke tool 没有 expires/timeout/cancel 状态</td><td>pending request 可能长期悬挂</td><td>通用 tool request 加 expiresAt、cancelled、retry state</td></tr><tr><td>Medium</td><td><code>/api/status</code> 会探测 HTML Center</td><td>HTML Center 卡顿会拖慢 Dashboard</td><td>已设置 600ms timeout；后续把 health check 做缓存</td></tr><tr><td>High</td><td>Dashboard client 仍在变大</td><td>已到 432 行，继续加 UI 会逼近 450 预警</td><td>下一轮拆 section renderer registry</td></tr><tr><td>High</td><td>跳过接入层/Gateway 直接做 agent</td><td>后续 agent 和记忆会缺少可信事件边界</td><td>先完成 L0/L1 smoke，再做 L3</td></tr><tr><td>Medium</td><td>docs build script 414 行</td><td>接近拆分预警</td><td>拆 parser/template/rewrite</td></tr></tbody></table></div>
 <h2 id="linus-视角严苛审查">Linus 视角严苛审查</h2>
-<p>独立 subagent 结论：Phase 1.5 的 stream/scoped token 方向正确，但初稿只保护了 <code>/api/events/stream</code>，其它 Gateway GET 控制面仍会在非 loopback 暴露，这是 Critical。已按审查意见修复：除 <code>/api/health</code> 外，Gateway GET 统一走 read auth；测试拆分后主测试文件不再接近 450；SSE 先构造 snapshot 再写 header，并明确当前是 snapshot/heartbeat，不是 seq/replay delta。</p>
-<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>Medium</td><td>Gateway mutation audit 如果记录 body/token 会直接变成泄露面</td><td>已修：<code>packages/core/src/audit.mjs</code> 只保留 action、method、path、status、actor/resource，测试断言 audit JSON 不含正文或 token</td></tr><tr><td>Critical</td><td>Gateway 非 loopback read plane 不应裸露</td><td>已修：<code>/api/status</code> 等控制面 GET 需要 <code>control:read</code> 或 <code>read</code>，<code>/api/events/stream</code> 需要 <code>events:read</code> 或 <code>read</code></td></tr><tr><td>High</td><td>454 行测试文件触发“接近 450 必须拆”</td><td>已修：拆出 <code>gateway-audit-auth.test.mjs</code>，主测试文件 347 行</td></tr><tr><td>High</td><td>UI 把 heartbeat 称为 live event stream 会误导</td><td>已修：文案改为 snapshot/heartbeat，并用 heartbeat 触发状态刷新</td></tr><tr><td>Medium</td><td>SSE headers 先写再读文件会产生半截响应</td><td>已修：先构造 snapshot，再 <code>writeHead</code></td></tr><tr><td>Medium</td><td>EventSource 无法带 token header</td><td>设计约束写入报告：Dashboard 通过本地同源 proxy 连接，直连 Gateway 认证后置</td></tr><tr><td>Medium</td><td>Dashboard health 如果没有超时会拖慢第一屏</td><td>已修：HTML Center health probe 设置 600ms abort，失败显示 warn</td></tr><tr><td>Medium</td><td>secret 不泄露缺少自动约束</td><td>已新增 <code>scripts/check-local-secret-leaks.mjs</code> 并纳入 <code>npm run check</code></td></tr><tr><td>Medium</td><td><code>docs/build-review-html.mjs</code> 414 行接近阈值</td><td>记录为下一阶段拆分任务</td></tr><tr><td>Medium</td><td>Dashboard client 仍继续增长</td><td>下一阶段拆 renderer registry</td></tr><tr><td>Low</td><td>硬规则会带来目录规划成本</td><td>保留，作为技术债刹车</td></tr></tbody></table></div>
+<p>独立 subagent 结论：Phase 1.6 smoke 能证明“先审批、后执行”的用户体验，但不能作为通用 ToolDescriptor 的底座。最大风险是 approval decision 和 tool side effect 绑在同一个 HTTP 写路径里，缺少可恢复、可重放、可幂等的执行边界。</p>
+<div class="table-wrap"><table><thead><tr><th>等级</th><th>发现</th><th>处理</th></tr></thead><tbody><tr><td>Critical</td><td>decision 后同步执行工具，崩溃窗口会导致 approval 已 approved 但 tool 未完成，真实副作用可能重复</td><td>Phase 1.6 只允许 safe local smoke；下一阶段必须 durable dispatch、claim/recovery、idempotency</td></tr><tr><td>High</td><td>Gateway/control-plane 直接依赖 <code>smoke-note.mjs</code></td><td>接受为 smoke；下一阶段抽 ToolRegistry/ToolDescriptor 和 approval.decided hook</td></tr><tr><td>High</td><td><code>approval:decide</code> 实际触发 execution，权限语义混在一起</td><td>下一阶段拆“人类授权”和“系统执行”，记录 actor 与 policy snapshot</td></tr><tr><td>High</td><td><code>/api/status</code> 曾暴露绝对 <code>stateDir</code>，tool request 列表曾暴露完整 note</td><td>已修：status 只返回 <code>state.label</code>，tool request read payload 只给 redacted preview</td></tr><tr><td>High</td><td>创建 tool request 曾接受外部 <code>toolRequestId</code></td><td>已修：非法 id 会被忽略并生成安全 id</td></tr><tr><td>Medium</td><td>ToolRequest 状态机缺 <code>executing/failed/retry/timeout/cancelled</code></td><td>下一阶段补完整生命周期和人工恢复入口</td></tr><tr><td>Medium</td><td>测试缺崩溃窗口和并发恢复覆盖</td><td>smoke 阶段覆盖 approve/reject/invalid id；通用工具前补 recovery tests</td></tr><tr><td>Medium</td><td><code>docs/build-review-html.mjs</code> 414 行、Dashboard client 432 行</td><td>下一阶段拆 docs builder 和 renderer，再加 tool panel</td></tr></tbody></table></div>
 <h2 id="skill-规范自检">Skill 规范自检</h2>
 <ul><li>已按 <code>web-design-review</code> 输出可视化 design review dashboard。</li><li>报告覆盖系统上下文、模块架构、业务流程、时序、状态机、ER、数据流、部署图。</li><li>报告包含目录行数、概念解释、相似技术比较、风险分级、Linus 视角。</li><li>单文件 500 行、每目录 20 文件、目录深度 4 层由 <code>npm run check</code> 执行。</li><li>本轮已更新 <code>web-design-review</code> skill 的 500 行、20 文件/目录、4 层深度约束；按 <code>skill-creator</code> 原则保持 <code>SKILL.md</code> 247 行，未增加额外过程文档。</li></ul>
 <h2 id="下一阶段建议">下一阶段建议</h2>
-<ul><li>把 approval queue 接到真实 tool action，但仍默认需要人工确认。</li><li>为 SSE 增加 seq/replay/cursor，不再只靠 heartbeat 刷新。</li><li>拆 <code>packages/dashboard/src/client.mjs</code> 和 <code>docs/build-review-html.mjs</code>。</li><li>把 Feishu replyBuilder 接到后续 agent runtime 的安全壳，并补 rich card。</li><li>给 Feishu outbound 增加 operation/delivery record，明确 at-least-once 恢复语义。</li></ul></article>
+<ul><li>抽 ToolDescriptor registry、durable dispatch、claim/recovery、idempotency key 和完整 ToolRequest 生命周期。</li><li>拆 <code>packages/dashboard/src/client.mjs</code> 与 <code>docs/build-review-html.mjs</code>，再做 tool panel。</li><li>为 SSE 增加 seq/replay/cursor，并把 Feishu replyBuilder 接到 agent runtime 安全壳。</li></ul></article>
       </main>
     </div>
     <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({startOnLoad:true,theme:"default"});</script>

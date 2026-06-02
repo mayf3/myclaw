@@ -5,6 +5,7 @@ import { listRuns, readEvents, readRun } from "../../core/src/state.mjs";
 import { buildFeishuAdapterConfig, describeFeishuAdapterReadiness } from "../../feishu-adapter/src/index.mjs";
 import { planOpenClawMigration } from "../../migrate/src/openclaw.mjs";
 import { readLatestOpenClawStage } from "../../migrate/src/stage.mjs";
+import { listToolRequests } from "../../tools/src/smoke-note.mjs";
 import { buildHumanExperimentsPayload } from "./experiments.mjs";
 import { buildMilestonesPayload } from "./milestones.mjs";
 import { buildOpenClawStageReview } from "./openclaw-diff.mjs";
@@ -15,10 +16,11 @@ const MIGRATION_PLAN_CACHE_MS = 5000;
 const migrationPlanCache = new Map();
 
 export async function buildStatusPayload(context) {
-  const [runs, events, approvals, migrationPlan, migrationStage] = await Promise.all([
+  const [runs, events, approvals, toolRequests, migrationPlan, migrationStage] = await Promise.all([
     listRuns(context.stateDir, { limit: 20 }),
     readEvents(context.stateDir, { limit: 50 }),
     listApprovals(context.stateDir, { limit: 20 }),
+    listToolRequests(context.stateDir, { limit: 20 }),
     cachedOpenClawPlan(context.openclawSource),
     readLatestOpenClawStage(context.stateDir),
   ]);
@@ -32,12 +34,13 @@ export async function buildStatusPayload(context) {
     ok: true,
     service: context.service || "myclaw-control-plane",
     at: new Date().toISOString(),
-    stateDir: context.stateDir,
+    state: { label: "local-state", storage: "jsonl" },
     channels: listChannels(),
     milestones: buildMilestonesPayload(),
     experiments: buildHumanExperimentsPayload(),
     health,
     approvals,
+    toolRequests: toolRequests.map(redactToolRequest),
     runs: runs.map(redactRunRecord),
     events: redactEvents(events),
     audit,
@@ -109,6 +112,13 @@ export async function buildApprovalsPayload(context, options = {}) {
       limit: options.limit || 50,
       status: options.status,
     }),
+  };
+}
+
+export async function buildToolRequestsPayload(context, options = {}) {
+  return {
+    ok: true,
+    toolRequests: (await listToolRequests(context.stateDir, { limit: options.limit || 50 })).map(redactToolRequest),
   };
 }
 
@@ -239,6 +249,26 @@ function isLoopbackHost(host) {
 
 function healthItem(id, label, status, summary) {
   return { id, label, status, summary };
+}
+
+function redactToolRequest(request) {
+  return {
+    ...request,
+    input: { notePreview: previewText(request.input?.note) },
+    result: request.result
+      ? {
+          toolRunId: request.result.toolRunId,
+          status: request.result.status,
+          completedAt: request.result.completedAt,
+          artifact: request.result.artifact,
+        }
+      : null,
+  };
+}
+
+function previewText(value) {
+  const text = String(value || "");
+  return text ? `[redacted ${text.length} chars]` : "";
 }
 
 function healthSummary(items) {

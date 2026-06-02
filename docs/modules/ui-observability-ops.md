@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.5 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、Gateway mutation audit 和 SSE stream 状态。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.6 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、Gateway mutation audit、SSE stream 状态和 tool request id。
 
 ## 参考项目观察
 
@@ -132,8 +132,15 @@ Phase 1.5 Gateway/Dashboard 新增：
 - Gateway 非 loopback 的 read plane 已统一鉴权，`events:read` 和 `control:read` 可以分别授权 stream 和控制面。
 - Dashboard 仍默认通过本地 dashboard proxy 访问 stream；浏览器直连 Gateway 的 header token 形态后续再设计。
 
+Phase 1.6 Gateway/Dashboard 新增：
+
+- `/api/status` 和 `/api/tool-requests` 暴露 safe smoke tool request 状态。
+- Approvals 区块能显示 `tool-action` 的 `toolRequestId`，用户可把 approval 和 tool request 对上。
+- 当前没有新增大面板，避免 `packages/dashboard/src/client.mjs` 超过 450 行；下一轮拆 renderer 后再做 tool request drawer。
+
 下一步应补：
 
+- tool request / approval drawer。
 - run detail drawer 或独立详情页。
 - event stream seq/replay 和更精确的 delta 更新。
 - stage snapshot 可操作 review drawer 和后续真实 schema diff。
@@ -199,5 +206,6 @@ myclaw security audit
 - Dashboard 能把 OpenClaw staged modules 和缺失项展示出来。
 - Dashboard 能把每个阶段对应的人类实验展示出来，并说明成功信号。
 - pending approvals 有独立列表。
+- tool request 能从 API/Dashboard 追踪 pending/completed/rejected。
 - status/doctor 能定位 config、state、tool policy 常见问题。
 - UI 所需数据全部来自 gateway API，不读私有文件。

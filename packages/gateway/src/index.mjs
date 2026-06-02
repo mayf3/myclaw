@@ -10,6 +10,7 @@ import { handleGetRequest } from "./routes/control.mjs";
 import { handlePostFeishuEvent } from "./routes/feishu.mjs";
 import { handlePostOpenClawMigrationStage } from "./routes/migration.mjs";
 import { handlePostMessage } from "./routes/messages.mjs";
+import { handlePostSmokeNoteToolRequest } from "./routes/tools.mjs";
 
 export async function startGateway(options = {}) {
   const host = options.host || "127.0.0.1";
@@ -76,6 +77,13 @@ export async function handleGatewayRequest(request, response, context) {
       return;
     }
     await handlePostOpenClawMigrationStage(request, response, context);
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/tool-requests/smoke-note") {
+    if (!authorizeMutation(request, response, context, ["mutation", "tool:request"])) {
+      return;
+    }
+    await handlePostSmokeNoteToolRequest(request, response, context);
     return;
   }
   if (request.method === "POST" && approvalDecisionId) {
