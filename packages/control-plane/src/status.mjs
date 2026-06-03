@@ -181,6 +181,7 @@ export async function buildRuntimeHealthPayload(context = {}) {
     healthItem("state-store", "Local state", "ok", "runs/events/audit readable"),
     healthItem("html-center", "HTML Center", htmlCenter.ok ? "ok" : "warn", htmlCenter.summary),
     healthItem("feishu-adapter", "Feishu adapter", adapter.level === "blocked" ? "fail" : adapter.level === "ready" ? "ok" : "warn", adapter.level),
+    llmHealthItem(context),
     healthItem("mutation-auth", "Mutation auth", auth.status, auth.summary),
   ];
   return {
@@ -241,6 +242,12 @@ function mutationAuthHealth(context) {
     return { status: "warn", summary: "loopback mutations allowed without token" };
   }
   return { status: "fail", summary: "non-loopback mutations require token" };
+}
+
+function llmHealthItem(context = {}) {
+  const hasKey = Boolean(context.openAiApiKey || process.env.OPENAI_API_KEY);
+  const model = context.openAiModel || process.env.MYCLAW_OPENAI_MODEL || process.env.OPENAI_MODEL || "gpt-5.5";
+  return healthItem("llm-provider", "LLM provider", hasKey ? "ok" : "warn", hasKey ? `openai-responses ${model}` : "set OPENAI_API_KEY");
 }
 
 function isLoopbackHost(host) {

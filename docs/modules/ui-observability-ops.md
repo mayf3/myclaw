@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.6 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、Gateway mutation audit、SSE stream 状态和 tool request id。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.7 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、LLM provider health、Gateway mutation audit、SSE stream 状态和 tool request id。
 
 ## 参考项目观察
 
@@ -138,9 +138,17 @@ Phase 1.6 Gateway/Dashboard 新增：
 - Approvals 区块能显示 `tool-action` 的 `toolRequestId`，用户可把 approval 和 tool request 对上。
 - 当前没有新增大面板，避免 `packages/dashboard/src/client.mjs` 超过 450 行；下一轮拆 renderer 后再做 tool request drawer。
 
+Phase 1.7 LLM reply smoke 新增：
+
+- `/api/status` health items 增加 `llm-provider`，只显示 OpenAI provider 是否配置、模型名和 warn/ok，不显示 API key。
+- `myclaw ask` 产生的 `ask_*` run 可在最近 Runs 中看到 answer 摘要。
+- Feishu LLM 模式必须显式启动，Dashboard/API 仍对 Feishu 原始正文、chat_id、sender_id 脱敏。
+- 下一轮要为 LLM run 增加更清楚的 run detail、usage、错误码和 toolCalls 面板。
+
 下一步应补：
 
 - tool request / approval drawer。
+- LLM run detail / usage drawer。
 - run detail drawer 或独立详情页。
 - event stream seq/replay 和更精确的 delta 更新。
 - stage snapshot 可操作 review drawer 和后续真实 schema diff。
@@ -208,4 +216,5 @@ myclaw security audit
 - pending approvals 有独立列表。
 - tool request 能从 API/Dashboard 追踪 pending/completed/rejected。
 - status/doctor 能定位 config、state、tool policy 常见问题。
+- status 能定位 `OPENAI_API_KEY` 是否缺失，但不能展示 secret。
 - UI 所需数据全部来自 gateway API，不读私有文件。

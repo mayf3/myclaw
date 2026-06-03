@@ -182,8 +182,16 @@ function summarizeEnvelope(envelope) {
   if (envelope.result?.text) {
     return `${envelope.result.channel} send: ${envelope.result.text}`;
   }
+  if (envelope.result?.answer) {
+    return `agent answer: ${truncate(envelope.result.answer, 80)}`;
+  }
   if (envelope.error) {
     return `${envelope.error.code}: ${envelope.error.message}`;
   }
   return envelope.status || "run";
+}
+
+function truncate(value, maxLength) {
+  const text = String(value || "");
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }

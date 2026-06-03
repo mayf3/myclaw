@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 import { resolveStateDir } from "../../core/src/state.mjs";
 import { listChannels } from "../../channels/src/index.mjs";
+import { answerFromEnvelope, askAgent } from "../../agent/src/ask.mjs";
 import { receiveMessage, sendMessage } from "../../runtime/src/messages.mjs";
 import { startGateway } from "../../gateway/src/index.mjs";
 import { startDashboard } from "../../dashboard/src/index.mjs";
 import { planOpenClawMigration, writeMigrationPlan } from "../../migrate/src/openclaw.mjs";
 import { stageOpenClawMigration } from "../../migrate/src/stage.mjs";
+import { printHelp, printMigrateHelp } from "./help.mjs";
+import { buildCliReplyBuilder } from "./reply-builder.mjs";
 
 const VERSION = "0.1.0";
 
 async function main(argv = process.argv.slice(2)) {
   const [command, ...rest] = argv;
   if (!command || command === "--help" || command === "-h") {
-    printHelp();
+    printHelp(VERSION);
     return 0;
   }
   if (command === "--version" || command === "-v") {
@@ -30,6 +33,9 @@ async function main(argv = process.argv.slice(2)) {
   }
   if (command === "receive") {
     return await runReceive(parseArgs(rest));
+  }
+  if (command === "ask") {
+    return await runAsk(parseArgs(rest));
   }
   if (command === "dashboard") {
     return await runDashboard(parseArgs(rest));
@@ -79,6 +85,21 @@ async function runReceive(args) {
     replyText: args.reply && args.reply !== "true" ? args.reply : "",
     webhookUrl: args.webhookUrl,
     stateDir: args.stateDir,
+    source: "cli",
+  });
+  printEnvelope(envelope, args.json);
+  return envelope.ok ? 0 : 1;
+}
+
+async function runAsk(args) {
+  const text = args.text || args._.join(" ").trim();
+  if (!text) {
+    throw new CliError("Missing ask text. Use --text \"...\" or pass text after ask.", "missing_text");
+  }
+  const envelope = await askAgent({
+    text,
+    stateDir: args.stateDir,
+    model: args.model,
     source: "cli",
   });
   printEnvelope(envelope, args.json);
@@ -209,9 +230,7 @@ async function runFeishuBot(args) {
       policyFile: args.policyFile || process.env.MYCLAW_FEISHU_POLICY_FILE,
     },
     replyMode: args.replyMode || process.env.MYCLAW_FEISHU_REPLY_MODE,
-    replyBuilder: args.replyPrefix
-      ? ({ inbound }) => `${args.replyPrefix}${inbound.text ? `：${inbound.text}` : ""}`
-      : undefined,
+    replyBuilder: buildCliReplyBuilder(args),
   });
   if (args.json) {
     console.log(JSON.stringify({ ok: true, mode: bot.mode, stateDir: bot.stateDir }, null, 2));
@@ -343,6 +362,10 @@ function printEnvelope(envelope, asJson) {
     return;
   }
   if (envelope.ok) {
+    if (envelope.result.answer) {
+      console.log(answerFromEnvelope(envelope));
+      return;
+    }
     if (envelope.result.inbound) {
       console.log(`received ${envelope.result.inbound.channel}:${envelope.result.inbound.id}`);
       console.log(envelope.result.inbound.text);
@@ -356,44 +379,6 @@ function printEnvelope(envelope, asJson) {
     return;
   }
   console.error(`${envelope.error.code}: ${envelope.error.message}`);
-}
-
-function printHelp() {
-  console.log(`MyClaw ${VERSION}
-
-Usage:
-  myclaw doctor [--json] [--state-dir <path>] [--html-center-url <url>]
-  myclaw channels [--json]
-  myclaw send --text <message> [--channel console|webhook|feishu-webhook] [--target <id>] [--webhook-url <url>] [--json]
-  myclaw receive --text <message> [--channel console] [--from <sender>] [--conversation <id>] [--reply <message>] [--json]
-  myclaw dashboard [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>]
-  myclaw gateway [--host 127.0.0.1] [--port 4321] [--state-dir <path>] [--openclaw-source <path>] [--token <token>] [--feishu-verify-token <token>] [--feishu-encrypt-key <key>]
-  myclaw feishu-bot [--state-dir <path>] [--reply-prefix <text>] [--reply-mode direct|thread] [--policy-file <path>] [--allowed-chat-ids <ids>] [--require-mention] [--unsafe-open-ingress] [--json]
-  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--json]
-
-Examples:
-  myclaw send --text "hello"
-  myclaw receive --from local-user --conversation local-thread --text "hello" --reply "received"
-  myclaw dashboard --port 4321
-  myclaw gateway --port 4321
-  myclaw feishu-bot --reply-prefix "MyClaw 收到了" --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS"
-  myclaw feishu-bot --reply-prefix "MyClaw 收到了" --reply-mode direct
-  myclaw feishu-bot --allowed-chat-ids "$MYCLAW_FEISHU_ALLOWED_CHAT_IDS" --require-mention
-  myclaw migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --json
-  myclaw send --channel feishu-webhook --webhook-url "$MYCLAW_FEISHU_WEBHOOK_URL" --text "hello"
-`);
-}
-
-function printMigrateHelp() {
-  console.log(`MyClaw migration
-
-Usage:
-  myclaw migrate openclaw [--source <openclaw.json|repo|home-dir>] [--stage] [--output <path>] [--state-dir <path>] [--json]
-
-The OpenClaw migration command is dry-run by default. It inventories config sections,
-channels, plugin manifests, unsupported runtime surfaces, and a MyClaw draft mapping.
-With --stage it writes a reviewable snapshot but still does not apply runtime changes.
-`);
 }
 
 class CliError extends Error {

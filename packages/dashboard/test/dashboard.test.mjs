@@ -99,9 +99,10 @@ test("dashboard serves HTML and status API", async () => {
     assert.equal(status.runs.length, 1);
     assert.equal(status.events.length, 2);
     assert.equal(status.channels.length, 4);
-    assert.equal(status.milestones.currentPhase, "1.6");
-    assert.equal(status.experiments.currentPhase, "1.6");
+    assert.equal(status.milestones.currentPhase, "1.7");
+    assert.equal(status.experiments.currentPhase, "1.7");
     assert.equal(status.health.items.some((item) => item.id === "html-center"), true);
+    assert.equal(status.health.items.some((item) => item.id === "llm-provider"), true);
     assert.equal(status.audit.length, 1);
     assert.equal(status.approvals.length, 1);
     assert.equal(reference.referenceCompletion.modules.length, 8);

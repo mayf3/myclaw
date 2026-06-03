@@ -54,11 +54,13 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.6");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.7");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
   );
+  assert.equal(experiments.payload.experiments.layerRoadmap[3].status, "partial");
+  assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6A"), true);
 
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);
@@ -131,6 +133,37 @@ test("control read routes redact Feishu message payloads", async () => {
   assert.equal(joined.includes("oc_secret"), false);
   assert.equal(joined.includes("ou_secret"), false);
   assert.equal(joined.includes("not-for-api"), false);
+});
+
+test("control read routes redact LLM answer payloads by default", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-control-route-"));
+  await recordRun(
+    stateDir,
+    "ask_secret",
+    okEnvelope({
+      runId: "ask_secret",
+      result: {
+        type: "agent-answer",
+        provider: "openai-responses",
+        answer: "sensitive model answer",
+        capabilities: { toolCalling: false, memory: false, streaming: false },
+        toolCalls: [],
+      },
+      events: [createEvent("agent.ask.completed")],
+    }),
+  );
+  const context = { stateDir, openclawSource: stateDir, service: "route-test" };
+
+  const status = await resolveControlGetRoute(url("/api/status"), context);
+  const run = await resolveControlGetRoute(url("/api/runs/ask_secret"), context);
+  const joined = JSON.stringify({ status: status.payload.runs, run: run.payload.run });
+
+  assert.equal(status.payload.runs[0].summary, "agent answer: [redacted 22 chars]");
+  assert.equal(status.payload.runs[0].envelope.result.answer, "[redacted]");
+  assert.equal(status.payload.runs[0].envelope.result.answerPreview, "[redacted 22 chars]");
+  assert.equal(run.payload.run.envelope.result.answer, "[redacted]");
+  assert.equal(run.payload.run.envelope.result.capabilities.toolCalling, false);
+  assert.equal(joined.includes("sensitive model answer"), false);
 });
 
 function url(pathname) {

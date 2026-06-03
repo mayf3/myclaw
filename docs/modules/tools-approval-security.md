@@ -74,6 +74,13 @@ Phase 1.6 已落地的 safe tool approval smoke：
 - `GET /api/tool-requests` 可查看 pending/completed/rejected；artifact 只暴露相对路径 `tool-runs/...`。
 - 当前仍不是通用 tool registry，没有任意 shell、文件写入、网络或 LLM tool。
 
+Phase 1.7 已落地的 LLM reply smoke：
+
+- `packages/llm/src/openai-responses.mjs` 是 provider adapter，不是 tool registry。
+- `packages/agent/src/ask.mjs` 会写入 answer 和 `toolCalls: []`。
+- Feishu 只有显式 `--reply-provider llm --llm-privacy-ack` 才会把消息交给 LLM；默认仍是确定性 reply policy。
+- 当前仍没有把 `llm.complete` 暴露为工具，也没有让模型调用本地工具。
+
 ## 第一批工具
 
 Phase 2：
@@ -82,7 +89,7 @@ Phase 2：
 - `read`：读取 workspace 内文件。
 - `write`：写 workspace 内文件，默认需要 approval。
 - `http.fetch`：网络请求，默认只允许 GET；POST 等后续。
-- `llm.complete`：provider-backed 简单补全，后续给 agent 用。
+- `llm.complete`：provider-backed 简单补全；Phase 1.7 已有 provider smoke，但还没作为 tool 暴露。
 
 ## Policy 层
 
@@ -130,11 +137,13 @@ MyClaw v0 明确采用：
 - approval 只靠终端交互，不落盘，无法 resume。
 - `exec` 支持 shell interpolation 时没有清楚的风险提示。
 - smoke tool 直接绑在 approval settlement 上，后续必须抽成 ToolDescriptor dispatch，避免新增工具都改 approval route。
+- 单轮 LLM 回复被误解成 tool calling，导致过早接入 shell/file/network。
 
 ## 验收标准
 
 - 未 allow 的 tool 不出现在 agent schema，且 dispatch 也拒绝。
 - `write` 和高风险 `exec` 会生成 approvalId；Phase 1.6 先要求 smoke tool approved 才执行。
+- Phase 1.7 的 `myclaw ask` 必须返回 `toolCalls=[]`，证明本阶段没有绕过工具策略。
 - approvalId 能被 `myclaw resume` 恢复。
 - cwd escape、absolute path、`..` escape 都有测试。
 - stdout/stderr cap 和 timeout 有测试。

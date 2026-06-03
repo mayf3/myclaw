@@ -16,7 +16,7 @@
 <nav aria-label="评审导航">
 <a href="#summary">总诊断</a>
 <a href="./implementation-architecture.html">当前实现架构</a>
-<a href="#phase-16">Phase 1.6</a>
+<a href="#phase-17">Phase 1.7</a>
 <a href="#modules">模块文档</a>
 <a href="#priority">实现优先级</a>
 <a href="#dependency">依赖关系</a>
@@ -31,8 +31,9 @@
 MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-tool permission。Phase 1.6 已在 Human Experiments、共享 route adapter、approval queue、Gateway stream/scoped token 之上，
-补齐 safe tool approval smoke、强制结构红线、生成物 stale 检查、HTML Center 仓库命令和 L0-L6 分层测试路线；
+tool permission。Phase 1.7 已在 Human Experiments、共享 route adapter、approval queue、Gateway stream/scoped token、
+safe tool approval smoke 之上，补齐 OpenAI Responses 真实回复 smoke、强制结构红线、生成物 stale 检查、
+HTML Center 仓库命令和 L0-L6 分层测试路线；
 Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
 <div class="quick-actions">
@@ -42,8 +43,8 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <a class="button secondary" href="./rendered/modules/README.html">打开模块索引</a>
 </div>
 </section>
-<section id="phase-16">
-<h2>Phase 1.6 当前焦点</h2>
+<section id="phase-17">
+<h2>Phase 1.7 当前焦点</h2>
 <table>
 <thead>
 <tr>
@@ -53,6 +54,11 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>LLM Reply Smoke</td>
+<td><code>myclaw ask</code> 已能通过 OpenAI Responses 返回真实 answer，并写入 <code>ask_*</code> run；Feishu bot 只有显式 <code>--reply-provider llm --llm-privacy-ack</code> 才启用。</td>
+<td>下一步接 ToolDescriptor、durable dispatch 和模型工具调用循环。</td>
+</tr>
 <tr>
 <td>Layered Roadmap</td>
 <td>L0 接入层、L1 Gateway、L2 Workflow/审批、L3 单 Agent、L4 Session Search、L5 Agent-to-Agent、L6 Long Memory。</td>
@@ -262,7 +268,7 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <td><span class="tag major">P1</span></td>
 <td><a href="./rendered/modules/agent-runtime.html">Agent Runtime</a></td>
 <td>自然语言入口建立在稳定工具和 workflow 之上。</td>
-<td><code>myclaw ask</code> 能安全调用工具。</td>
+<td>Phase 1.7 先测真实 answer；下一阶段 <code>myclaw ask</code> 再安全调用工具。</td>
 </tr>
 <tr>
 <td><span class="tag major">P1</span></td>

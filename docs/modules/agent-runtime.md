@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Agent Runtime 应该晚于 workflow core 和 tool registry。MyClaw 的 agent 不应直接变成“无边界 shell 代理”，而应该围绕 workflow、tool policy 和 approval 运行。
+Agent Runtime 应该晚于 workflow core 和 tool registry。Phase 1.7 先开放真实 LLM 单轮回复，让用户开始测试“智能回答”；但 MyClaw 的 agent 不应直接变成“无边界 shell 代理”，后续工具调用必须围绕 workflow、tool policy 和 approval 运行。
 
 ## 参考项目观察
 
@@ -29,7 +29,7 @@ OpenHuman 的 agent runtime 可借鉴点：
 - `spawn_subagent` 是普通 tool，子代理也必须从 parent context 读取工具和 memory。
 - context pipeline 有 tool-result budget、microcompact、autocompaction、session memory。
 
-对 MyClaw 的结论：Phase 3 只做单 agent，但文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch 拆好。
+对 MyClaw 的结论：Phase 1.7 只做 `askAgent` 单轮回复；Phase 1.8 再把 ToolDescriptor、policy dispatch 和 provider tool loop 接起来。文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch 拆好。
 
 ## 推荐设计
 
@@ -60,6 +60,13 @@ policy/
   model-capabilities.ts
 ```
 
+Phase 1.7 已落地的最小切片：
+
+- `packages/llm/src/openai-responses.mjs`：OpenAI Responses provider adapter。
+- `packages/agent/src/ask.mjs`：单轮 ask run，写入 answer、usage、events 和 `toolCalls: []`。
+- `myclaw ask --text ... --json`：本地 CLI 验证真实回复。
+- `myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct`：显式把备份群回复切到 LLM。
+
 最小 agent API：
 
 ```ts
@@ -86,11 +93,20 @@ config/tool policy
   -> transcript
 ```
 
-如果 tool 需要 approval，agent turn 应暂停并返回 `needs_approval`，而不是绕过审批继续执行。
+如果 tool 需要 approval，agent turn 应暂停并返回 `needs_approval`，而不是绕过审批继续执行。Phase 1.7 不把任何工具暴露给模型，`toolCalls` 必须保持空数组。
 
 ## MVP 边界
 
-Phase 3：
+Phase 1.7：
+
+- OpenAI Responses 单轮 provider。
+- CLI `ask`。
+- Feishu 显式 LLM replyBuilder。
+- no tool calling。
+- no memory injection。
+- no streaming first。
+
+Phase 1.8：
 
 - OpenAI-compatible provider。
 - 单轮和多轮 session。
@@ -117,12 +133,17 @@ Phase 3：
 ## 关键风险
 
 - agent 直接执行 shell，绕过 workflow/approval。
+- 把单轮 LLM 回复误认为已具备工具执行能力。
+- Feishu 默认把群消息发给 LLM，导致隐私边界不清。
 - prompt builder 注入过多动态内容，导致不可缓存和难调试。
 - tool result 过大，污染 transcript。
 
 ## 验收标准
 
-- `myclaw ask "列出当前目录"` 能调用工具并返回结果。
-- tool call、tool result、assistant response 都写入 transcript。
+- Phase 1.7：`myclaw ask "用一句话介绍 MyClaw"` 能返回真实 answer，并写入 `ask_*` run。
+- Phase 1.7：缺少 `OPENAI_API_KEY` 时返回 `llm_config_required`，不能 fake 回复。
+- Phase 1.7：Feishu LLM 回复必须显式 `--reply-provider llm --llm-privacy-ack`。
+- Phase 1.8：`myclaw ask "列出当前目录"` 能通过 policy 允许的工具返回结果。
+- Phase 1.8：tool call、tool result、assistant response 都写入 transcript。
 - 被 policy deny 的工具不会出现在模型 schema。
 - 需要 approval 的工具调用会暂停，resume 后继续或结束。
