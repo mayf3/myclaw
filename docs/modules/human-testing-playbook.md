@@ -32,7 +32,7 @@ Review 观察：
 | L0 接入层 | partial | 可以 | E0、E2A、E2B、E2C，E2/E3 配置后 | rich card 和 agent replyBuilder |
 | L1 Gateway | partial | 可以 | E1、E1B、E1C、E2A、E2B、E2C、E3、E5、E5B | 补 seq/replay、route schema 和 tool panel |
 | L2 Workflow / 审批 | partial | 可以 | E4、E5、E5B | 把 smoke tool 抽象成通用 policy dispatch |
-| L3 单 Agent | planned | 暂不能 | E6 占位 | 最小 run/resume/tool loop |
+| L3 单 Agent | partial | 可以先测回复 | E6A 真实 LLM 回复；E6 占位 | 最小 run/resume/tool loop |
 | L4 Session Search / Provenance | planned | 暂不能 | E8 占位 | run/step/tool result 可检索 |
 | L5 Agent-to-Agent | planned | 暂不能 | E9 占位 | agent 分工、交接、互审 |
 | L6 Long Memory / Search | planned | 暂不能 | E10 占位 | 长期记忆、来源、遗忘 |
@@ -50,6 +50,7 @@ Review 观察：
 | E4 OpenClaw stage | L2 | 现在就测 | `npm run myclaw -- migrate openclaw --source $MYCLAW_OPENCLAW_SOURCE --stage --json` | stage 是 review-only，记录 stageId 和 approvalId |
 | E5 审批队列 | L1/L2 | 现在就测 | `MYCLAW_GATEWAY_TOKEN=dev-token npm run myclaw -- gateway --port 4322 --openclaw-source $MYCLAW_OPENCLAW_SOURCE`；POST `/api/openclaw-migration/stage`；GET `/api/approvals`；POST `/api/approvals/<approvalId>/decision` | pending 变 approved/rejected，event 有记录 |
 | E5B Tool approval smoke | L1/L2 | 现在就测 | POST `/api/tool-requests/smoke-note`；GET `/api/approvals`；approve/reject；GET `/api/tool-requests` | tool-action approval 出现；approved 才写 `tool-runs/...`；rejected 不执行 |
+| E6A LLM Reply Smoke | L3 | 现在就测 | `OPENAI_API_KEY=... npm run myclaw -- ask --text "用三句话介绍 MyClaw" --json`；可选显式启动 `myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct` | `ask_*` run 写入 state；返回真实 answer；`toolCalls=[]`；Dashboard/API 只暴露 answer preview；缺 key 时返回 `llm_config_required` |
 | E7 工程约束 | 全局 | 现在就测 | `npm run check` | 生成物 up to date，结构红线通过 |
 | E2/E3 Feishu | L0/L1 | 配置后测 | 设置 `MYCLAW_FEISHU_WEBHOOK_URL` 后发送 webhook；设置 verify/encrypt token 后 POST callback challenge | 群消息收到，callback challenge 通过 |
 
@@ -57,7 +58,7 @@ Review 观察：
 
 | 实验 | 原因 | 开放前置条件 |
 |---|---|---|
-| E6 单 Agent | 还没有 agent runtime | L0/L1 smoke 稳定，E5B tool approval 可用 |
+| E6 单 Agent 工具循环 | 还没有 ToolDescriptor/durable dispatch/model tool calling | E6A 真实回复稳定，E5B tool approval 可用 |
 | E8 Session Search | 还没有可检索 run/step/source | run event schema 更稳定 |
 | E9 Agent-to-Agent | 还没有 agent runtime 和 provenance | E6/E8 先完成 |
 | E10 Long Memory | 还没有 memory store 和遗忘策略 | E8 先完成，记忆来源可解释 |
@@ -76,7 +77,8 @@ flowchart TD
   L0Gate -->|是| Stage[E4 stage OpenClaw]
   Stage --> Approval[E5 审批 decision]
   Approval --> ToolSmoke[E5B tool approval smoke]
-  ToolSmoke --> Record[记录体验问题]
+  ToolSmoke --> Ask[E6A LLM reply smoke]
+  Ask --> Record[记录体验问题]
   Record --> Report[更新 issue / 文档 / 下一轮目标]
 ```
 
@@ -88,6 +90,7 @@ Review 观察：
 - E1C 现在用于确认 Gateway read plane 不再裸露；非 loopback 控制面 GET 必须有 `control:read` 或 `read` scope。
 - E2B 当前只做文本自动回复；default-closed ingress 和 persistent replay 已有，还缺 rich card 和 agent replyBuilder。
 - E4/E5/E5B 是后续 agent 写操作的安全前置。
+- E6A 只证明真实 LLM 回复可用，不代表模型可以调用工具。
 - L0/L1 smoke 没过，不进入 L3 agent。
 - 测试反馈必须回到文档或 issue，不能只留在对话里。
 
@@ -106,6 +109,7 @@ Review 观察：
 | Gateway read auth | 非 loopback `/api/status` 无 token 拒绝，`control:read` 放行，`events:read` 只能读 stream | 必须通过 |
 | Approval evidence | stageId、approvalId、decision event | 必须通过 |
 | Tool approval smoke | toolRequestId、approvalId、approved/rejected 结果、`tool-runs/...` 相对 artifact | 必须通过 |
+| LLM reply smoke | `ask_*` run、answer、provider、`toolCalls=[]`，缺 key 时 `llm_config_required` | 必须通过 |
 | Mutation audit | 高风险 mutation 有 event 或 audit record | 下一轮补齐 |
 
 ## 反馈记录格式
@@ -114,13 +118,14 @@ Review 观察：
 
 ```text
 日期：
-测试实验：E0/E1/E4/E5/E5B/E7/...
+测试实验：E0/E1/E4/E5/E5B/E6A/E7/...
 入口命令或 URL：
 命令退出码：
 runId：
 stageId：
 approvalId：
 toolRequestId：
+askRunId：
 证据路径或截图：
 预期结果：
 实际结果：
@@ -145,12 +150,12 @@ issue 或 commit：
 
 ## 当前推荐下一轮
 
-下一轮建议继续守住 L1/L2，不直接做 agent：
+下一轮建议从 L3 的真实回复进入受控工具循环：
 
 1. 通用 ToolDescriptor、policy snapshot 和 sandbox dispatch。
 2. Gateway event stream seq/replay 和 route schema。
 3. Dashboard tool request / approval drawer 和 renderer 拆分。
-4. 保持 E0/E1/E1B/E1C/E4/E5/E5B/E7 作为回归测试。
+4. 保持 E0/E1/E1B/E1C/E4/E5/E5B/E6A/E7 作为回归测试。
 
 ## 本地文档入口
 

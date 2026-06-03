@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.6 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token 和 safe tool request 入口。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.7 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token、safe tool request 入口和 LLM provider health。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
 
 ## 参考项目观察
 
@@ -149,7 +149,7 @@ type GatewayFrame =
 ## Gateway 不负责
 
 - 不解析 workflow 语法。
-- 不直接执行通用 tool；Phase 1.6 只触发 safe smoke tool 的 approval-to-effect bridge。
+- 不直接执行通用 tool；Phase 1.6 只触发 safe smoke tool 的 approval-to-effect bridge，Phase 1.7 的 LLM 回复也不暴露 tool calling。
 - 不决定 approval policy。
 - 不直接写 plugin runtime 逻辑。
 
@@ -243,6 +243,12 @@ Phase 1.6：
 - `packages/feishu-bot` 在 Gateway 外独立持有 Feishu SDK、default-closed policy 和 persistent replay。
 - Gateway/control-plane read API 对 Feishu run 做脱敏，避免 Dashboard 暴露正文、chat_id、sender_id。
 
+Phase 1.7：
+
+- `/api/status` health items 增加 `llm-provider`。
+- `myclaw ask` 产生的 `ask_*` run 能被控制面读取。
+- Feishu bot 只有显式 `--reply-provider llm --llm-privacy-ack` 才把群消息交给 LLM；Gateway 不默认开启。
+
 Phase 1.4：
 
 - Gateway 对 `/messages`、`/api/openclaw-migration/stage`、approval decision 和 Feishu callback 写 mutation audit。
@@ -298,7 +304,7 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.6 的 L0-L6、E0-E10/E5B 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.7 的 L0-L6、E0-E10/E5B/E6A 路线，并和 Dashboard 展示一致。
 - `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
 - `GET /api/events/stream` 能返回脱敏 snapshot；非 loopback 时必须有 `events:read` 或 `read` scope。
 - 非 loopback 的 `/api/status`、`/api/events`、`/api/audit`、`/api/approvals`、Dashboard HTML 都必须有 `control:read` 或 `read` scope。

@@ -2,6 +2,13 @@ const REDACTED = "[redacted]";
 
 export function redactRunRecord(record) {
   const copy = cloneJson(record);
+  if (isAgentAnswerRun(copy)) {
+    copy.summary = redactAgentSummary(copy.summary, copy.envelope);
+    if (copy.envelope) {
+      redactEnvelope(copy.envelope);
+    }
+    return copy;
+  }
   if (!isFeishuRun(copy)) {
     return copy;
   }
@@ -14,6 +21,13 @@ export function redactRunRecord(record) {
 
 export function redactRunDetail(run) {
   const copy = cloneJson(run);
+  if (isAgentAnswerRun(copy)) {
+    copy.summary = redactAgentSummary(copy.summary, copy.envelope);
+    if (copy.envelope) {
+      redactEnvelope(copy.envelope);
+    }
+    return copy;
+  }
   if (!isFeishuRun(copy)) {
     return copy;
   }
@@ -30,6 +44,17 @@ export function redactEvents(events = []) {
 }
 
 function redactEnvelope(envelope) {
+  if (envelope.result?.type === "agent-answer") {
+    const answer = String(envelope.result.answer || "");
+    envelope.result.answerPreview = summarizeRedactedText(answer);
+    envelope.result.answer = REDACTED;
+    envelope.result.capabilities = {
+      toolCalling: false,
+      memory: false,
+      streaming: false,
+      ...(envelope.result.capabilities || {}),
+    };
+  }
   if (envelope.result?.inbound?.channel === "feishu-event") {
     const inbound = envelope.result.inbound;
     inbound.textPreview = summarizeRedactedText(inbound.text);
@@ -44,6 +69,11 @@ function redactEnvelope(envelope) {
     delete envelope.result.reply.raw;
   }
   envelope.events = redactEvents(envelope.events);
+}
+
+function isAgentAnswerRun(record = {}) {
+  const envelope = record.envelope ?? record;
+  return envelope.result?.type === "agent-answer" || String(record.runId || envelope.runId || "").startsWith("ask_");
 }
 
 function redactEvent(event) {
@@ -75,6 +105,14 @@ function isFeishuEvent(event = {}) {
 
 function redactSummary(summary) {
   return String(summary || "").replace(/feishu-event inbound:.*/i, "feishu-event inbound: [redacted]");
+}
+
+function redactAgentSummary(summary, envelope) {
+  const answer = envelope?.result?.answer;
+  if (answer) {
+    return `agent answer: ${summarizeRedactedText(answer)}`;
+  }
+  return String(summary || "").replace(/agent answer:.*/i, "agent answer: [redacted]");
 }
 
 function redactLocalPaths(value, key = "") {
