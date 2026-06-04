@@ -50,14 +50,15 @@ test("gateway serves dashboard status and accepts inbound messages", async () =>
     assert.equal(reference.referenceCompletion.modules.some((module) => module.id === "feishu"), true);
 
     const milestones = await fetch(`${gateway.url}/api/milestones`).then((response) => response.json());
-    assert.equal(milestones.milestones.currentPhase, "1.7");
+    assert.equal(milestones.milestones.currentPhase, "1.8");
     assert.equal(milestones.milestones.currentMilestone, "M4");
 
     const experiments = await fetch(`${gateway.url}/api/experiments`).then((response) => response.json());
-    assert.equal(experiments.experiments.currentPhase, "1.7");
+    assert.equal(experiments.experiments.currentPhase, "1.8");
     assert.deepEqual(experiments.experiments.layerRoadmap.map((item) => item.id), ["L0", "L1", "L2", "L3", "L4", "L5", "L6"]);
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E5B"), true);
     assert.equal(experiments.experiments.experiments.some((item) => item.id === "E6A"), true);
+    assert.equal(experiments.experiments.experiments.some((item) => item.id === "E6B"), true);
 
     const feishu = await fetch(`${gateway.url}/api/feishu-adoption`).then((response) => response.json());
     assert.equal(feishu.feishuAdoption.referenceUse, true);

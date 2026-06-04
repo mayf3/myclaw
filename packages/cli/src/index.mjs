@@ -2,11 +2,13 @@
 import { resolveStateDir } from "../../core/src/state.mjs";
 import { listChannels } from "../../channels/src/index.mjs";
 import { answerFromEnvelope, askAgent } from "../../agent/src/ask.mjs";
+import { proposeAgentConfig } from "../../agent/src/config-proposal.mjs";
 import { receiveMessage, sendMessage } from "../../runtime/src/messages.mjs";
 import { startGateway } from "../../gateway/src/index.mjs";
 import { startDashboard } from "../../dashboard/src/index.mjs";
 import { planOpenClawMigration, writeMigrationPlan } from "../../migrate/src/openclaw.mjs";
 import { stageOpenClawMigration } from "../../migrate/src/stage.mjs";
+import { printConfigEnvelope } from "./config-output.mjs";
 import { printHelp, printMigrateHelp } from "./help.mjs";
 import { buildCliReplyBuilder } from "./reply-builder.mjs";
 
@@ -36,6 +38,9 @@ async function main(argv = process.argv.slice(2)) {
   }
   if (command === "ask") {
     return await runAsk(parseArgs(rest));
+  }
+  if (command === "configure-agent" || command === "config-agent") {
+    return await runConfigureAgent(parseArgs(rest));
   }
   if (command === "dashboard") {
     return await runDashboard(parseArgs(rest));
@@ -103,6 +108,18 @@ async function runAsk(args) {
     source: "cli",
   });
   printEnvelope(envelope, args.json);
+  return envelope.ok ? 0 : 1;
+}
+
+async function runConfigureAgent(args) {
+  const envelope = await proposeAgentConfig({
+    target: args.target,
+    text: args.text || args._.join(" ").trim(),
+    stateDir: args.stateDir,
+    model: args.model,
+    source: "cli",
+  });
+  printConfigEnvelope(envelope, { json: args.json, unsafeFullLocal: args.unsafeFullLocal });
   return envelope.ok ? 0 : 1;
 }
 

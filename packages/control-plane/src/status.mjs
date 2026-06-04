@@ -10,7 +10,7 @@ import { buildHumanExperimentsPayload } from "./experiments.mjs";
 import { buildMilestonesPayload } from "./milestones.mjs";
 import { buildOpenClawStageReview } from "./openclaw-diff.mjs";
 import { buildFeishuAdoptionPayload, buildReferenceCompletionPayload } from "./reference-completion.mjs";
-import { redactEvents, redactRunDetail, redactRunRecord } from "./redaction.mjs";
+import { redactApprovalRecord, redactEvents, redactRunDetail, redactRunRecord } from "./redaction.mjs";
 
 const MIGRATION_PLAN_CACHE_MS = 5000;
 const migrationPlanCache = new Map();
@@ -39,7 +39,7 @@ export async function buildStatusPayload(context) {
     milestones: buildMilestonesPayload(),
     experiments: buildHumanExperimentsPayload(),
     health,
-    approvals,
+    approvals: approvals.map(redactApprovalRecord),
     toolRequests: toolRequests.map(redactToolRequest),
     runs: runs.map(redactRunRecord),
     events: redactEvents(events),
@@ -108,10 +108,10 @@ export async function buildOpenClawMigrationPayload(context, options = {}) {
 export async function buildApprovalsPayload(context, options = {}) {
   return {
     ok: true,
-    approvals: await listApprovals(context.stateDir, {
+    approvals: (await listApprovals(context.stateDir, {
       limit: options.limit || 50,
       status: options.status,
-    }),
+    })).map(redactApprovalRecord),
   };
 }
 
@@ -128,10 +128,10 @@ export async function buildApprovalPayload(context, options = {}) {
     return {
       ok: false,
       error: { code: payload.status, message: "Approval not found or invalid" },
-      approval: payload.approval,
+      approval: redactApprovalRecord(payload.approval),
     };
   }
-  return { ok: true, approval: payload.approval };
+  return { ok: true, approval: redactApprovalRecord(payload.approval) };
 }
 
 export function buildReferenceCompletionStatusPayload() {

@@ -185,6 +185,9 @@ function summarizeEnvelope(envelope) {
   if (envelope.result?.answer) {
     return `agent answer: ${truncate(envelope.result.answer, 80)}`;
   }
+  if (envelope.result?.type === "agent-config-proposal") {
+    return `config proposal: ${truncate(envelope.result.proposal?.summary || envelope.result.target, 80)}`;
+  }
   if (envelope.error) {
     return `${envelope.error.code}: ${envelope.error.message}`;
   }

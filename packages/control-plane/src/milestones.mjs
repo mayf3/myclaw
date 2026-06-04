@@ -3,10 +3,10 @@ export function buildMilestonesPayload() {
     schemaVersion: 1,
     computed: false,
     source: "static-roadmap",
-    currentPhase: "1.7",
+    currentPhase: "1.8",
     currentMilestone: "M4",
     summary:
-      "Phase 1.7 adds real LLM reply smoke before enabling model-driven tool execution.",
+      "Phase 1.8 adds review-only agent configuration proposals before model-driven tool execution.",
     milestones: [
       m("M0", "本地消息闭环", "done", 100, "CLI send/receive、state、channel registry 已可用"),
       m("M1", "Gateway 与 Dashboard", "partial", 92, "共享 control route adapter、run detail、reference matrix、人类实验路线、health strip、mutation audit、SSE snapshot 和 scoped token 已可用，缺 route schema"),
@@ -18,7 +18,7 @@ export function buildMilestonesPayload() {
         "signed encrypted challenge、custom-bot outbound facade、openduck credential import、WebSocket app-token 群回复、default-closed local policy、persistent replay 和 redacted reads 已可用，缺 rich card/agent replyBuilder",
       ),
       m("M3", "OpenClaw 迁移", "partial", 65, "plan/stage/review summary 与 stage review 已有，缺 apply/rollback"),
-      m("M4", "Agent Runtime 与审批", "partial", 48, "已有 migration approval queue、smoke tool approval execution 和 OpenAI Responses ask smoke，缺通用 tool schema/policy、sandbox 和 LLM tool loop"),
+      m("M4", "Agent Runtime 与审批", "partial", 56, "已有 migration approval queue、smoke tool approval execution、OpenAI Responses ask smoke 和 agent config proposal approval，缺通用 tool schema/policy、sandbox 和 LLM tool loop"),
       m("M5", "记忆、搜索与插件", "planned", 8, "还没有 SQLite/FTS、long memory、plugin manifest loader"),
       m("M6", "工程约束与技术债", "done", 100, "npm run check 已强制 500 行、20 文件/目录、4 层目录深度和生成 HTML 新鲜度"),
       m("M7", "分层交互测试路线", "partial", 45, "L0-L6 测试路线已定义；E8-E10 仍是 planned，不代表能力已完成"),

@@ -9,6 +9,13 @@ export function redactRunRecord(record) {
     }
     return copy;
   }
+  if (isConfigProposalRun(copy)) {
+    copy.summary = redactConfigProposalSummary(copy.summary, copy.envelope);
+    if (copy.envelope) {
+      redactEnvelope(copy.envelope);
+    }
+    return copy;
+  }
   if (!isFeishuRun(copy)) {
     return copy;
   }
@@ -23,6 +30,13 @@ export function redactRunDetail(run) {
   const copy = cloneJson(run);
   if (isAgentAnswerRun(copy)) {
     copy.summary = redactAgentSummary(copy.summary, copy.envelope);
+    if (copy.envelope) {
+      redactEnvelope(copy.envelope);
+    }
+    return copy;
+  }
+  if (isConfigProposalRun(copy)) {
+    copy.summary = redactConfigProposalSummary(copy.summary, copy.envelope);
     if (copy.envelope) {
       redactEnvelope(copy.envelope);
     }
@@ -43,6 +57,32 @@ export function redactEvents(events = []) {
   return events.map((event) => redactLocalPaths(isFeishuEvent(event) ? redactEvent(event) : event));
 }
 
+export function redactApprovalRecord(approval) {
+  if (!approval) {
+    return approval;
+  }
+  const copy = redactLocalPaths(cloneJson(approval));
+  if (copy.subject?.type !== "agent-config-proposal") {
+    return copy;
+  }
+  const target = supportedConfigTarget(copy.subject?.target) ? copy.subject.target : "unsupported";
+  copy.title = `Review agent config proposal: ${target}`;
+  copy.summary = `Review-only config proposal for ${target}; details redacted.`;
+  copy.subject = {
+    type: "agent-config-proposal",
+    target,
+    proposalId: copy.subject?.proposalId,
+    applySupported: false,
+  };
+  copy.evidence = (copy.evidence || [])
+    .filter((item) => item?.type === "run" || item?.type === "target")
+    .map((item) => (item.type === "target" ? { type: "target", target } : item));
+  if (copy.decision?.reason) {
+    copy.decision = { ...copy.decision, reason: REDACTED };
+  }
+  return copy;
+}
+
 function redactEnvelope(envelope) {
   if (envelope.result?.type === "agent-answer") {
     const answer = String(envelope.result.answer || "");
@@ -53,6 +93,22 @@ function redactEnvelope(envelope) {
       memory: false,
       streaming: false,
       ...(envelope.result.capabilities || {}),
+    };
+  }
+  if (envelope.result?.type === "agent-config-proposal") {
+    const proposal = envelope.result.proposal || {};
+    envelope.result.proposalPreview = {
+      summaryPreview: summarizeRedactedText(proposal.summary),
+      readiness: proposal.readiness || "needs_review",
+      proposedChangeCount: Array.isArray(proposal.proposedChanges) ? proposal.proposedChanges.length : 0,
+      commandCount: Array.isArray(proposal.commands) ? proposal.commands.length : 0,
+      riskCount: Array.isArray(proposal.risks) ? proposal.risks.length : 0,
+      blockedCount: Array.isArray(proposal.blocked) ? proposal.blocked.length : 0,
+    };
+    envelope.result.proposal = REDACTED;
+    envelope.result.sanitizedContext = {
+      target: envelope.result.sanitizedContext?.target || envelope.result.target,
+      guardrails: envelope.result.sanitizedContext?.guardrails || {},
     };
   }
   if (envelope.result?.inbound?.channel === "feishu-event") {
@@ -74,6 +130,11 @@ function redactEnvelope(envelope) {
 function isAgentAnswerRun(record = {}) {
   const envelope = record.envelope ?? record;
   return envelope.result?.type === "agent-answer" || String(record.runId || envelope.runId || "").startsWith("ask_");
+}
+
+function isConfigProposalRun(record = {}) {
+  const envelope = record.envelope ?? record;
+  return envelope.result?.type === "agent-config-proposal" || String(record.runId || envelope.runId || "").startsWith("cfg_");
 }
 
 function redactEvent(event) {
@@ -115,6 +176,14 @@ function redactAgentSummary(summary, envelope) {
   return String(summary || "").replace(/agent answer:.*/i, "agent answer: [redacted]");
 }
 
+function redactConfigProposalSummary(summary, envelope) {
+  const proposal = envelope?.result?.proposal;
+  if (proposal?.summary) {
+    return `config proposal: ${summarizeRedactedText(proposal.summary)}`;
+  }
+  return String(summary || "").replace(/config proposal:.*/i, "config proposal: [redacted]");
+}
+
 function redactLocalPaths(value, key = "") {
   if (Array.isArray(value)) {
     return value.map((item) => redactLocalPaths(item));
@@ -140,6 +209,10 @@ function summarizeRedactedText(text) {
     return "";
   }
   return `[redacted ${value.length} chars]`;
+}
+
+function supportedConfigTarget(value) {
+  return value === "feishu-llm";
 }
 
 function cloneJson(value) {
