@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.8 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token、safe tool request 入口、LLM provider health 和 agent config proposal preview。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply 或自动应用 agent 配置提案。
+Gateway 是 MyClaw 的控制平面。Phase 1.9 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token、safe tool request 入口、LLM provider health、agent config proposal preview 和 Feishu LLM reply chain 可观测性。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply 或自动应用 agent 配置提案。
 
 ## 参考项目观察
 
@@ -267,6 +267,12 @@ Phase 1.8：
 - 控制面和 approval API 只暴露 `proposalPreview`、guardrails、redacted summary 和 target，不返回完整 proposal。
 - `agent-config-proposal` approval 可在 `/api/approvals` 看到，但 decision 不触发 apply。
 
+Phase 1.9：
+
+- Feishu LLM replyBuilder 会返回 linked `ask_*` run id。
+- `fb_*` run 通过 control-plane 可看到 `reply.builder.provider=llm` 和 `linkedRunId`。
+- Gateway/control-plane 仍对飞书正文、chat_id、sender_id 和完整 LLM answer 脱敏。
+
 Phase 1.4：
 
 - Gateway 对 `/messages`、`/api/openclaw-migration/stage`、approval decision 和 Feishu callback 写 mutation audit。
@@ -323,7 +329,7 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.8 的 L0-L6、E0-E10/E5B/E6A/E6B 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.9 的 L0-L6、E0-E10/E5B/E6A/E6B/E6C 路线，并和 Dashboard 展示一致。
 - `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
 - `GET /api/events/stream` 能返回脱敏 snapshot；非 loopback 时必须有 `events:read` 或 `read` scope。
 - 非 loopback 的 `/api/status`、`/api/events`、`/api/audit`、`/api/approvals`、Dashboard HTML 都必须有 `control:read` 或 `read` scope。

@@ -11,12 +11,12 @@ MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“�
 | L0 接入层 | 人、CLI、webhook、Feishu/Lark 的基础消息交互 | E0、E2、E3 |
 | L1 Gateway | HTTP 控制面、鉴权、状态读取、mutation 边界 | E1、E3、E5 |
 | L2 Workflow 与审批 | 高风险动作进入 review/approval，而不是自动执行 | E4、E5 |
-| L3 单 Agent Runtime | 先测真实 LLM 回复和配置提案，再接任务拆解、工具调用、失败重试、人工确认 | E6A、E6B、E6 |
+| L3 单 Agent Runtime | 先测真实 LLM 回复、配置提案和飞书回复链路，再接任务拆解、工具调用、失败重试、人工确认 | E6A、E6B、E6C、E6 |
 | L4 Session Search / Provenance | run、step、tool result 可检索，召回来源可解释 | E8 |
 | L5 Agent-to-Agent | 多 agent 分工、交接上下文、互相 review | E9 |
 | L6 Long Memory / Search | 长期事实、来源解释、遗忘策略和跨会话召回 | E10 |
 
-原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；E6A 只验证真实 LLM 回复，不代表工具调用已开放；E6B 只验证 review-only 配置提案，不代表配置已应用；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。
+原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；E6A 只验证真实 LLM 回复，不代表工具调用已开放；E6B 只验证 review-only 配置提案，不代表配置已应用；E6C 只验证飞书消息能关联到 LLM run，不代表工具调用已开放；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。
 
 具体的人类测试入口、反馈格式和每轮回归路径见 [人类测试手册](./human-testing-playbook.md)。
 
@@ -91,7 +91,7 @@ MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“�
 
 目标：
 
-- 先由 E6A 验证真实 LLM 回复。
+- 先由 E6A 验证真实 LLM 回复，由 E6C 验证飞书群消息到 LLM run 的链路。
 - 后续 agent 能调用工具，但不能绕过 workflow/policy/approval。
 
 交付：
@@ -100,6 +100,7 @@ MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“�
 - OpenAI-compatible provider。
 - single-turn ask。
 - review-only config proposal。
+- Feishu LLM reply chain。
 - transcript JSONL。
 - tool calling。
 
@@ -107,6 +108,7 @@ MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“�
 
 - Phase 1.7：`myclaw ask` 能返回真实 answer，缺 key 时返回 `llm_config_required`。
 - Phase 1.8：`myclaw configure-agent` 能返回配置提案，创建 pending approval，且不自动写配置。
+- Phase 1.9：飞书 LLM 回复能把 `fb_*` run 关联到 `ask_*` run。
 - 后续 E6：`myclaw ask` 能完成 read/exec 类任务。
 - tool call 全量入 transcript。
 - approval pause/resume 可用。

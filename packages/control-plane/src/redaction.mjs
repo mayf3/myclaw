@@ -122,6 +122,7 @@ function redactEnvelope(envelope) {
   if (envelope.result?.reply?.provider === "feishu") {
     envelope.result.reply.target = REDACTED;
     envelope.result.reply.replyToMessageId = envelope.result.reply.replyToMessageId ? REDACTED : null;
+    redactReplyBuilder(envelope.result.reply.builder);
     delete envelope.result.reply.raw;
   }
   envelope.events = redactEvents(envelope.events);
@@ -143,6 +144,9 @@ function redactEvent(event) {
     if (copy[key]) {
       copy[key] = REDACTED;
     }
+  }
+  if (copy.linkedRunId && !isSafeAskRunId(copy.linkedRunId)) {
+    copy.linkedRunId = REDACTED;
   }
   return copy;
 }
@@ -209,6 +213,23 @@ function summarizeRedactedText(text) {
     return "";
   }
   return `[redacted ${value.length} chars]`;
+}
+
+function redactReplyBuilder(builder) {
+  if (!builder || typeof builder !== "object") {
+    return;
+  }
+  if (builder.text) {
+    builder.textPreview = summarizeRedactedText(builder.text);
+    builder.text = REDACTED;
+  }
+  if (builder.linkedRunId && !isSafeAskRunId(builder.linkedRunId)) {
+    builder.linkedRunId = REDACTED;
+  }
+}
+
+function isSafeAskRunId(value) {
+  return /^ask_[A-Za-z0-9_-]+$/.test(String(value || ""));
 }
 
 function supportedConfigTarget(value) {

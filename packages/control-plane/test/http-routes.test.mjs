@@ -54,7 +54,7 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.8");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.9");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
@@ -62,6 +62,7 @@ test("control get route adapter resolves shared read routes", async () => {
   assert.equal(experiments.payload.experiments.layerRoadmap[3].status, "partial");
   assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6A"), true);
   assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6B"), true);
+  assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6C"), true);
 
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);
@@ -105,6 +106,7 @@ test("control read routes redact Feishu message payloads", async () => {
           mode: "app",
           ok: true,
           target: "oc_secret",
+          builder: { provider: "llm", text: "sensitive model reply", linkedRunId: "ask_safe" },
           raw: { token: "not-for-api" },
         },
       },
@@ -128,8 +130,12 @@ test("control read routes redact Feishu message payloads", async () => {
   assert.equal("stateDir" in status.payload, false);
   assert.equal(status.payload.state.label, "local-state");
   assert.equal(status.payload.runs[0].envelope.result.inbound.textPreview, "[redacted 22 chars]");
+  assert.equal(status.payload.runs[0].envelope.result.reply.builder.text, "[redacted]");
+  assert.equal(status.payload.runs[0].envelope.result.reply.builder.textPreview, "[redacted 21 chars]");
+  assert.equal(status.payload.runs[0].envelope.result.reply.builder.linkedRunId, "ask_safe");
   assert.equal(run.payload.run.envelope.result.reply.raw, undefined);
   assert.equal(joined.includes("private feishu message"), false);
+  assert.equal(joined.includes("sensitive model reply"), false);
   assert.equal(joined.includes("private"), false);
   assert.equal(joined.includes("oc_secret"), false);
   assert.equal(joined.includes("ou_secret"), false);

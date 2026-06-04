@@ -59,7 +59,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
         </section>
         <article class="content">
           <h2 id="诊断">诊断</h2>
-<p>Agent Runtime 应该晚于 workflow core 和 tool registry。Phase 1.7 先开放真实 LLM 单轮回复，Phase 1.8 再开放 review-only 配置提案，让用户开始测试“agent 能不能帮助判断配置缺口”。但 MyClaw 的 agent 不应直接变成“无边界 shell 代理”，后续工具调用和配置落地必须围绕 workflow、tool policy、staged apply 和 approval 运行。</p>
+<p>Agent Runtime 应该晚于 workflow core 和 tool registry。Phase 1.7 先开放真实 LLM 单轮回复，Phase 1.8 开放 review-only 配置提案，Phase 1.9 把 Feishu LLM 回复与 <code>ask_*</code> run 关联起来，让用户能在群里测试真实回复效果。但 MyClaw 的 agent 不应直接变成“无边界 shell 代理”，后续工具调用和配置落地必须围绕 workflow、tool policy、staged apply 和 approval 运行。</p>
 <h2 id="参考项目观察">参考项目观察</h2>
 <p>Hermes 的 agent loop 可借鉴点：</p>
 <ul><li>provider resolution 独立于 agent。</li><li>tool call schema 来自 registry。</li><li>tool call 结果回填对话历史。</li><li>compression 和 prompt caching 分层。</li><li>session persistence 在每 turn 后落盘。</li><li>fallback model 和 auxiliary model 可独立配置。</li></ul>
@@ -67,7 +67,7 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>workspace bootstrap files。</li><li>skills load order。</li><li>tools 由 policy 裁剪后再暴露给模型。</li><li>streaming、steering queue、block streaming 都是后期能力。</li></ul>
 <p>OpenHuman 的 agent runtime 可借鉴点：</p>
 <ul><li><code>Agent::turn</code> 明确按 prompt build、memory context、provider loop、tool dispatch、history、background extraction 组织。</li><li><code>AgentBuilder</code> 负责组装 provider、tools、memory、prompt builder、dispatcher，不把构造逻辑塞进 turn。</li><li><code>spawn_subagent</code> 是普通 tool，子代理也必须从 parent context 读取工具和 memory。</li><li>context pipeline 有 tool-result budget、microcompact、autocompaction、session memory。</li></ul>
-<p>对 MyClaw 的结论：Phase 1.8 仍不能直接进入 provider tool loop。现在只做 <code>askAgent</code> 单轮回复和 <code>proposeAgentConfig</code> 配置提案；下一步先补 staged apply，再把 ToolDescriptor、policy dispatch 和 provider tool loop 接起来。文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch/config-proposal 拆好。</p>
+<p>对 MyClaw 的结论：Phase 1.9 仍不能直接进入 provider tool loop。现在只做 <code>askAgent</code> 单轮回复、<code>proposeAgentConfig</code> 配置提案和 Feishu LLM reply chain；下一步先补 Dashboard chain drawer 和 staged apply，再把 ToolDescriptor、policy dispatch 和 provider tool loop 接起来。文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch/config-proposal 拆好。</p>
 <h2 id="推荐设计">推荐设计</h2>
 <p>Agent Runtime 分为五个小模块：</p>
 <pre class="code" data-lang="text"><code>provider/
@@ -93,7 +93,7 @@ policy/
   visible-tools.ts
   model-capabilities.ts</code></pre>
 <p>Phase 1.7/1.8 已落地的最小切片：</p>
-<ul><li><code>packages/llm/src/openai-responses.mjs</code>：OpenAI Responses provider adapter。</li><li><code>packages/agent/src/ask.mjs</code>：单轮 ask run，写入 answer、usage、events 和 <code>toolCalls: []</code>。</li><li><code>packages/agent/src/config-proposal.mjs</code>：review-only 配置提案，写入 <code>cfg_*</code> run 和 pending approval。</li><li><code>myclaw ask --text ... --json</code>：本地 CLI 验证真实回复。</li><li><code>myclaw configure-agent --target feishu-llm --text ... --json</code>：本地 CLI 验证 agent 配置提案。</li><li><code>myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct</code>：显式把备份群回复切到 LLM。</li></ul>
+<ul><li><code>packages/llm/src/openai-responses.mjs</code>：OpenAI Responses provider adapter。</li><li><code>packages/agent/src/ask.mjs</code>：单轮 ask run，写入 answer、usage、events 和 <code>toolCalls: []</code>。</li><li><code>packages/agent/src/config-proposal.mjs</code>：review-only 配置提案，写入 <code>cfg_*</code> run 和 pending approval。</li><li><code>packages/feishu-bot/src/runtime.mjs</code>：Feishu LLM 回复会记录 <code>reply.builder.linkedRunId</code>，把 <code>fb_*</code> run 关联到 <code>ask_*</code> run。</li><li><code>myclaw ask --text ... --json</code>：本地 CLI 验证真实回复。</li><li><code>myclaw configure-agent --target feishu-llm --text ... --json</code>：本地 CLI 验证 agent 配置提案。</li><li><code>myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct</code>：显式把备份群回复切到 LLM。</li></ul>
 <p>最小 agent API：</p>
 <pre class="code" data-lang="ts"><code>runAgentTurn({
   sessionId,
@@ -117,6 +117,8 @@ policy/
 <ul><li>OpenAI Responses 单轮 provider。</li><li>CLI <code>ask</code>。</li><li>Feishu 显式 LLM replyBuilder。</li><li>no tool calling。</li><li>no memory injection。</li><li>no streaming first。</li></ul>
 <p>Phase 1.8：</p>
 <ul><li>Config proposal smoke：sanitized context、JSON proposal、pending approval。</li><li>不读取 secret，不写 <code>.myclaw</code>，不自动 apply。</li><li>CLI 默认 JSON、Dashboard/API、approval API 只暴露 safe projection 或 proposalPreview。</li><li>staged apply 是下一步，不和 proposal 混在一个命令里。</li></ul>
+<p>Phase 1.9：</p>
+<ul><li>Feishu LLM reply chain：<code>reply-builder</code> 返回 <code>{ text, provider, linkedRunId }</code>。</li><li><code>fb_*</code> run 记录 <code>reply.builder.provider=llm</code> 和 <code>linkedRunId=ask_*</code>。</li><li>Dashboard/API 仍隐藏飞书正文、chat_id、sender_id 和完整 LLM answer。</li><li>no tool calling。</li></ul>
 <p>后续：</p>
 <ul><li>OpenAI-compatible provider registry。</li><li>单轮和多轮 session。</li><li>tool call dispatch。</li><li>transcript JSONL。</li><li><code>/new</code>, <code>/status</code>, <code>/model</code> 最小命令。</li><li>streaming。</li><li>fallback providers。</li><li>context compression。</li><li>session search injection。</li><li>skills auto update。</li></ul>
 <h2 id="不建议照搬">不建议照搬</h2>

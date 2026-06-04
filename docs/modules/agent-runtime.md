@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Agent Runtime 应该晚于 workflow core 和 tool registry。Phase 1.7 先开放真实 LLM 单轮回复，Phase 1.8 再开放 review-only 配置提案，让用户开始测试“agent 能不能帮助判断配置缺口”。但 MyClaw 的 agent 不应直接变成“无边界 shell 代理”，后续工具调用和配置落地必须围绕 workflow、tool policy、staged apply 和 approval 运行。
+Agent Runtime 应该晚于 workflow core 和 tool registry。Phase 1.7 先开放真实 LLM 单轮回复，Phase 1.8 开放 review-only 配置提案，Phase 1.9 把 Feishu LLM 回复与 `ask_*` run 关联起来，让用户能在群里测试真实回复效果。但 MyClaw 的 agent 不应直接变成“无边界 shell 代理”，后续工具调用和配置落地必须围绕 workflow、tool policy、staged apply 和 approval 运行。
 
 ## 参考项目观察
 
@@ -29,7 +29,7 @@ OpenHuman 的 agent runtime 可借鉴点：
 - `spawn_subagent` 是普通 tool，子代理也必须从 parent context 读取工具和 memory。
 - context pipeline 有 tool-result budget、microcompact、autocompaction、session memory。
 
-对 MyClaw 的结论：Phase 1.8 仍不能直接进入 provider tool loop。现在只做 `askAgent` 单轮回复和 `proposeAgentConfig` 配置提案；下一步先补 staged apply，再把 ToolDescriptor、policy dispatch 和 provider tool loop 接起来。文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch/config-proposal 拆好。
+对 MyClaw 的结论：Phase 1.9 仍不能直接进入 provider tool loop。现在只做 `askAgent` 单轮回复、`proposeAgentConfig` 配置提案和 Feishu LLM reply chain；下一步先补 Dashboard chain drawer 和 staged apply，再把 ToolDescriptor、policy dispatch 和 provider tool loop 接起来。文件边界要提前按 builder/loop/provider/session/prompt/tool-dispatch/config-proposal 拆好。
 
 ## 推荐设计
 
@@ -65,6 +65,7 @@ Phase 1.7/1.8 已落地的最小切片：
 - `packages/llm/src/openai-responses.mjs`：OpenAI Responses provider adapter。
 - `packages/agent/src/ask.mjs`：单轮 ask run，写入 answer、usage、events 和 `toolCalls: []`。
 - `packages/agent/src/config-proposal.mjs`：review-only 配置提案，写入 `cfg_*` run 和 pending approval。
+- `packages/feishu-bot/src/runtime.mjs`：Feishu LLM 回复会记录 `reply.builder.linkedRunId`，把 `fb_*` run 关联到 `ask_*` run。
 - `myclaw ask --text ... --json`：本地 CLI 验证真实回复。
 - `myclaw configure-agent --target feishu-llm --text ... --json`：本地 CLI 验证 agent 配置提案。
 - `myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct`：显式把备份群回复切到 LLM。
@@ -114,6 +115,13 @@ Phase 1.8：
 - 不读取 secret，不写 `.myclaw`，不自动 apply。
 - CLI 默认 JSON、Dashboard/API、approval API 只暴露 safe projection 或 proposalPreview。
 - staged apply 是下一步，不和 proposal 混在一个命令里。
+
+Phase 1.9：
+
+- Feishu LLM reply chain：`reply-builder` 返回 `{ text, provider, linkedRunId }`。
+- `fb_*` run 记录 `reply.builder.provider=llm` 和 `linkedRunId=ask_*`。
+- Dashboard/API 仍隐藏飞书正文、chat_id、sender_id 和完整 LLM answer。
+- no tool calling。
 
 后续：
 
