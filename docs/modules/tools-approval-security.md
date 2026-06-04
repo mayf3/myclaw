@@ -81,6 +81,15 @@ Phase 1.7 已落地的 LLM reply smoke：
 - Feishu 只有显式 `--reply-provider llm --llm-privacy-ack` 才会把消息交给 LLM；默认仍是确定性 reply policy。
 - 当前仍没有把 `llm.complete` 暴露为工具，也没有让模型调用本地工具。
 
+Phase 1.8 已落地的 agent config proposal smoke：
+
+- `packages/agent/src/config-proposal.mjs` 只生成 review-only 配置提案。
+- 提案会创建 `agent-config-proposal` pending approval，但 approval 只代表“人要审阅”，不触发 apply。
+- 配置上下文只包含 readiness、计数、布尔值和 guardrail，不包含 app secret、token、chat_id、sender_id 或 webhook URL。
+- CLI 默认 JSON、control-plane 和 approval API 默认只暴露 safe projection 或 proposalPreview，完整 proposal 不经普通读出口输出。
+- 当前仍没有 staged apply、工具调用、文件写入、shell 执行或 Feishu LLM 自动切换。
+- `--target` 当前只允许 `feishu-llm`，避免敏感字符串进入 title、subject 或 event。
+
 ## 第一批工具
 
 Phase 2：
@@ -138,12 +147,15 @@ MyClaw v0 明确采用：
 - `exec` 支持 shell interpolation 时没有清楚的风险提示。
 - smoke tool 直接绑在 approval settlement 上，后续必须抽成 ToolDescriptor dispatch，避免新增工具都改 approval route。
 - 单轮 LLM 回复被误解成 tool calling，导致过早接入 shell/file/network。
+- 配置提案 approval 被误解成 apply 授权，导致后续实现绕过 staged apply。
+- 用户在 prompt 中主动粘贴 secret 时，模式化 redaction 不能保证 100% 清除。
 
 ## 验收标准
 
 - 未 allow 的 tool 不出现在 agent schema，且 dispatch 也拒绝。
 - `write` 和高风险 `exec` 会生成 approvalId；Phase 1.6 先要求 smoke tool approved 才执行。
 - Phase 1.7 的 `myclaw ask` 必须返回 `toolCalls=[]`，证明本阶段没有绕过工具策略。
+- Phase 1.8 的 `myclaw configure-agent` 必须返回 `appliesChanges=false`，且只创建 review approval。
 - approvalId 能被 `myclaw resume` 恢复。
 - cwd escape、absolute path、`..` escape 都有测试。
 - stdout/stderr cap 和 timeout 有测试。

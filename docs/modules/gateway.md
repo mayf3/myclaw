@@ -2,7 +2,7 @@
 
 ## 诊断
 
-Gateway 是 MyClaw 的控制平面。Phase 1.7 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token、safe tool request 入口和 LLM provider health。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply。
+Gateway 是 MyClaw 的控制平面。Phase 1.8 已把 Feishu WebSocket 群消息自动回复放进独立 `packages/feishu-bot` 插件包，并给 Gateway 写操作补上 mutation audit、SSE snapshot、scoped token、safe tool request 入口、LLM provider health 和 agent config proposal preview。Gateway 仍只负责 HTTP 控制面、鉴权、状态和 mutation 边界，不能承担业务逻辑，也不能直接执行 OpenClaw apply 或自动应用 agent 配置提案。
 
 ## 参考项目观察
 
@@ -83,6 +83,17 @@ POST /api/tool-requests/smoke-note
   -> approved writes state/tool-runs/<toolRunId>.json
 ```
 
+Agent config proposal 路径：
+
+```text
+CLI myclaw configure-agent
+  -> packages/agent/config-proposal
+  -> OpenAI Responses with sanitized context
+  -> state cfg_* run
+  -> create agent-config-proposal approval
+  -> Gateway/control-plane exposes proposalPreview/redacted approval only
+```
+
 Phase 4 的完整 gateway：
 
 ```text
@@ -150,6 +161,7 @@ type GatewayFrame =
 
 - 不解析 workflow 语法。
 - 不直接执行通用 tool；Phase 1.6 只触发 safe smoke tool 的 approval-to-effect bridge，Phase 1.7 的 LLM 回复也不暴露 tool calling。
+- 不自动 apply agent 配置提案；Phase 1.8 只通过控制面展示 proposalPreview 和 approval。
 - 不决定 approval policy。
 - 不直接写 plugin runtime 逻辑。
 
@@ -249,6 +261,12 @@ Phase 1.7：
 - `myclaw ask` 产生的 `ask_*` run 能被控制面读取。
 - Feishu bot 只有显式 `--reply-provider llm --llm-privacy-ack` 才把群消息交给 LLM；Gateway 不默认开启。
 
+Phase 1.8：
+
+- `myclaw configure-agent` 产生的 `cfg_*` run 能被控制面读取。
+- 控制面和 approval API 只暴露 `proposalPreview`、guardrails、redacted summary 和 target，不返回完整 proposal。
+- `agent-config-proposal` approval 可在 `/api/approvals` 看到，但 decision 不触发 apply。
+
 Phase 1.4：
 
 - Gateway 对 `/messages`、`/api/openclaw-migration/stage`、approval decision 和 Feishu callback 写 mutation audit。
@@ -293,6 +311,7 @@ Phase 4：
 - `/api/status` 虽有短 TTL cache，但仍会读取本地 OpenClaw source，后续要支持显式 refresh 和更强错误隔离。
 - Human Experiments 当前是静态 payload，不能被当作自动验收结果；但已按 L0-L6 分层暴露测试路线。
 - approval decision 现在可触发 safe smoke tool settlement，但还不是完整 authorization framework。
+- agent config proposal approval 现在只是 review record，还不是 apply capability。
 
 ## 验收标准
 
@@ -304,13 +323,14 @@ Phase 4：
 - 配置 `feishuEncryptKey` 时，`POST /feishu/events` 必须校验 `x-lark-signature`。
 - 配置 `feishuEncryptKey` 时，signed encrypted challenge 必须返回 challenge。
 - `GET /api/runs/:runId` 能返回 envelope 和 events。
-- `GET /api/experiments` 能返回 Phase 1.7 的 L0-L6、E0-E10/E5B/E6A 路线，并和 Dashboard 展示一致。
+- `GET /api/experiments` 能返回 Phase 1.8 的 L0-L6、E0-E10/E5B/E6A/E6B 路线，并和 Dashboard 展示一致。
 - `GET /api/audit` 能返回最近 mutation audit，且不包含请求正文或 token 值。
 - `GET /api/events/stream` 能返回脱敏 snapshot；非 loopback 时必须有 `events:read` 或 `read` scope。
 - 非 loopback 的 `/api/status`、`/api/events`、`/api/audit`、`/api/approvals`、Dashboard HTML 都必须有 `control:read` 或 `read` scope。
 - `POST /api/approvals/:id/decision` 配置 token 后可记录 rejected/approved。
 - `POST /api/tool-requests/smoke-note` 配置 token 后生成 pending approval，approved 才写 `tool-runs/...`。
 - `GET /api/tool-requests` 能返回 pending/completed/rejected，且 artifact 不暴露绝对路径。
+- `GET /api/runs/:runId` 对 `cfg_*` run 只能返回 proposalPreview，不能返回完整配置提案或 secret。
 - `POST /runs` 返回 runId，WS 能收到完整 run 事件。
 - token 错误时所有 mutation 请求被拒绝。
 - Gateway 重启后能从 state store 读历史 run。

@@ -54,13 +54,14 @@ test("control get route adapter resolves shared read routes", async () => {
 
   const experiments = await resolveControlGetRoute(url("/api/experiments"), context);
   assert.equal(experiments.status, 200);
-  assert.equal(experiments.payload.experiments.currentPhase, "1.7");
+  assert.equal(experiments.payload.experiments.currentPhase, "1.8");
   assert.deepEqual(
     experiments.payload.experiments.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],
   );
   assert.equal(experiments.payload.experiments.layerRoadmap[3].status, "partial");
   assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6A"), true);
+  assert.equal(experiments.payload.experiments.experiments.some((item) => item.id === "E6B"), true);
 
   const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
   assert.equal(approvals.status, 200);
@@ -164,6 +165,51 @@ test("control read routes redact LLM answer payloads by default", async () => {
   assert.equal(run.payload.run.envelope.result.answer, "[redacted]");
   assert.equal(run.payload.run.envelope.result.capabilities.toolCalling, false);
   assert.equal(joined.includes("sensitive model answer"), false);
+});
+
+test("control read routes redact agent config proposals by default", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-control-route-"));
+  const approval = await createApprovalRequest(stateDir, {
+    requestedBy: "agent.config",
+    title: "Review agent config proposal: feishu-llm",
+    summary: "configure sensitive group",
+    subject: { type: "agent-config-proposal", target: "feishu-llm", proposalId: "cfg_secret", applySupported: false },
+    evidence: [{ type: "run", runId: "cfg_secret" }, { type: "target", target: "feishu-llm" }],
+  });
+  await recordRun(
+    stateDir,
+    "cfg_secret",
+    okEnvelope({
+      runId: "cfg_secret",
+      result: {
+        type: "agent-config-proposal",
+        target: "feishu-llm",
+        sanitizedContext: { target: "feishu-llm", guardrails: { proposalOnly: true } },
+        proposal: {
+          summary: "configure sensitive group",
+          readiness: "needs_config",
+          commands: ["myclaw feishu-bot --reply-provider llm --llm-privacy-ack"],
+          risks: ["risk"],
+        },
+      },
+      events: [createEvent("agent.config.proposal.completed")],
+    }),
+  );
+  const context = { stateDir, openclawSource: stateDir, service: "route-test" };
+
+  const status = await resolveControlGetRoute(url("/api/status"), context);
+  const run = await resolveControlGetRoute(url("/api/runs/cfg_secret"), context);
+  const approvals = await resolveControlGetRoute(url("/api/approvals"), context);
+  const approvalDetail = await resolveControlGetRoute(url(`/api/approvals/${approval.approvalId}`), context);
+  const joined = JSON.stringify({ status: status.payload, run: run.payload.run, approvals: approvals.payload, approvalDetail: approvalDetail.payload });
+
+  assert.equal(status.payload.runs[0].summary, "config proposal: [redacted 25 chars]");
+  assert.equal(status.payload.runs[0].envelope.result.proposal, "[redacted]");
+  assert.equal(status.payload.runs[0].envelope.result.proposalPreview.commandCount, 1);
+  assert.equal(run.payload.run.envelope.result.proposal, "[redacted]");
+  assert.equal(approvals.payload.approvals[0].summary, "Review-only config proposal for feishu-llm; details redacted.");
+  assert.equal(approvalDetail.payload.approval.summary, "Review-only config proposal for feishu-llm; details redacted.");
+  assert.equal(joined.includes("configure sensitive group"), false);
 });
 
 function url(pathname) {
