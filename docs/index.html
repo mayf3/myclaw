@@ -16,7 +16,7 @@
 <nav aria-label="评审导航">
 <a href="#summary">总诊断</a>
 <a href="./implementation-architecture.html">当前实现架构</a>
-<a href="#phase-18">Phase 1.8</a>
+<a href="#phase-19">Phase 1.9</a>
 <a href="#modules">模块文档</a>
 <a href="#priority">实现优先级</a>
 <a href="#dependency">依赖关系</a>
@@ -31,8 +31,8 @@
 MyClaw 不应该复刻 Hermes、OpenClaw 或 OpenHuman。推荐先做 Node.js/TypeScript 的
 本地工作流内核，吸收 OpenClaw Lobster 的 typed workflow、JSON envelope、
 approval/resume，再吸收 OpenHuman 的 controller registry、event bus、
-tool permission。Phase 1.8 已在 Human Experiments、共享 route adapter、approval queue、Gateway stream/scoped token、
-safe tool approval smoke 和 OpenAI Responses 真实回复 smoke 之上，补齐 review-only agent 配置提案、强制结构红线、生成物 stale 检查、
+tool permission。Phase 1.9 已在 Human Experiments、共享 route adapter、approval queue、Gateway stream/scoped token、
+safe tool approval smoke、OpenAI Responses 真实回复 smoke 和 review-only agent 配置提案之上，补齐 Feishu LLM reply chain、强制结构红线、生成物 stale 检查、
 HTML Center 仓库命令和 L0-L6 分层测试路线；
 Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 runtime。
 </p>
@@ -43,8 +43,8 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <a class="button secondary" href="./rendered/modules/README.html">打开模块索引</a>
 </div>
 </section>
-<section id="phase-18">
-<h2>Phase 1.8 当前焦点</h2>
+<section id="phase-19">
+<h2>Phase 1.9 当前焦点</h2>
 <table>
 <thead>
 <tr>
@@ -63,6 +63,11 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <td>Agent Config Proposal</td>
 <td><code>myclaw configure-agent</code> 已能生成 review-only 配置提案、写入 <code>cfg_*</code> run，并创建 pending approval；不写 <code>.myclaw</code>，不自动 apply。</td>
 <td>下一步做 staged apply，且必须和 proposal approval 分开。</td>
+</tr>
+<tr>
+<td>Feishu LLM Reply Chain</td>
+<td>显式 LLM 模式下，<code>fb_*</code> run 会记录 <code>reply.builder.linkedRunId</code>，指向对应 <code>ask_*</code> run。</td>
+<td>下一步做 Dashboard reply chain drawer。</td>
 </tr>
 <tr>
 <td>Layered Roadmap</td>
@@ -273,7 +278,7 @@ Feishu/Lark 仍参考 OpenClaw `extensions/feishu`，但不直接加载插件 ru
 <td><span class="tag major">P1</span></td>
 <td><a href="./rendered/modules/agent-runtime.html">Agent Runtime</a></td>
 <td>自然语言入口建立在稳定工具和 workflow 之上。</td>
-<td>Phase 1.8 可测真实 answer 和 review-only 配置提案；下一阶段再安全调用工具。</td>
+<td>Phase 1.9 可测真实 answer、review-only 配置提案和 Feishu LLM 回复链路；下一阶段再安全调用工具。</td>
 </tr>
 <tr>
 <td><span class="tag major">P1</span></td>

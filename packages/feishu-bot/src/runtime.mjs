@@ -74,6 +74,7 @@ export async function handleFeishuMessageEvent(event, context) {
 
   const runId = createRunId("fb");
   const events = [createEvent("feishu.bot.message.received", { eventId: eventId || null })];
+  let replyOutput = null;
   try {
     const reservation = eventId && context.replayStore ? await context.replayStore.reserve(eventId) : { duplicate: false };
     if (reservation.duplicate) {
@@ -93,8 +94,8 @@ export async function handleFeishuMessageEvent(event, context) {
       return await recordSkipped(context, runId, events, eventId, policyDecision.reason);
     }
 
-    const replyText = String(await context.replyBuilder({ inbound, event })).trim();
-    if (!replyText) {
+    replyOutput = normalizeReplyOutput(await context.replyBuilder({ inbound, event }));
+    if (!replyOutput.text) {
       throw new Error("Feishu reply builder returned empty text.");
     }
     const replyMode = normalizeReplyMode(context.replyMode);
@@ -107,7 +108,7 @@ export async function handleFeishuMessageEvent(event, context) {
     );
     const reply = await sendFeishuAppText({
       client: context.client,
-      text: replyText,
+      text: replyOutput.text,
       chatId: inbound.conversationId,
       replyToMessageId: replyMode === "thread" ? inbound.id : null,
       replyInThread: replyMode === "thread",
@@ -120,9 +121,11 @@ export async function handleFeishuMessageEvent(event, context) {
         messageId: reply.messageId,
         target: reply.target,
         replyMode,
+        replyProvider: replyOutput.provider,
+        linkedRunId: replyOutput.linkedRunId,
       }),
     );
-    const envelope = okEnvelope({ runId, result: { inbound, reply }, events });
+    const envelope = okEnvelope({ runId, result: { inbound, reply: { ...reply, builder: replyMetadata(replyOutput) } }, events });
     await recordRun(context.stateDir, runId, envelope);
     await context.replayStore?.complete(eventId, { status: "completed", runId });
     return envelope;
@@ -131,7 +134,11 @@ export async function handleFeishuMessageEvent(event, context) {
       context.processed.delete(eventId);
     }
     await context.replayStore?.fail(eventId, { runId, message: redactError(error) });
-    events.push(createEvent("feishu.bot.reply.failed", { message: redactError(error) }));
+    events.push(createEvent("feishu.bot.reply.failed", {
+      message: redactError(error),
+      replyProvider: replyOutput?.provider || null,
+      linkedRunId: replyOutput?.linkedRunId || null,
+    }));
     const envelope = errorEnvelope({
       runId,
       code: "feishu_bot_reply_failed",
@@ -158,6 +165,42 @@ function normalizeReplyMode(value) {
     return mode;
   }
   throw new Error(`Invalid Feishu reply mode: ${mode}. Expected direct or thread.`);
+}
+
+function normalizeReplyOutput(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return {
+      text: String(value.text || "").trim(),
+      provider: String(value.provider || "custom").trim() || "custom",
+      linkedRunId: safeRunId(value.linkedRunId),
+      model: value.model ? String(value.model) : null,
+    };
+  }
+  return {
+    text: String(value || "").trim(),
+    provider: "static",
+    linkedRunId: null,
+    model: null,
+  };
+}
+
+function safeRunId(value) {
+  const id = String(value || "").trim();
+  return /^ask_[A-Za-z0-9_-]+$/.test(id) ? id : null;
+}
+
+function replyMetadata(output) {
+  return {
+    provider: output.provider,
+    linkedRunId: output.linkedRunId,
+    model: output.model,
+    textPreview: summarizeText(output.text),
+  };
+}
+
+function summarizeText(text) {
+  const value = String(text || "").trim();
+  return value ? `[redacted ${value.length} chars]` : "";
 }
 
 function redactError(error) {

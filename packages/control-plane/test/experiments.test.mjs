@@ -5,11 +5,13 @@ import { buildHumanExperimentsPayload } from "../src/experiments.mjs";
 test("human experiment layers reference valid experiments in strict order", () => {
   const payload = buildHumanExperimentsPayload();
   const experimentById = new Map(payload.experiments.map((item) => [item.id, item]));
-  assert.equal(payload.currentPhase, "1.8");
+  assert.equal(payload.currentPhase, "1.9");
   assert.equal(experimentById.get("E6A")?.status, "ready");
   assert.equal(experimentById.get("E6A")?.commands.some((command) => command.includes("--reply-provider llm")), true);
   assert.equal(experimentById.get("E6B")?.status, "ready");
   assert.equal(experimentById.get("E6B")?.commands.some((command) => command.includes("configure-agent")), true);
+  assert.equal(experimentById.get("E6C")?.status, "ready");
+  assert.equal(experimentById.get("E6C")?.commands.some((command) => command.includes("feishu-bot")), true);
   assert.deepEqual(
     payload.layerRoadmap.map((item) => item.id),
     ["L0", "L1", "L2", "L3", "L4", "L5", "L6"],

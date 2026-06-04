@@ -2,7 +2,7 @@
 
 ## 诊断
 
-UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.8 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、LLM provider health、Gateway mutation audit、SSE stream 状态、tool request id 和 agent config proposal preview。
+UI 不是第一阶段核心，但观测能力必须从 CLI 阶段就开始设计。否则 gateway 和 Control UI 加入后只能倒推日志格式。Phase 1.9 的 dashboard 已展示 Feishu adapter readiness、signed webhook readiness、milestones、Human Experiments、Approvals、最新 run detail、OpenClaw stage review summary/diff、运行健康条、LLM provider health、Gateway mutation audit、SSE stream 状态、tool request id、agent config proposal preview 和 Feishu LLM reply chain。
 
 ## 参考项目观察
 
@@ -152,11 +152,19 @@ Phase 1.8 Agent config proposal smoke 新增：
 - `/api/status`、`/api/runs/:runId` 和 `/api/approvals` 只给 proposalPreview、guardrails、redacted summary 和最小 target，不返回完整配置建议文本。
 - UI 文案必须持续标明 review-only，避免用户以为配置已经自动应用。
 
+Phase 1.9 Feishu LLM reply chain 新增：
+
+- `fb_*` run 的 reply metadata 可显示 `reply.builder.provider=llm`。
+- `reply.builder.linkedRunId` 指向对应的 `ask_*` run，便于从群消息追踪到 LLM 请求。
+- 控制面仍只展示 answerPreview，不展示完整 LLM answer。
+- 下一步需要把这条链路做成 Dashboard drawer，而不是让用户读 raw JSON。
+
 下一步应补：
 
 - tool request / approval drawer。
 - LLM run detail / usage drawer。
 - config proposal review drawer，后续只从 approval 进入 staged apply。
+- Feishu LLM reply chain drawer。
 - run detail drawer 或独立详情页。
 - event stream seq/replay 和更精确的 delta 更新。
 - stage snapshot 可操作 review drawer 和后续真实 schema diff。

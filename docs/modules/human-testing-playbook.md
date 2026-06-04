@@ -32,7 +32,7 @@ Review 观察：
 | L0 接入层 | partial | 可以 | E0、E2A、E2B、E2C，E2/E3 配置后 | rich card 和 agent replyBuilder |
 | L1 Gateway | partial | 可以 | E1、E1B、E1C、E2A、E2B、E2C、E3、E5、E5B | 补 seq/replay、route schema 和 tool panel |
 | L2 Workflow / 审批 | partial | 可以 | E4、E5、E5B | 把 smoke tool 抽象成通用 policy dispatch |
-| L3 单 Agent | partial | 可以先测回复与配置提案 | E6A 真实 LLM 回复；E6B 配置提案；E6 占位 | staged apply、最小 run/resume/tool loop |
+| L3 单 Agent | partial | 可以先测回复、配置提案和飞书 LLM 回复链路 | E6A 真实 LLM 回复；E6B 配置提案；E6C 飞书 LLM 回复链路；E6 占位 | staged apply、最小 run/resume/tool loop |
 | L4 Session Search / Provenance | planned | 暂不能 | E8 占位 | run/step/tool result 可检索 |
 | L5 Agent-to-Agent | planned | 暂不能 | E9 占位 | agent 分工、交接、互审 |
 | L6 Long Memory / Search | planned | 暂不能 | E10 占位 | 长期记忆、来源、遗忘 |
@@ -52,6 +52,7 @@ Review 观察：
 | E5B Tool approval smoke | L1/L2 | 现在就测 | POST `/api/tool-requests/smoke-note`；GET `/api/approvals`；approve/reject；GET `/api/tool-requests` | tool-action approval 出现；approved 才写 `tool-runs/...`；rejected 不执行 |
 | E6A LLM Reply Smoke | L3 | 现在就测 | `OPENAI_API_KEY=... npm run myclaw -- ask --text "用三句话介绍 MyClaw" --json`；可选显式启动 `myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct` | `ask_*` run 写入 state；返回真实 answer；`toolCalls=[]`；Dashboard/API 只暴露 answer preview；缺 key 时返回 `llm_config_required` |
 | E6B Agent Config Proposal | L3 | 现在就测 | `OPENAI_API_KEY=... npm run myclaw -- configure-agent --target feishu-llm --text "帮我检查飞书 LLM 回复还差哪些配置" --json` | `cfg_*` run 写入 state；返回 safe projection；创建 pending approval；Dashboard/API 只暴露 proposalPreview |
+| E6C Feishu LLM Reply Chain | L3 | 现在就测 | `OPENAI_API_KEY=...` 后启动 `myclaw feishu-bot --reply-provider llm --llm-privacy-ack --reply-mode direct`；在备份群发文本 | 群里直接收到 LLM 回复；`fb_*` run 的 `reply.builder.linkedRunId` 指向 `ask_*`；控制面仍脱敏 |
 | E7 工程约束 | 全局 | 现在就测 | `npm run check` | 生成物 up to date，结构红线通过 |
 | E2/E3 Feishu | L0/L1 | 配置后测 | 设置 `MYCLAW_FEISHU_WEBHOOK_URL` 后发送 webhook；设置 verify/encrypt token 后 POST callback challenge | 群消息收到，callback challenge 通过 |
 
@@ -59,7 +60,7 @@ Review 观察：
 
 | 实验 | 原因 | 开放前置条件 |
 |---|---|---|
-| E6 单 Agent 工具循环 | 还没有 ToolDescriptor/durable dispatch/model tool calling | E6A 真实回复、E6B 配置提案和 E5B tool approval 都稳定 |
+| E6 单 Agent 工具循环 | 还没有 ToolDescriptor/durable dispatch/model tool calling | E6A 真实回复、E6B 配置提案、E6C 飞书回复链路和 E5B tool approval 都稳定 |
 | E8 Session Search | 还没有可检索 run/step/source | run event schema 更稳定 |
 | E9 Agent-to-Agent | 还没有 agent runtime 和 provenance | E6/E8 先完成 |
 | E10 Long Memory | 还没有 memory store 和遗忘策略 | E8 先完成，记忆来源可解释 |
@@ -80,7 +81,8 @@ flowchart TD
   Approval --> ToolSmoke[E5B tool approval smoke]
   ToolSmoke --> Ask[E6A LLM reply smoke]
   Ask --> ConfigProposal[E6B agent config proposal]
-  ConfigProposal --> Record[记录体验问题]
+  ConfigProposal --> FeishuLlm[E6C Feishu LLM reply chain]
+  FeishuLlm --> Record[记录体验问题]
   Record --> Report[更新 issue / 文档 / 下一轮目标]
 ```
 
@@ -94,6 +96,7 @@ Review 观察：
 - E4/E5/E5B 是后续 agent 写操作的安全前置。
 - E6A 只证明真实 LLM 回复可用，不代表模型可以调用工具。
 - E6B 只证明 agent 能生成配置提案和 approval，不代表它能自动改 `.myclaw`。
+- E6C 只证明飞书群消息能关联到 LLM run，不代表模型可以调用本地工具。
 - L0/L1 smoke 没过，不进入 L3 agent。
 - 测试反馈必须回到文档或 issue，不能只留在对话里。
 
@@ -114,6 +117,7 @@ Review 观察：
 | Tool approval smoke | toolRequestId、approvalId、approved/rejected 结果、`tool-runs/...` 相对 artifact | 必须通过 |
 | LLM reply smoke | `ask_*` run、answer、provider、`toolCalls=[]`，缺 key 时 `llm_config_required` | 必须通过 |
 | Config proposal smoke | `cfg_*` run、`agent-config-proposal` approval、`appliesChanges=false`、CLI/API/approval 默认只有 safe projection 或 proposalPreview | 必须通过 |
+| Feishu LLM reply chain | `fb_*` run、`reply.builder.provider=llm`、`linkedRunId=ask_*`、飞书正文和 LLM answer 默认脱敏 | 必须通过 |
 | Mutation audit | 高风险 mutation 有 event 或 audit record | 下一轮补齐 |
 
 ## 反馈记录格式
@@ -122,7 +126,7 @@ Review 观察：
 
 ```text
 日期：
-测试实验：E0/E1/E4/E5/E5B/E6A/E6B/E7/...
+测试实验：E0/E1/E4/E5/E5B/E6A/E6B/E6C/E7/...
 入口命令或 URL：
 命令退出码：
 runId：
@@ -131,6 +135,8 @@ approvalId：
 toolRequestId：
 askRunId：
 configProposalRunId：
+feishuRunId：
+linkedAskRunId：
 证据路径或截图：
 预期结果：
 实际结果：
@@ -155,13 +161,13 @@ issue 或 commit：
 
 ## 当前推荐下一轮
 
-下一轮建议先把 E6B 的 review-only 配置提案升级成 staged apply，再从 L3 的真实回复进入受控工具循环：
+下一轮建议先把 E6C 的链路在 Dashboard 里做成 drawer，再把 E6B 的 review-only 配置提案升级成 staged apply：
 
-1. Config proposal approval 后的 staged apply，只能写 ignored `.myclaw`，且必须二次确认。
-2. 通用 ToolDescriptor、policy snapshot 和 sandbox dispatch。
-3. Gateway event stream seq/replay 和 route schema。
-4. Dashboard tool request / approval drawer 和 renderer 拆分。
-5. 保持 E0/E1/E1B/E1C/E4/E5/E5B/E6A/E6B/E7 作为回归测试。
+1. Dashboard reply chain drawer：`fb_* -> ask_* -> answerPreview`。
+2. Config proposal approval 后的 staged apply，只能写 ignored `.myclaw`，且必须二次确认。
+3. 通用 ToolDescriptor、policy snapshot 和 sandbox dispatch。
+4. Gateway event stream seq/replay 和 route schema。
+5. 保持 E0/E1/E1B/E1C/E4/E5/E5B/E6A/E6B/E6C/E7 作为回归测试。
 
 ## 本地文档入口
 

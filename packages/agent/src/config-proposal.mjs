@@ -102,7 +102,7 @@ export function buildSanitizedConfigContext(options = {}) {
   const env = options.env || process.env;
   const target = normalizeTarget(options.target);
   return {
-    phase: "1.8",
+    phase: "1.9",
     target: isSupportedConfigTarget(target) ? target : "unsupported",
     llm: {
       openAiKeyConfigured: Boolean(envValue(env, "OPENAI_API_KEY")),

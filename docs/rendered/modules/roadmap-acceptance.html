@@ -64,8 +64,8 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
           <h2 id="总诊断">总诊断</h2>
 <p>MyClaw 的阶段路线应该从“可恢复 workflow”开始，而不是从“全能个人助理”开始。OpenHuman 增加后的判断更明确：controller registry、event bus、tool permission 可以早做；桌面壳、memory tree、subconscious、渠道和大规模集成必须后置。</p>
 <h2 id="分层路线">分层路线</h2>
-<div class="table-wrap"><table><thead><tr><th>层</th><th>目标</th><th>用户可测实验</th></tr></thead><tbody><tr><td>L0 接入层</td><td>人、CLI、webhook、Feishu/Lark 的基础消息交互</td><td>E0、E2、E3</td></tr><tr><td>L1 Gateway</td><td>HTTP 控制面、鉴权、状态读取、mutation 边界</td><td>E1、E3、E5</td></tr><tr><td>L2 Workflow 与审批</td><td>高风险动作进入 review/approval，而不是自动执行</td><td>E4、E5</td></tr><tr><td>L3 单 Agent Runtime</td><td>先测真实 LLM 回复和配置提案，再接任务拆解、工具调用、失败重试、人工确认</td><td>E6A、E6B、E6</td></tr><tr><td>L4 Session Search / Provenance</td><td>run、step、tool result 可检索，召回来源可解释</td><td>E8</td></tr><tr><td>L5 Agent-to-Agent</td><td>多 agent 分工、交接上下文、互相 review</td><td>E9</td></tr><tr><td>L6 Long Memory / Search</td><td>长期事实、来源解释、遗忘策略和跨会话召回</td><td>E10</td></tr></tbody></table></div>
-<p>原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；E6A 只验证真实 LLM 回复，不代表工具调用已开放；E6B 只验证 review-only 配置提案，不代表配置已应用；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。</p>
+<div class="table-wrap"><table><thead><tr><th>层</th><th>目标</th><th>用户可测实验</th></tr></thead><tbody><tr><td>L0 接入层</td><td>人、CLI、webhook、Feishu/Lark 的基础消息交互</td><td>E0、E2、E3</td></tr><tr><td>L1 Gateway</td><td>HTTP 控制面、鉴权、状态读取、mutation 边界</td><td>E1、E3、E5</td></tr><tr><td>L2 Workflow 与审批</td><td>高风险动作进入 review/approval，而不是自动执行</td><td>E4、E5</td></tr><tr><td>L3 单 Agent Runtime</td><td>先测真实 LLM 回复、配置提案和飞书回复链路，再接任务拆解、工具调用、失败重试、人工确认</td><td>E6A、E6B、E6C、E6</td></tr><tr><td>L4 Session Search / Provenance</td><td>run、step、tool result 可检索，召回来源可解释</td><td>E8</td></tr><tr><td>L5 Agent-to-Agent</td><td>多 agent 分工、交接上下文、互相 review</td><td>E9</td></tr><tr><td>L6 Long Memory / Search</td><td>长期事实、来源解释、遗忘策略和跨会话召回</td><td>E10</td></tr></tbody></table></div>
+<p>原则：L0/L1 没有稳定人类测试前，不进入 L3；L2 没有审批边界前，不开放 agent 执行写操作；E6A 只验证真实 LLM 回复，不代表工具调用已开放；E6B 只验证 review-only 配置提案，不代表配置已应用；E6C 只验证飞书消息能关联到 LLM run，不代表工具调用已开放；L4 最小 session/provenance 必须早于 L5 agent 协作，否则交接上下文不可审计；L6 复杂长期记忆必须晚于可追踪 run/event，否则召回来源不可解释。</p>
 <p>具体的人类测试入口、反馈格式和每轮回归路径见 <a href="./human-testing-playbook.html">人类测试手册</a>。</p>
 <h2 id="phase-0-contract-skeleton">Phase 0: Contract Skeleton</h2>
 <p>目标：</p>
@@ -90,11 +90,11 @@ code{border-radius:4px;background:#eef2f6;color:var(--code);padding:2px 5px;font
 <ul><li>denied tool 不可见也不可 dispatch。</li><li>write/exec 可以触发 approval。</li><li>tool result 全部规范化。</li></ul>
 <h2 id="phase-3-agent-runtime">Phase 3: Agent Runtime</h2>
 <p>目标：</p>
-<ul><li>先由 E6A 验证真实 LLM 回复。</li><li>后续 agent 能调用工具，但不能绕过 workflow/policy/approval。</li></ul>
+<ul><li>先由 E6A 验证真实 LLM 回复，由 E6C 验证飞书群消息到 LLM run 的链路。</li><li>后续 agent 能调用工具，但不能绕过 workflow/policy/approval。</li></ul>
 <p>交付：</p>
-<ul><li>provider abstraction。</li><li>OpenAI-compatible provider。</li><li>single-turn ask。</li><li>review-only config proposal。</li><li>transcript JSONL。</li><li>tool calling。</li></ul>
+<ul><li>provider abstraction。</li><li>OpenAI-compatible provider。</li><li>single-turn ask。</li><li>review-only config proposal。</li><li>Feishu LLM reply chain。</li><li>transcript JSONL。</li><li>tool calling。</li></ul>
 <p>验收：</p>
-<ul><li>Phase 1.7：<code>myclaw ask</code> 能返回真实 answer，缺 key 时返回 <code>llm_config_required</code>。</li><li>Phase 1.8：<code>myclaw configure-agent</code> 能返回配置提案，创建 pending approval，且不自动写配置。</li><li>后续 E6：<code>myclaw ask</code> 能完成 read/exec 类任务。</li><li>tool call 全量入 transcript。</li><li>approval pause/resume 可用。</li></ul>
+<ul><li>Phase 1.7：<code>myclaw ask</code> 能返回真实 answer，缺 key 时返回 <code>llm_config_required</code>。</li><li>Phase 1.8：<code>myclaw configure-agent</code> 能返回配置提案，创建 pending approval，且不自动写配置。</li><li>Phase 1.9：飞书 LLM 回复能把 <code>fb_*</code> run 关联到 <code>ask_*</code> run。</li><li>后续 E6：<code>myclaw ask</code> 能完成 read/exec 类任务。</li><li>tool call 全量入 transcript。</li><li>approval pause/resume 可用。</li></ul>
 <h2 id="phase-3-5-session-search">Phase 3.5: Session Search</h2>
 <p>目标：</p>
 <ul><li>先获得长期使用价值，但不做完整 memory tree。</li></ul>

@@ -18,7 +18,12 @@ export function buildCliReplyBuilder(args, env = process.env) {
       if (!envelope.ok) {
         throw new Error(`LLM reply failed: ${envelope.error.code}`);
       }
-      return answerFromEnvelope(envelope);
+      return {
+        text: answerFromEnvelope(envelope),
+        provider: "llm",
+        linkedRunId: envelope.runId,
+        model: envelope.result?.model || null,
+      };
     };
   }
   if (args.replyPrefix) {

@@ -4,17 +4,17 @@
 
 Hermes、OpenClaw、OpenHuman 都是成熟大系统，适合拆思想，不适合照搬结构。MyClaw 的起点应该更接近 OpenClaw `extensions/lobster` 的 run/resume/envelope，再吸收 OpenHuman 的 controller registry、event bus、tool permission 和 UI 状态边界，最后才逐步加入 Hermes/OpenHuman 的记忆与 agent 能力。
 
-Phase 1.8 在 Human Experiments、共享 route adapter、migration approval queue、结构红线、Feishu WebSocket 群消息自动回复、Gateway mutation audit、Dashboard health strip、Gateway SSE snapshot、scoped token、safe tool approval smoke 和 OpenAI Responses 真实回复 smoke 之后，新增 review-only agent config proposal。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
+Phase 1.9 在 Human Experiments、共享 route adapter、migration approval queue、结构红线、Feishu WebSocket 群消息自动回复、Gateway mutation audit、Dashboard health strip、Gateway SSE snapshot、scoped token、safe tool approval smoke、OpenAI Responses 真实回复 smoke 和 review-only agent config proposal 之后，新增 Feishu LLM reply chain。每个阶段仍必须把 MyClaw 当前模块完成度和 OpenClaw、Hermes-agent、OpenHuman 放在同一张矩阵里看。
 
-## Phase 1.8 完成度矩阵
+## Phase 1.9 完成度矩阵
 
 | 模块 | MyClaw | OpenClaw | Hermes-agent | OpenHuman | 当前差距 |
 |---|---:|---:|---:|---:|---|
 | Gateway / 控制面 | 84 | 90 | 78 | 86 | 已拆 routes/auth、共享 read route adapter、approval decision mutation、mutation audit、SSE snapshot、scoped token 和 smoke tool request，仍缺 route schema、seq/replay 和 WebSocket |
-| Feishu/Lark 接入 | 64 | 92 | 42 | 35 | 有 WebSocket app-token direct text、default-closed policy、replay 和 redaction，缺 rich card/agent replyBuilder |
+| Feishu/Lark 接入 | 68 | 92 | 42 | 35 | 有 WebSocket app-token direct text、default-closed policy、replay、redaction 和 LLM reply run linking，缺 rich card |
 | Dashboard / 观测 | 85 | 78 | 55 | 90 | 有 milestones/run detail/stage review/approval queue/tool request id/LLM provider health/config proposal preview/human experiments/health/audit/stream 状态，缺 review drawer 和 delta replay |
 | OpenClaw 迁移 | 63 | 0 | 82 | 35 | 已有 plan/stage/review summary/approval，缺 apply/rollback/真实 schema diff |
-| Agent Runtime | 25 | 76 | 92 | 90 | 有 OpenAI Responses 单轮 ask、review-only config proposal 和 approval-to-tool smoke，但还没有 LLM tool loop、subagent、context budget |
+| Agent Runtime | 29 | 76 | 92 | 90 | 有 OpenAI Responses 单轮 ask、review-only config proposal、Feishu LLM reply chain 和 approval-to-tool smoke，但还没有 LLM tool loop、subagent、context budget |
 | Memory / Search | 10 | 52 | 94 | 96 | 仅 JSON/JSONL state，没有 SQLite/FTS/long-term memory |
 | Tools / Security | 48 | 88 | 74 | 84 | 有 migration approval seed、scoped gateway guard、safe tool approval smoke 和 config proposal approval；LLM 是 provider smoke，不是 tool schema，仍缺 policy snapshot、sandbox |
 | Plugins / Skills | 26 | 92 | 88 | 78 | 有 Feishu plugin manifest 草案，但还没有通用 loader/skill loader |
@@ -129,6 +129,12 @@ Phase 1.8 MyClaw 结论：
 - `myclaw configure-agent` 已能让 LLM 基于 sanitized context 生成配置提案，并创建 pending approval。
 - 这只是 review-only 配置建议，不会写 `.myclaw`、不会启动 Feishu LLM；CLI 默认 JSON、Dashboard/API 和 approval API 都不暴露完整 proposal。
 - 下一步如果做 staged apply，必须把“提案 approval”和“执行 approval”分开，避免参考项目里更厚的配置 runtime 被半截搬进来。
+
+Phase 1.9 MyClaw 结论：
+
+- Feishu LLM 回复现在能把 `fb_*` run 关联到 `ask_*` run，用户在群里发消息后可以追踪这次回复的 LLM 来源。
+- 这仍不是 OpenClaw/OpenHuman 意义上的完整 channel-agent runtime：没有 rich card、工具调用、会话记忆或 route schema。
+- 下一步应优先做 Dashboard reply chain drawer，而不是继续扩大 raw JSON。
 
 ## OpenClaw Lobster 观察
 

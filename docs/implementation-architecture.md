@@ -1,22 +1,22 @@
-# MyClaw Phase 1.8 实现架构可视化评审
+# MyClaw Phase 1.9 实现架构可视化评审
 
-更新时间：2026-06-04
+更新时间：2026-06-05
 
 ## 总诊断
 
-Phase 1.8 把 L3 从“只能问真实 LLM”推进到“可以让 agent 生成配置提案”：`myclaw configure-agent` 会基于 sanitized context 调用 OpenAI Responses，生成 review-only proposal，写入 `cfg_*` run，并创建 pending approval。结论：你现在可以用 agent 做配置审查和建议，但不能让 agent 自动应用配置；下一阶段必须把 staged apply、ToolDescriptor、policy snapshot、durable dispatch 分开实现。
+Phase 1.9 把 L3 从“只能单独问 LLM/生成配置提案”推进到“可以在飞书群里测试真实 LLM 回复并追踪来源”：显式 LLM 模式下，Feishu bot 会把 `fb_*` run 的 `reply.builder.linkedRunId` 指向对应的 `ask_*` run。结论：你现在可以在备份飞书群验证真实回复效果；但这仍不是工具调用、记忆或自动配置落地。
 
 | 评分项 | 当前分 | 判断 |
 |---|---:|---|
-| 设计清晰度 | 9/10 | 清楚区分 ask、config proposal、tool calling、apply |
-| 可扩展性 | 8/10 | proposal、LLM adapter、approval、redaction 分包；后续可接 staged apply |
+| 设计清晰度 | 9/10 | 清楚区分 Feishu reply chain、ask、config proposal、tool calling、apply |
+| 可扩展性 | 8/10 | replyBuilder metadata、proposal、LLM adapter、approval、redaction 分包 |
 | 可靠性 | 7/10 | `cfg_*` run 与 approval 落盘；仍缺 apply recovery、provider retry、idempotency |
 | 可维护性 | 8/10 | 新模块小于 200 行；CLI 425 行接近拆分线 |
-| 安全性 | 8/10 | 默认不读 secret、不写配置、不暴露完整 proposal；prompt redaction 不是完整 DLP |
+| 安全性 | 8/10 | Feishu 正文/chat_id/sender_id 和完整 LLM answer 默认脱敏；prompt redaction 不是完整 DLP |
 
 ## 大规划图
 
-这张图回答：从人类可测角度看，Phase 1.8 处在整个 milestone 的哪里。
+这张图回答：从人类可测角度看，Phase 1.9 处在整个 milestone 的哪里。
 
 ```mermaid
 flowchart LR
@@ -28,7 +28,8 @@ flowchart LR
   E5 --> E5B["E5B Tool approval smoke"]
   E5B --> E6A["E6A LLM Reply Smoke"]
   E6A --> E6B["E6B Agent Config Proposal"]
-  E6B --> E6["E6 Agent Tool Loop"]
+  E6B --> E6C["E6C Feishu LLM Reply Chain"]
+  E6C --> E6["E6 Agent Tool Loop"]
   E6 --> E8["E8 Session Search"]
   E8 --> E9["E9 Agent-to-Agent"]
   E9 --> E10["E10 Long Memory"]
@@ -36,14 +37,14 @@ flowchart LR
 
 Review 观察：
 
-- 优点：E6B 给用户一个现在能测的 agent 配置审查入口。
+- 优点：E6C 给用户一个现在能在飞书群里测的真实 LLM 入口。
 - 优点：E6B 仍排在 E5B 之后，避免 agent 写操作早于审批系统。
-- 风险：用户可能把 proposal approval 误认为 apply approval。
-- 改进：下一阶段新增 staged apply，单独生成 apply approval 和 artifact diff。
+- 风险：用户可能把 Feishu LLM 回复误认为工具调用已经开放。
+- 改进：Dashboard 增加 reply chain drawer，明确 `fb_* -> ask_*` 但 `toolCalls=[]`。
 
 ## 系统上下文图
 
-这张图回答：MyClaw Phase 1.8 和用户、Feishu、OpenAI、HTML Center、OpenClaw 参考配置的边界在哪里。
+这张图回答：MyClaw Phase 1.9 和用户、Feishu、OpenAI、HTML Center、OpenClaw 参考配置的边界在哪里。
 
 ```mermaid
 flowchart LR
@@ -61,6 +62,7 @@ flowchart LR
   CLI --> FeishuBot["Feishu bot plugin"]
   FeishuBot --> FeishuGroup["备份飞书群"]
   FeishuBot -.显式 llm.-> AgentAsk
+  FeishuBot --> LinkedRun["fb_* linkedRunId -> ask_*"]
   Gateway["Gateway :4322"] --> State[".myclaw/state"]
   Control --> State
   AgentAsk --> State
@@ -74,18 +76,19 @@ Review 观察：
 
 - 优点：OpenAI 调用仍只在 agent/LLM adapter 内部，Gateway 不直接依赖 provider。
 - 优点：openduck 配置只读导入 ignored `.myclaw/`，本轮 proposal 不读取 secret 值。
-- 优点：Dashboard 通过 control-plane 只看 redacted run 和 proposalPreview。
+- 优点：Dashboard 通过 control-plane 只看 redacted run、proposalPreview 和 linkedRunId。
 - 风险：用户输入给 `--text` 的敏感内容会被模式化脱敏，但不是完整泄漏防护。
 - 改进：下一阶段把 prompt 输入前置为本地 structured checklist，减少自由文本粘贴 secret。
 
 ## 模块架构图
 
-这张图回答：本轮新增的配置提案如何保持主线干净，并为后续 staged apply 留接口。
+这张图回答：本轮新增的 Feishu LLM reply chain 如何保持主线干净，并为后续 Dashboard drawer 留接口。
 
 ```mermaid
 flowchart TB
   CLI["packages/cli/src/index.mjs"] --> AskCmd["runAsk"]
   CLI --> ConfigCmd["runConfigureAgent"]
+  CLI --> ReplyBuilder["cli/reply-builder.mjs"]
   CLI --> Help["cli/help.mjs"]
   AskCmd --> AgentAsk["packages/agent/src/ask.mjs"]
   ConfigCmd --> AgentConfig["packages/agent/src/config-proposal.mjs"]
@@ -94,6 +97,9 @@ flowchart TB
   AgentConfig --> Approvals["core/approvals.mjs"]
   AgentConfig --> StateStore["core/state.mjs"]
   AgentConfig --> Redaction["control-plane/redaction.mjs"]
+  ReplyBuilder --> AgentAsk
+  FeishuBot["packages/feishu-bot/runtime.mjs"] --> ReplyBuilder
+  FeishuBot --> StateStore
   Dashboard["packages/dashboard"] --> ControlRoutes["control-plane/http-routes.mjs"]
   Gateway["packages/gateway"] --> ControlRoutes
   ControlRoutes --> Redaction
@@ -103,7 +109,7 @@ flowchart TB
 
 Review 观察：
 
-- 优点：`config-proposal.mjs` 是独立插件状能力，没有塞进 ask runtime。
+- 优点：LLM reply metadata 只扩展 replyBuilder contract，没有把 Feishu SDK 塞进 agent。
 - 优点：approval 创建复用 core，不在 CLI 里手写状态格式。
 - 优点：control-plane 是唯一脱敏出口，Dashboard/Gateway 不复制敏感逻辑。
 - 风险：CLI 主文件 425 行，继续加命令会碰到 450 预警。
@@ -111,106 +117,102 @@ Review 观察：
 
 ## 核心业务流程图
 
-这张图回答：一次 `myclaw configure-agent` 如何从用户目标变成可审阅的配置提案。
+这张图回答：一条飞书群消息如何变成 LLM 回复，并被串到 `ask_*` run。
 
 ```mermaid
 flowchart TD
-  Start["用户运行 configure-agent"] --> Validate["校验 target/text"]
-  Validate --> Sanitize["构建 sanitized context"]
-  Sanitize --> RedactText["用户文本模式化 redaction"]
-  RedactText --> Key{"OPENAI_API_KEY exists?"}
-  Key -->|否| NeedConfig["error llm_config_required"]
-  Key -->|是| Request["POST /v1/responses JSON only"]
-  Request --> Parse{"JSON proposal ok?"}
-  Parse -->|否| Failed["failed invalid_provider_json"]
-  Parse -->|是| Normalize["normalize + redact proposal"]
-  Normalize --> Approval["create pending approval"]
-  Approval --> Persist["record cfg_* run"]
-  NeedConfig --> Persist
-  Failed --> Persist
-  Persist --> Output["CLI JSON / Dashboard preview"]
+  Start["Feishu group text"] --> Policy["default-closed ingress policy"]
+  Policy -->|blocked| Skipped["record fb_* skipped"]
+  Policy -->|allowed| Builder["reply-builder llm"]
+  Builder --> Key{"OPENAI_API_KEY exists?"}
+  Key -->|no| Failed["record feishu.bot.reply.failed"]
+  Key -->|yes| Ask["askAgent creates ask_* run"]
+  Ask --> ReplyMeta["return text + linkedRunId"]
+  ReplyMeta --> Send["sendFeishuAppText direct"]
+  Send --> Persist["record fb_* run with builder metadata"]
+  Persist --> Dashboard["Dashboard/API redacted chain"]
 ```
 
 Review 观察：
 
-- 优点：缺 key 不伪造提案，仍写入可诊断 run。
-- 优点：proposal approval 在生成阶段创建，但不触发任何副作用。
-- 风险：provider 返回非法 JSON 会失败；还没有自动 retry 或 fallback。
-- 改进：加 provider retry、schema explain error 和本地 checklist fallback。
+- 优点：缺 key 不伪造智能回复，会进入 failed run。
+- 优点：`fb_*` 和 `ask_*` 都落盘，方便用户从群消息追踪 LLM 来源。
+- 风险：当前 Dashboard 还需要看 run detail/raw JSON 才能串链路。
+- 改进：做 reply chain drawer，显示 `fb_* -> ask_* -> answerPreview`。
 
 ## 关键时序图
 
-这张图回答：配置提案一次请求里 CLI、Agent、LLM、State、Dashboard 如何协作。
+这张图回答：Feishu LLM 回复一次请求里 Bot、Agent、LLM、State、Dashboard 如何协作。
 
 ```mermaid
 sequenceDiagram
-  participant U as User
-  participant C as CLI
-  participant A as proposeAgentConfig
+  participant U as Feishu User
+  participant B as Feishu Bot
+  participant A as askAgent
   participant O as OpenAI Responses
   participant S as State
-  participant P as Approvals
   participant D as Dashboard/API
 
-  U->>C: configure-agent --target feishu-llm
-  C->>A: target + redacted user goal
-  A->>A: build sanitized context
-  A->>O: JSON-only proposal request
-  O-->>A: proposal JSON
-  A->>P: create pending approval
-  P-->>A: approvalId
-  A->>S: record cfg_* envelope/events
-  C-->>U: safe proposal preview + approvalId
+  U->>B: send group text
+  B->>B: policy / replay guard
+  B->>A: askAgent(inbound.text)
+  A->>O: POST /responses
+  O-->>A: answer
+  A->>S: record ask_* run
+  A-->>B: answer + ask runId
+  B->>B: build reply.builder metadata
+  B-->>U: direct group reply
+  B->>S: record fb_* run linkedRunId
   D->>S: read latest runs/approvals
-  D-->>U: proposalPreview only
+  D-->>U: redacted fb_* + ask_* preview
 ```
 
 Review 观察：
 
-- 优点：CLI 返回给本机用户可见，控制面默认只给 preview。
-- 优点：approval 队列把“人来审”变成可跟踪状态。
-- 风险：approval decision 当前不会触发 apply，用户需要文档和 UI 清楚提示。
-- 改进：Dashboard 增加 config proposal drawer，展示可审字段但仍隐藏敏感输入。
+- 优点：Feishu 回复和 LLM 请求不再是两条断开的 run。
+- 优点：linkedRunId 是内部 run id，不是飞书 chat_id 或 sender_id。
+- 风险：模型回复可能包含用户敏感内容，控制面必须继续只展示 answerPreview。
+- 改进：为 Feishu LLM 模式增加 per-channel opt-in 状态展示。
 
 ## 状态机图
 
-这张图回答：配置提案、审批、未来 apply 的生命周期如何区分。
+这张图回答：Feishu LLM reply chain 当前有哪些状态，以及失败如何呈现。
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Drafting
-  Drafting --> NeedsConfig: missing OPENAI_API_KEY
-  Drafting --> Proposed: provider returns valid JSON
-  Drafting --> Failed: provider/http/json error
-  Proposed --> PendingReview: approval created
-  PendingReview --> Rejected: human rejects
-  PendingReview --> ApprovedForReview: human approves proposal
-  ApprovedForReview --> StagedApply: future explicit apply command
-  StagedApply --> Applied: future second approval
-  StagedApply --> ApplyRejected: future reject
+  [*] --> Received
+  Received --> Skipped: policy/replay/type block
+  Received --> BuildingReply: allowed
+  BuildingReply --> NeedsConfig: missing OPENAI_API_KEY
+  BuildingReply --> Asking: config ok
+  Asking --> AskCompleted: OpenAI ok
+  Asking --> Failed: provider error
+  AskCompleted --> SendingFeishu
+  SendingFeishu --> Completed: Feishu API ok
+  SendingFeishu --> Failed: Feishu API error
+  Skipped --> Persisted
   NeedsConfig --> Persisted
   Failed --> Persisted
-  Rejected --> Persisted
-  ApprovedForReview --> Persisted
-  Applied --> Persisted
+  Completed --> Persisted
 ```
 
 Review 观察：
 
-- 优点：review approval 和 future apply approval 被明确分开。
-- 优点：失败、配置缺失、拒绝都能落盘观察。
-- 风险：当前没有 `expired`、`superseded`、`retrying` 状态。
-- 改进：proposal 加 checksum/version，apply 前确认仍匹配当前本地配置。
+- 优点：policy skip、LLM 配置缺失、provider 失败、Feishu API 失败都有状态。
+- 优点：成功路径同时产生 `ask_*` 和 `fb_*`。
+- 风险：没有 retry/cancel 状态，失败后需要人工重启或重发。
+- 改进：后续把 Feishu reply job 提升成 durable dispatch。
 
 ## 数据模型 / ER 图
 
-这张图回答：ask run、config proposal、approval、tool request 和 event 如何关联。
+这张图回答：ask run、Feishu run、config proposal、approval、tool request 和 event 如何关联。
 
 ```mermaid
 erDiagram
   RUN ||--o{ EVENT : emits
   RUN ||--o| USAGE : records
   RUN ||--o| CONFIG_PROPOSAL : may_contain
+  FEISHU_RUN }o--o| RUN : links_to_ask
   CONFIG_PROPOSAL ||--|| APPROVAL : review_gates
   TOOL_REQUEST ||--|| APPROVAL : execution_gates
   TOOL_REQUEST ||--o| TOOL_RUN : produces
@@ -220,6 +222,7 @@ erDiagram
   EVENT { string type string at string runId }
   USAGE { int inputTokens int outputTokens int elapsedMs }
   CONFIG_PROPOSAL { string target string summary string readiness boolean appliesChanges }
+  FEISHU_RUN { string runId string replyProvider string linkedRunId string replyMode }
   APPROVAL { string approvalId string status string subjectType }
   TOOL_REQUEST { string toolRequestId string status }
   TOOL_RUN { string toolRunId string artifact }
@@ -228,37 +231,38 @@ erDiagram
 
 Review 观察：
 
-- 优点：`CONFIG_PROPOSAL` 是一等结果类型，不伪装成 tool request。
+- 优点：`FEISHU_RUN` 和 `RUN` 通过 linkedRunId 建立轻量关联。
 - 优点：tool approval 和 proposal approval 语义不同，后续能分别建 UI。
 - 风险：完整 proposal 当前存在本地 state，控制面脱敏但本机文件仍需被视为敏感。
 - 改进：未来加 proposal field-level sensitivity 和 encrypted local state。
 
 ## 数据流图
 
-这张图回答：配置相关数据从哪里来、经过哪些处理、最终到哪里去。
+这张图回答：飞书消息和 LLM 回复数据从哪里来、经过哪些处理、最终到哪里去。
 
 ```mermaid
 flowchart LR
-  Env["process env readiness only"] --> Context["sanitized context"]
-  Policy["local policy counts only"] --> Context
-  UserGoal["user goal text"] --> PromptRedact["pattern redaction"]
-  PromptRedact --> LLMRequest["LLM request"]
-  Context --> LLMRequest
-  LLMRequest --> Proposal["proposal JSON"]
-  Proposal --> ProposalRedact["proposal redaction"]
-  ProposalRedact --> Run["cfg_* run in state"]
-  ProposalRedact --> Approval["pending approval"]
-  Run --> Control["control-plane redaction"]
-  Control --> Preview["proposalPreview"]
-  Preview --> Dashboard["Dashboard/API"]
+  FeishuText["Feishu text"] --> Policy["ingress policy"]
+  Policy --> Ask["askAgent"]
+  Ask --> Provider["OpenAI Responses"]
+  Provider --> Answer["answer"]
+  Ask --> AskRun["ask_* run"]
+  Answer --> ReplyBuilder["reply builder metadata"]
+  ReplyBuilder --> FeishuSend["Feishu app direct send"]
+  FeishuSend --> FbRun["fb_* run"]
+  AskRun --> Link["linkedRunId"]
+  Link --> FbRun
+  FbRun --> Redaction["control-plane redaction"]
+  AskRun --> Redaction
+  Redaction --> Dashboard["Dashboard/API preview"]
 ```
 
 Review 观察：
 
-- 优点：发送给 LLM 的配置上下文不含 secret 值，只含 readiness 和数量。
-- 优点：控制面二次脱敏，避免 proposal 全文通过 API 扩散。
-- 风险：用户自由文本仍可能带入未知格式的敏感信息。
-- 改进：把配置检查改成结构化问题，并给 CLI 加敏感文本确认提示。
+- 优点：只把内部 run id 作为链路字段，不把飞书 ID 当关联键。
+- 优点：控制面二次脱敏，避免飞书正文和完整 answer 扩散。
+- 风险：真实 LLM 回复会把群消息发给 provider，必须显式 opt-in。
+- 改进：增加 per-channel privacy acknowledgment 记录。
 
 ## 部署图
 
@@ -297,12 +301,13 @@ Review 观察：
 | 实验 | 状态 | 用户动作 | 成功信号 |
 |---|---|---|---|
 | E0 | ready | `send --text` | ok envelope，run 可见 |
-| E1 | ready | 打开 Dashboard | Phase 1.8、Approvals、LLM health、E6B 可见 |
+| E1 | ready | 打开 Dashboard | Phase 1.9、Approvals、LLM health、E6C 可见 |
 | E1C | ready | 测非 loopback scoped token 与 SSE | 错 scope 被拒绝，stream snapshot 脱敏 |
 | E2B | ready | 在备份飞书群发文本 | 群内直接收到确定性回复 |
 | E5B | ready | POST smoke tool + approve/reject | approved 才写 tool-run；rejected 不执行 |
 | E6A | ready | `myclaw ask --text ... --json` | 真实 answer、provider、usage、`toolCalls=[]` |
 | E6B | ready | `myclaw configure-agent --target feishu-llm --text ... --json` | `cfg_*` run、proposal、pending approval、`appliesChanges=false` |
+| E6C | ready | 飞书群发文本，LLM 模式直接回复 | `fb_*` run、`reply.builder.linkedRunId=ask_*`、控制面脱敏 |
 | E6 | planned | agent run/resume/tool loop | 后续开放 |
 | E8/E9/E10 | planned | search/A2A/memory | 后续开放 |
 
@@ -312,23 +317,24 @@ Review 观察：
 |---|---|---|
 | LLM reply smoke | 单轮真实模型回复 | 不含工具调用、记忆、streaming |
 | Config proposal | agent 生成配置建议 | review-only，不 apply、不写 `.myclaw` |
+| Reply chain | 飞书回复与 LLM run 的关联 | `linkedRunId` 是内部 run id，不含飞书 ID |
 | Sanitized context | 只含 readiness、计数和 guardrail | 不含 secret、chat_id、sender_id |
 | Proposal preview | 控制面暴露的摘要 | 不含完整 proposal 正文 |
 | Review approval | 人类审阅记录 | 当前不会触发配置变更 |
 | Staged apply | 未来显式落地步骤 | 必须二次批准并输出 diff |
-| ToolDescriptor | 后续工具注册契约 | Phase 1.8 尚未实现 |
+| ToolDescriptor | 后续工具注册契约 | Phase 1.9 尚未实现 |
 | Durable dispatch | 可恢复工具执行分发 | 后续 E6 重点 |
 | Policy snapshot | 工具可见性和审批策略快照 | 后续和每次 tool call 绑定 |
 | Structure guardrail | 技术债红线 | 500 行、20 文件、4 层深度 |
 
 ## 相似技术比较
 
-| 维度 | MyClaw Phase 1.8 | OpenClaw | Hermes-agent | OpenHuman |
+| 维度 | MyClaw Phase 1.9 | OpenClaw | Hermes-agent | OpenHuman |
 |---|---|---|---|---|
-| LLM 入口 | `ask` + review-only config proposal | 成熟 agent/plugin runtime | 完整 agent loop | agent harness + provider/tool loop |
+| LLM 入口 | `ask` + config proposal + Feishu LLM reply chain | 成熟 agent/plugin runtime | 完整 agent loop | agent harness + provider/tool loop |
 | 配置变更 | 当前不 apply，只提案 | Control UI / plugin config 更厚 | 配置散在 agent/runtime | controller/registry 组合更强 |
 | 工具调用 | 未开放，仅 E5B smoke | policy/sandbox 更成熟 | registry/check_fn | ToolSpec/permission/scope |
-| Feishu/Lark | 独立 bot，显式 LLM opt-in | 完整 Feishu extension | 非重点 | 多 controller/channel 思路 |
+| Feishu/Lark | 独立 bot，显式 LLM opt-in，linked ask run | 完整 Feishu extension | 非重点 | 多 controller/channel 思路 |
 | 记忆 | JSON/JSONL state | session/plugin 边界 | SQLite/FTS 强 | memory tree/UnifiedMemory 强 |
 | UI/观测 | Dashboard preview/health/run/audit/experiments | Control UI | TUI/ops | UI-first |
 
@@ -342,11 +348,14 @@ Review 观察：
 | `packages/cli/src/index.mjs` | 421 行 | CLI 命令入口 | 接近 450；下一轮必须拆 commands |
 | `packages/cli/src/config-output.mjs` | 62 行 | configure-agent safe projection 输出 | 健康；默认不打印完整 proposal |
 | `packages/cli/src/help.mjs` | 40 行 | CLI help 文案 | 健康 |
+| `packages/cli/src/reply-builder.mjs` | 37 行 | Feishu 确定性/LLM 回复生成插件点 | 健康；LLM 模式返回 linked ask run metadata |
+| `packages/feishu-bot/src/runtime.mjs` | 191 行 | Feishu WebSocket bot、reply send、run 记录 | 健康；已记录 `reply.builder.linkedRunId` |
+| `packages/feishu-bot/test/feishu-bot.test.mjs` | 336 行 | Feishu bot replay、policy、reply mode、LLM link 测试 | 健康 |
 | `packages/cli/test/config-agent.test.mjs` | 98 行 | configure-agent missing-key 与 safe JSON 测试 | 健康 |
 | `packages/agent/test/config-proposal.test.mjs` | 104 行 | proposal、approval、target、脱敏测试 | 健康 |
 | `packages/control-plane/src/redaction.mjs` | 220 行 | Feishu/LLM/config proposal/approval 控制面脱敏 | 健康；规则继续集中维护 |
 | `packages/control-plane/src/status.mjs` | 342 行 | status/runs/events/health/toolRequests/approvals | 健康，但继续增长要拆 health builder |
-| `packages/control-plane/src/experiments.mjs` | 349 行 | E0-E10 与 L0-L6 payload | 健康；增长后拆 experiment registry |
+| `packages/control-plane/src/experiments.mjs` | 372 行 | E0-E10/E6C 与 L0-L6 payload | 健康；增长后拆 experiment registry |
 | `packages/dashboard/src/client.mjs` | 432 行 | Dashboard renderer | 接近 450；下一轮拆 section renderer |
 | `docs/build-review-html.mjs` | 414 行 | Markdown 到 HTML 生成器 | 接近 450；下一轮拆 parser/template |
 | `docs/modules` | 16 直接文件 | 模块化源文档 | 低于 20 文件限制 |
@@ -364,20 +373,19 @@ Review 观察：
 | Medium | provider 没有 retry/backoff | 临时网络错误会直接失败 | 加 retry policy、timeout 分类和错误码 |
 | Medium | `--unsafe-full-local` 可输出完整 envelope | 用户若复制到远程日志会泄露 proposal | 默认不用；只在本机刻意查看时使用 |
 | Medium | proposal 本地 state 仍保存完整建议 | 本机 state 文件可能含用户目标或敏感回显 | 提醒 state 视为敏感；后续 field-level sensitivity |
-| Low | Feishu run 与 ask run 未关联 | Dashboard 追踪群聊智能回复不够顺 | 增加 correlation id |
+| Low | Feishu reply chain 仍需要看 raw/detail | 用户还不能一眼看懂 `fb_* -> ask_*` | 下一轮做 Dashboard drawer |
 
 ## Linus 视角严苛审查
 
-独立 subagent 结论：现在不能笼统说“可以用 agent 配置”。只能说可以用 agent 生成 review-only 配置提案，用来检查 Feishu LLM 配置缺口；它不 apply、不写 `.myclaw`、不启动飞书 LLM、不具备工具调用。approval 当前只代表“请人审阅”，不是“授权执行”。
+独立 subagent 结论：可以对用户说“能在备份飞书群手动验证 LLM 直接回复是否工作”，但边界必须很窄：必须显式 `--reply-provider llm --llm-privacy-ack --reply-mode direct`，必须有本地 policy，且这仍不代表工具调用、读写文件、记忆、自动配置或 Dashboard chain drawer 已完成。审查发现的 `reply.builder.text` 泄漏风险已在发布前修复。
 
 | 等级 | 发现 | 处理 |
 |---|---|---|
-| Critical | approval API 曾可能暴露 proposal summary | 已修：approval 创建使用 redacted summary；approval list/detail 走 `redactApprovalRecord`；补测试 |
-| High | CLI `--json` 曾会打印完整 proposal envelope | 已修：默认输出 safe projection；显式 `--unsafe-full-local` 才输出完整本机 envelope；补成功路径测试 |
-| High | `target` 曾是自由字符串 | 已修：当前只允许 `feishu-llm`，非法 target 不回显；补测试 |
-| High | redaction 是模式匹配，不是 DLP | 保留风险：不主动读取 secret，但用户不能把 secret 粘进 prompt；后续结构化 checklist |
-| Medium | Agent 层直接知道 Feishu env | 下一阶段抽 adapter `safeConfigSnapshot()`，避免每个接入层污染 agent runtime |
-| Medium | proposal 和 staged apply 契约还没硬隔离 | 后续新建 `staged-config-change`，带 hash、diff、allowlist 路径、过期时间和二次确认 |
+| Critical | `fb_*` run 曾可能通过 `reply.builder.text` 暴露完整 LLM answer | 已修：`fb_*` 只存 `textPreview`，control-plane 对旧 `builder.text` 兜底脱敏；补 status/run detail 测试 |
+| High | `linkedRunId` 校验太宽，可能被误填成 Feishu ID | 已修：只允许 `ask_` 前缀；非法值置空；补测试 |
+| High | Feishu send 失败时链路会断 | 已修：失败事件保留安全 `linkedRunId` 和 `replyProvider` |
+| Medium | Phase 1.9 只能宣称备份群显式 LLM 直接回复可测 | 文档和实验 E6C 已收窄边界，不宣称工具调用或 Dashboard drawer 完成 |
+| Medium | `reply.builder` 是实现细节 | 暂保留为最小改动；下一轮建议迁移为 `reply.provenance` 或顶层 `links` |
 | Low | CLI/Dashboard/docs builder 接近 450 行 | 下一轮先拆分 |
 
 ## Skill 规范自检
@@ -390,8 +398,8 @@ Review 观察：
 
 ## 下一阶段建议
 
-1. 给 `configure-agent` 增加 staged apply：只写 ignored `.myclaw`，必须输出 diff、checksum 和二次 approval。
-2. 抽 ToolDescriptor registry、durable dispatch、claim/recovery、idempotency key 和完整 ToolRequest 生命周期。
-3. 给 OpenAI Responses 接 model tool calling，但只暴露 policy 裁剪后的工具。
-4. 拆 `packages/cli/src/index.mjs`、`packages/dashboard/src/client.mjs` 和 `docs/build-review-html.mjs`。
-5. 给 Feishu LLM reply 增加 correlation id、per-channel opt-in 和 Dashboard run chain。
+1. 做 Dashboard reply chain drawer：`fb_* -> ask_* -> answerPreview`，不展示原始正文或完整 answer。
+2. 给 `configure-agent` 增加 staged apply：只写 ignored `.myclaw`，必须输出 diff、checksum 和二次 approval。
+3. 抽 ToolDescriptor registry、durable dispatch、claim/recovery、idempotency key 和完整 ToolRequest 生命周期。
+4. 给 OpenAI Responses 接 model tool calling，但只暴露 policy 裁剪后的工具。
+5. 拆 `packages/cli/src/index.mjs`、`packages/dashboard/src/client.mjs` 和 `docs/build-review-html.mjs`。

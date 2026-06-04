@@ -82,6 +82,45 @@ test("Feishu bot stores replay state and skips duplicate events after restart", 
   second.stop();
 });
 
+test("Feishu bot records linked LLM run metadata from reply builders", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const calls = { reply: [], create: [] };
+  const envelope = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => ({ text: "llm ack", provider: "llm", linkedRunId: "ask_123", model: "test-model" }),
+    ingressPolicy: { unsafeOpenIngress: true },
+    replyMode: "direct",
+    stateDir,
+  });
+
+  assert.equal(envelope.ok, true);
+  assert.equal(calls.create[0].data.content, JSON.stringify({ text: "llm ack" }));
+  assert.equal(envelope.result.reply.builder.provider, "llm");
+  assert.equal(envelope.result.reply.builder.linkedRunId, "ask_123");
+  assert.equal(envelope.result.reply.builder.text, undefined);
+  assert.equal(envelope.result.reply.builder.textPreview, "[redacted 7 chars]");
+  assert.equal(envelope.events.find((event) => event.type === "feishu.bot.reply.completed").linkedRunId, "ask_123");
+});
+
+test("Feishu bot only accepts ask run ids as linked reply metadata", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const calls = { reply: [], create: [] };
+  const envelope = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => ({ text: "llm ack", provider: "llm", linkedRunId: "oc_secret" }),
+    ingressPolicy: { unsafeOpenIngress: true },
+    stateDir,
+  });
+
+  assert.equal(envelope.ok, true);
+  assert.equal(envelope.result.reply.builder.linkedRunId, null);
+  assert.equal(JSON.stringify(envelope).includes("oc_secret"), false);
+});
+
 test("Feishu bot loads ingress policy from a local policy file", async () => {
   const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
   const policyFile = path.join(stateDir, "feishu-policy.json");
@@ -233,6 +272,24 @@ test("Feishu bot handler records failed reply when app API returns an error", as
   assert.match(envelope.error.message, /code=99991663/);
   assert.equal(envelope.events.some((event) => event.type === "feishu.bot.reply.completed"), false);
   assert.equal(envelope.events.some((event) => event.type === "feishu.bot.reply.failed"), true);
+});
+
+test("Feishu bot failed app replies preserve safe linked ask run ids", async () => {
+  const stateDir = await mkdtemp(path.join(tmpdir(), "myclaw-feishu-bot-"));
+  const calls = { reply: [], replyResponse: { code: 99991663, msg: "forbidden" } };
+  const envelope = await handleFeishuMessageEvent(feishuTextEvent({ text: "hello" }), {
+    client: createFakeClient(calls),
+    logger: silentLogger(),
+    processed: new Set(),
+    replyBuilder: () => ({ text: "llm ack", provider: "llm", linkedRunId: "ask_456" }),
+    ingressPolicy: { unsafeOpenIngress: true },
+    stateDir,
+  });
+  const failed = envelope.events.find((event) => event.type === "feishu.bot.reply.failed");
+
+  assert.equal(envelope.ok, false);
+  assert.equal(failed.linkedRunId, "ask_456");
+  assert.equal(failed.replyProvider, "llm");
 });
 
 test("Feishu bot handler skips unsupported message types without retrying", async () => {
